@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Claude palette ───────────────────────────────────────────────────────
+   Warm ivory canvas + terracotta accent. Values are space-separated RGB
+   channels so Tailwind's `<alpha-value>` works.                              */
+:root {
+  --c-canvas: 250 249 245; /* #FAF9F5 ivory */
+  --c-surface: 255 255 255; /* card */
+  --c-surface-sunken: 240 238 230; /* #F0EEE6 sunken panel / input */
+  --c-border: 230 227 217; /* #E6E3D9 */
+  --c-ink: 31 30 29; /* #1F1E1D */
+  --c-muted: 107 106 101; /* #6B6A65 */
+  --c-faint: 150 148 140; /* #96948C */
+  --c-accent: 217 119 87; /* #D97757 Claude clay */
+  --c-accent-hover: 193 99 68; /* #C16344 */
+  --c-accent-soft: 244 224 213; /* tint for soft fills */
+  --c-success: 79 138 91; /* #4F8A5B warm green */
+  --c-danger: 193 74 60; /* #C14A3C */
+  --c-chart-cpu: 217 119 87; /* clay */
+  --c-chart-ram: 201 153 78; /* amber */
+  --c-chart-net: 90 138 130; /* teal-sage */
+}
+
+.dark {
+  /* Claude-style dark: near-black page bg, subtle dark-grey elevated cards. */
+  --c-canvas: 14 14 14; /* #0E0E0E — page background (near-black) */
+  --c-surface: 28 28 28; /* #1C1C1C — cards / capsules (subtle elevation) */
+  --c-surface-sunken: 38 38 38; /* #262626 — inputs / sunken */
+  --c-border: 44 44 44; /* #2C2C2C — subtle dividers */
+  --c-ink: 245 244 238; /* #F5F4EE */
+  --c-muted: 168 167 159; /* #A8A79F */
+  --c-faint: 124 123 116; /* #7C7B74 */
+  --c-accent: 217 119 87;
+  --c-accent-hover: 230 137 106;
+  --c-accent-soft: 64 50 43;
+  --c-success: 112 168 124;
+  --c-danger: 214 110 96;
+  --c-chart-cpu: 224 137 106;
+  --c-chart-ram: 214 172 102;
+  --c-chart-net: 124 173 164;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink));
+  font-family: theme('fontFamily.sans');
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* Long-press / selection callout off (iOS Telegram) except real inputs. */
+*:not(input):not(textarea) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Headings use the same sans as the body (Inter) — like Claude's UI — just
+   tighter tracking for an editorial feel. */
+.font-display {
+  font-family: theme('fontFamily.sans');
+  letter-spacing: -0.02em;
+}
+
+/* Hide scrollbars inside sheets but keep scrolling. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,0 +1,148 @@
+# mvp-n.net — full stack
+#
+# Run:
+#   docker-compose up -d --build
+#
+# Services bind to 127.0.0.1 by default; nginx on the host (or in a separate
+# compose file) does the SNI routing on :443.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mvpn-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     mvpn
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+      POSTGRES_DB:       mvpn
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mvpn"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./api
+    container_name: mvpn-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT:           "8081"
+      DATABASE_URL:   postgres://mvpn:${POSTGRES_PASSWORD}@postgres:5432/mvpn?sslmode=disable
+      JWT_SECRET:     ${JWT_SECRET:?JWT_SECRET required}
+      BOT_TOKEN:      ${BOT_TOKEN:?BOT_TOKEN required}
+      ADMIN_TG_IDS:   ${ADMIN_TG_IDS:?ADMIN_TG_IDS required}
+      # awg-server runs in host network mode → reach it via the host gateway.
+      AWG_API_URL:    http://host.docker.internal:8080
+      AWG_API_TOKEN:  ${AWG_API_TOKEN:-}
+      XRAY_API_HOST:  host.docker.internal
+      XRAY_API_PORT:  "10085"
+      CONNECT_URL:    http://connect:3000
+      # REALITY params baked into the VLESS URI by the API. MUST be passed in or
+      # the link gets empty pbk/sid and clients fail with "empty password".
+      SERVER_IP:        ${SERVER_IP:-<origin-ip>}
+      XRAY_PUBLIC_KEY:  ${XRAY_PUBLIC_KEY:-}
+      XRAY_SHORT_ID:    ${XRAY_SHORT_ID:-}
+      # shared secret for the internal provisioning endpoint (connect → api)
+      ADMIN_TOKEN:      ${CONNECT_ADMIN_TOKEN:-}
+    ports:
+      - "127.0.0.1:8081:8081"
+    volumes:
+      # Host NIC byte counters — the api runs in a bridge network, so its own
+      # /proc/net/dev only sees container traffic. Reading the host's sysfs
+      # counters makes the "network load" graph reflect real VPN throughput.
+      # Mount all of /sys (node-exporter style): /sys/class/net/<if> is a symlink
+      # into /sys/devices/..., so a narrower mount would leave it dangling.
+      - /sys:/host/sys:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  connect:
+    build: ./connect
+    container_name: mvpn-connect
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT:           "3000"
+      DATABASE_URL:   postgres://mvpn:${POSTGRES_PASSWORD}@postgres:5432/mvpn?sslmode=disable
+      ADMIN_TOKEN:    ${CONNECT_ADMIN_TOKEN:-}
+      PROFILE_TITLE:  ${PROFILE_TITLE:-mvp-n}
+      UPDATE_HOURS:   "12"
+      SUPPORT_URL:    ${SUPPORT_URL:-https://t.me/mvp_n_net_bot}
+      API_INTERNAL_URL: http://api:8081
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  awg-server:
+    build: ./awg-server
+    container_name: mvpn-awg
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    network_mode: host
+    environment:
+      AWG_LISTEN:     ":8080"
+      AWG_INTERFACE:  awg0
+      AWG_API_TOKEN:  ${AWG_API_TOKEN:?AWG_API_TOKEN required}
+      AWG_PARAMS_FILE: /etc/mvpn/awg-params.json
+    volumes:
+      - awg_data:/var/lib/awg-server
+      # server keys + obfuscation params, written by scripts/install/amneziawg.sh
+      - /etc/mvpn/awg-params.json:/etc/mvpn/awg-params.json:ro
+
+  bot:
+    build: ./bot
+    container_name: mvpn-bot
+    restart: unless-stopped
+    environment:
+      BOT_TOKEN:     ${BOT_TOKEN:?BOT_TOKEN required}
+      MINI_APP_URL:  ${MINI_APP_URL:-https://app.mvp-n.net/v2/}
+      # Read the user's in-app language choice so greetings match the Mini App.
+      API_INTERNAL_URL: http://api:8081
+      ADMIN_TOKEN:      ${CONNECT_ADMIN_TOKEN:-}
+
+  # Automatic PostgreSQL backups with rotation (daily / weekly / monthly).
+  # Dumps land in the db_backups volume; losing postgres_data no longer means
+  # losing every user/config. To restore: gunzip a dump and `psql` it back in.
+  db-backup:
+    image: prodrigestivill/postgres-backup-local:16
+    container_name: mvpn-db-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST:     postgres
+      POSTGRES_DB:       mvpn
+      POSTGRES_USER:     mvpn
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SCHEDULE:          "@daily"
+      BACKUP_KEEP_DAYS:  "7"
+      BACKUP_KEEP_WEEKS: "4"
+      BACKUP_KEEP_MONTHS: "6"
+      HEALTHCHECK_PORT:  "8080"
+    volumes:
+      - db_backups:/backups
+
+volumes:
+  postgres_data:
+  awg_data:
+  db_backups:

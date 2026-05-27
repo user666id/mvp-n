@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mvp-n — импорт</title>
+    <style>
+      body {
+        font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+        background: #1f1e1d; color: #f5f4ee; margin: 0; min-height: 100vh;
+        display: grid; place-items: center; text-align: center; padding: 24px;
+      }
+      .t { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+      .m { color: #a8a79f; font-size: 14px; line-height: 1.5; max-width: 320px; margin: 0 auto; }
+      a.btn {
+        display: inline-block; margin-top: 20px; background: #d97757; color: #fff;
+        text-decoration: none; padding: 14px 26px; border-radius: 12px; font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <div class="t">mvp-n</div>
+      <div class="m" id="status">Открываем приложение…</div>
+      <a class="btn" id="manual" href="#">Открыть приложение</a>
+    </div>
+    <script>
+      (function () {
+        var p = new URLSearchParams(location.search)
+        var app = p.get('app') || ''
+        var u = p.get('u') || '' // subscription URL (already decoded by URLSearchParams)
+        // Follow the app/bot language (passed as ?lang=en|ru); default ru.
+        var lang = p.get('lang') === 'en' ? 'en' : 'ru'
+        var T = {
+          ru: { title: 'Открываем приложение…', btn: 'Открыть приложение' },
+          en: { title: 'Opening the app…', btn: 'Open the app' },
+        }
+        document.documentElement.lang = lang
+        document.getElementById('status').textContent = T[lang].title
+        document.getElementById('manual').textContent = T[lang].btn
+        function deeplink(app, u) {
+          switch (app) {
+            case 'happ': return 'happ://add/' + u
+            case 'v2raytun': return 'v2raytun://import/' + u
+            case 'v2rayng': return 'v2rayng://install-sub?url=' + encodeURIComponent(u)
+            case 'amneziavpn': return u // u is the raw vless:// link; AmneziaVPN imports it
+            default: return u
+          }
+        }
+        var dl = deeplink(app, u)
+        document.getElementById('manual').setAttribute('href', dl)
+        // Auto-open the app shortly after the page loads (gives the browser a tick).
+        setTimeout(function () {
+          try { location.href = dl } catch (e) {}
+        }, 250)
+      })()
+    </script>
+  </body>
+</html>

@@ -1,0 +1,175 @@
+package handlers
+
+import (
+	"database/sql"
+	"encoding/json"
+	"log"
+	"net/http"
+	"strings"
+
+	"github.com/google/uuid"
+	"github.com/user666id/vpn-project/api/internal/xray"
+)
+
+// ProvisionRequest — body for POST /internal/provision (called by connect/).
+type ProvisionRequest struct {
+	ShortID   string `json:"short_id"`
+	Name      string `json:"name"`
+	Client    string `json:"client"`
+	IP        string `json:"ip"`
+	DeviceUID string `json:"device_uid"` // launcher install id (Happ); "" otherwise
+	OS        string `json:"os"`         // OS only, used to adopt legacy OS-named rows
+}
+
+// ProvisionDevice issues a PER-DEVICE VLESS user and returns its URI.
+//
+// Each (config, device-name, launcher) gets its own xray UUID. Deleting the
+// device removes that xray user → the device stops working; re-adding the
+// subscription link provisions a fresh UUID. Internal-only: authenticated with
+// the shared ADMIN_TOKEN. On any xray failure it falls back to the config's
+// own UUID so the device keeps working.
+func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
+	if h.Config.AdminToken == "" || r.Header.Get("X-Internal-Token") != h.Config.AdminToken {
+		h.writeError(w, 401, "UNAUTHORIZED", "")
+		return
+	}
+	var req ProvisionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ShortID == "" {
+		h.writeError(w, 400, "BAD_REQUEST", "short_id required")
+		return
+	}
+
+	var (
+		userID      int64
+		internalID  int
+		location    string
+		enhanced    bool
+		gameMode    bool
+		clientUUID  sql.NullString
+		deviceLimit int
+	)
+	err := h.DB.QueryRowContext(r.Context(), `
+		SELECT vc.user_id, u.internal_id, vc.location, vc.enhanced, vc.game_mode, vc.client_uuid, u.device_limit
+		FROM vpn_configs vc JOIN users u ON u.id = vc.user_id
+		WHERE vc.short_id = $1 AND vc.is_active = true`, req.ShortID).
+		Scan(&userID, &internalID, &location, &enhanced, &gameMode, &clientUUID, &deviceLimit)
+	if err != nil {
+		h.writeError(w, 404, "NOT_FOUND", "config not found")
+		return
+	}
+
+	name := strings.TrimSpace(req.Name)     // display name: model when known, else OS
+	uid := strings.TrimSpace(req.DeviceUID) // launcher install id (Happ); "" otherwise
+	os := strings.TrimSpace(req.OS)         // OS only, for adopting legacy OS-named rows
+
+	// Device identity. Prefer the launcher's unique install id when it sends one
+	// (Happ): that yields a distinct row per physical device on the SAME shared
+	// subscription link. Launchers that send nothing unique (v2RayTun) fall back
+	// to (name, launcher), so two identical such devices unavoidably share a row.
+	var (
+		devID             string
+		devUUID, devEmail sql.NullString
+		blocked           bool
+		found             bool
+	)
+	scanDev := func(row *sql.Row) (bool, error) {
+		switch err := row.Scan(&devID, &devUUID, &devEmail, &blocked); err {
+		case nil:
+			return true, nil
+		case sql.ErrNoRows:
+			return false, nil
+		default:
+			return false, err
+		}
+	}
+
+	var lookupErr error
+	if uid != "" {
+		found, lookupErr = scanDev(h.DB.QueryRowContext(r.Context(), `
+			SELECT id, vpn_uuid, vpn_email, is_blocked FROM devices
+			WHERE user_id=$1 AND COALESCE(client,'')=$2 AND device_uid=$3 LIMIT 1`,
+			userID, req.Client, uid))
+		if lookupErr == nil && !found {
+			// First sighting of this install id — adopt a pre-uid row for the same
+			// launcher so an existing device migrates in place instead of leaving a
+			// duplicate. Match the row by its current name OR by the OS: legacy rows
+			// were named after the OS (e.g. "iOS"), but now we display the model, so
+			// both must match. Adopting also upgrades the name OS -> model.
+			found, lookupErr = scanDev(h.DB.QueryRowContext(r.Context(), `
+				SELECT id, vpn_uuid, vpn_email, is_blocked FROM devices
+				WHERE user_id=$1 AND COALESCE(client,'')=$2 AND device_uid IS NULL
+				  AND (COALESCE(name,'')=$3 OR ($4 <> '' AND COALESCE(name,'')=$4))
+				LIMIT 1`, userID, req.Client, name, os))
+			if found {
+				_, _ = h.DB.ExecContext(r.Context(),
+					`UPDATE devices SET device_uid=$1, name=$2, os=COALESCE(NULLIF($3,''), os) WHERE id=$4`,
+					uid, name, os, devID)
+			}
+		}
+	} else {
+		found, lookupErr = scanDev(h.DB.QueryRowContext(r.Context(), `
+			SELECT id, vpn_uuid, vpn_email, is_blocked FROM devices
+			WHERE user_id=$1 AND COALESCE(name,'')=$2 AND COALESCE(client,'')=$3 LIMIT 1`,
+			userID, name, req.Client))
+	}
+	if lookupErr != nil {
+		h.writeError(w, 500, "DB_ERROR", lookupErr.Error())
+		return
+	}
+
+	if found && blocked {
+		h.writeError(w, 403, "BLOCKED", "device blocked")
+		return
+	}
+
+	uuidStr := ""
+	emailStr := ""
+	switch {
+	case found && devUUID.Valid && devUUID.String != "":
+		// Reuse this device's UUID.
+		uuidStr, emailStr = devUUID.String, devEmail.String
+		_, _ = h.DB.ExecContext(r.Context(),
+			`UPDATE devices SET ip=$1, last_seen=NOW(), os=COALESCE(NULLIF($2,''), os) WHERE id=$3`,
+			req.IP, os, devID)
+	default:
+		// New device → enforce the device limit, then mint a UUID + register in xray.
+		if deviceLimit > 0 {
+			var cnt int
+			_ = h.DB.QueryRowContext(r.Context(),
+				`SELECT COUNT(*) FROM devices WHERE user_id = $1 AND is_blocked = false`, userID).Scan(&cnt)
+			if cnt >= deviceLimit {
+				h.writeError(w, 403, "LIMIT", "device limit reached")
+				return
+			}
+		}
+		uuidStr = uuid.New().String()
+		emailStr = xray.EmailFor(internalID, genShortID())
+		// Game mode = no Vision flow on the TCP inbound (URI also omits it), so
+		// the registered flow must match or the client gets "flow not match".
+		flow := "xtls-rprx-vision"
+		if gameMode {
+			flow = ""
+		}
+		if err := h.Xray.AddUser(r.Context(), emailStr, uuidStr, flow); err != nil {
+			log.Printf("[provision] AddUser failed, falling back to config uuid: %v", err)
+			uuidStr, emailStr = clientUUID.String, ""
+		}
+		if found {
+			_, _ = h.DB.ExecContext(r.Context(),
+				`UPDATE devices SET vpn_uuid=$1, vpn_email=$2, ip=$3, last_seen=NOW(), os=COALESCE(NULLIF($4,''), os) WHERE id=$5`,
+				uuidStr, emailStr, req.IP, os, devID)
+		} else {
+			_, _ = h.DB.ExecContext(r.Context(),
+				`INSERT INTO devices (user_id, name, client, ip, vpn_uuid, vpn_email, device_uid, os, last_seen)
+				 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())`,
+				userID, name, req.Client, req.IP, uuidStr, emailStr,
+				sql.NullString{String: uid, Valid: uid != ""},
+				sql.NullString{String: os, Valid: os != ""})
+		}
+	}
+
+	if uuidStr == "" {
+		uuidStr = clientUUID.String // ultimate fallback
+	}
+	h.writeOK(w, map[string]any{"vless_uri": buildURI(uuidStr, location, enhanced, gameMode)})
+}
