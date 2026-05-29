@@ -81,7 +81,7 @@ export interface AdminConfig {
 /** Live reachability of a public domain (GET /admin/domains). */
 export interface DomainStatus {
   name: string
-  url: string
+  kind: 'web' | 'vpn' | 'svc'
   ok: boolean
   status: number
   ms: number

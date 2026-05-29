@@ -58,21 +58,28 @@ async function langOf(ctx: Context): Promise<'en' | 'ru'> {
   if (hit && hit.exp > Date.now()) return hit.lang
 
   let lang = tgLang(ctx)
+  let authoritative = false
   if (API_INTERNAL_URL && ADMIN_TOKEN) {
     try {
       const res = await fetch(`${API_INTERNAL_URL}/internal/user-lang?tg_id=${tgId}`, {
         headers: { 'X-Internal-Token': ADMIN_TOKEN },
-        signal: AbortSignal.timeout(800),
+        signal: AbortSignal.timeout(2500),
       })
       if (res.ok) {
         const saved = (await res.json())?.data?.lang
-        if (saved === 'en' || saved === 'ru') lang = saved
+        if (saved === 'en' || saved === 'ru') {
+          lang = saved
+          authoritative = true
+        }
       }
     } catch {
       /* network/timeout — keep the Telegram language_code fallback */
     }
   }
-  boundedSet(langCache, tgId, { lang, exp: Date.now() + LANG_TTL_MS }, 10_000)
+  // Cache an authoritative answer for the full TTL; a fallback (timeout/error)
+  // only briefly, so a single slow lookup can't pin the wrong language for 5 min.
+  const ttl = authoritative ? LANG_TTL_MS : 30_000
+  boundedSet(langCache, tgId, { lang, exp: Date.now() + ttl }, 10_000)
   return lang
 }
 

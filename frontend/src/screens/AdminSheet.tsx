@@ -358,28 +358,48 @@ function DomainStatusSheet({
       {!items ? (
         <ListSkeleton rows={3} />
       ) : (
-        <div className="mb-3 overflow-hidden rounded-2xl border border-border bg-surface">
-          {items.map((d, i) => (
-            <button
-              key={d.name}
-              onClick={() => openLink('https://' + d.name)}
-              className={
-                'flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-surface-sunken ' +
-                (i === items.length - 1 ? '' : 'border-b border-border')
-              }
-            >
-              <span className={'h-2.5 w-2.5 shrink-0 rounded-full ' + (d.ok ? 'bg-success' : 'bg-danger')} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[15px] font-medium text-accent">{d.name}</div>
-                <div className="text-[12.5px] text-muted">
-                  {d.ok ? t('admin.domainOk') : t('admin.domainDown')}
-                  {d.status ? ` · ${d.status}` : ''} · {d.ms} ms
-                </div>
+        (['web', 'vpn', 'svc'] as const).map((kind) => {
+          const group = items.filter((d) => d.kind === kind)
+          if (group.length === 0) return null
+          const label =
+            kind === 'web' ? t('admin.domainsWeb') : kind === 'vpn' ? t('admin.domainsVpn') : t('admin.domainsSvc')
+          return (
+            <div key={kind} className="mb-4">
+              <div className="font-display mb-2 px-3 text-[13px] font-medium uppercase tracking-[0.06em] text-faint">
+                {label}
               </div>
-              <ExternalLink size={16} className="shrink-0 text-accent" />
-            </button>
-          ))}
-        </div>
+              <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+                {group.map((d, i) => {
+                  const cls =
+                    'flex w-full items-center gap-3 px-4 py-3.5 text-left ' +
+                    (i === group.length - 1 ? '' : 'border-b border-border ')
+                  const inner = (
+                    <>
+                      <span className={'h-2.5 w-2.5 shrink-0 rounded-full ' + (d.ok ? 'bg-success' : 'bg-danger')} />
+                      <div className="min-w-0 flex-1">
+                        <div className={'truncate text-[15px] font-medium ' + (kind === 'web' ? 'text-accent' : 'text-ink')}>
+                          {d.name}
+                        </div>
+                        <div className="text-[12.5px] text-muted">
+                          {d.ok ? t('admin.domainOk') : t('admin.domainDown')}
+                          {d.status ? ` · ${d.status}` : ''} · {d.ms} ms
+                        </div>
+                      </div>
+                      {kind === 'web' && <ExternalLink size={16} className="shrink-0 text-accent" />}
+                    </>
+                  )
+                  return kind === 'web' ? (
+                    <button key={d.name} onClick={() => openLink('https://' + d.name)} className={cls + 'active:bg-surface-sunken'}>
+                      {inner}
+                    </button>
+                  ) : (
+                    <div key={d.name} className={cls}>{inner}</div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })
       )}
       <div className="pb-2">
         <Button variant="secondary" stretched disabled={!items} onClick={load}>

@@ -253,11 +253,12 @@ func (s *Scheduler) cleanupDeletedUsers(ctx context.Context) error {
 }
 
 // cleanupDevices removes devices that haven't refreshed their subscription in
-// 48h (the launcher refreshes every ~12h; a deleted subscription stops doing
-// so) and revokes each one's per-device xray user so it can't reconnect.
+// 7 days (the launcher refreshes every ~12h while running; a deleted
+// subscription or a long-off device stops doing so) and revokes each one's
+// per-device xray user so it can't reconnect.
 func (s *Scheduler) cleanupDevices(ctx context.Context) error {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT COALESCE(vpn_email, '') FROM devices WHERE last_seen < NOW() - INTERVAL '48 hours'`)
+		`SELECT COALESCE(vpn_email, '') FROM devices WHERE last_seen < NOW() - INTERVAL '7 days'`)
 	if err != nil {
 		return err
 	}
@@ -275,7 +276,7 @@ func (s *Scheduler) cleanupDevices(ctx context.Context) error {
 		}
 	}
 	res, err := s.db.ExecContext(ctx,
-		`DELETE FROM devices WHERE last_seen < NOW() - INTERVAL '48 hours'`)
+		`DELETE FROM devices WHERE last_seen < NOW() - INTERVAL '7 days'`)
 	if err != nil {
 		return err
 	}

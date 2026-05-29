@@ -24,7 +24,7 @@ export function CreateConfigSheet({
 }) {
   const { t } = useT()
   const [protocol, setProtocol] = useState<Protocol>('vless')
-  const [enhanced, setEnhanced] = useState(true) // on by default
+  const [enhanced, setEnhanced] = useState(false) // default = Обычный; user opts into Усиленный/Игровой
   const [game, setGame] = useState(false)
 
   const protocols: {

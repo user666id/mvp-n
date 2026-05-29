@@ -201,9 +201,14 @@ export async function mockRequest(
   }
   if (path === '/admin/domains' && m === 'GET') {
     return [
-      { name: 'gw.mvp-n.net', url: 'https://gw.mvp-n.net/health', ok: true, status: 200, ms: 42 },
-      { name: 'app.mvp-n.net', url: 'https://app.mvp-n.net/', ok: true, status: 301, ms: 35 },
-      { name: 'connect.mvp-n.net', url: 'https://connect.mvp-n.net/health', ok: true, status: 200, ms: 51 },
+      { name: 'gw.mvp-n.net', kind: 'web', ok: true, status: 200, ms: 42 },
+      { name: 'app.mvp-n.net', kind: 'web', ok: true, status: 301, ms: 35 },
+      { name: 'connect.mvp-n.net', kind: 'web', ok: true, status: 200, ms: 51 },
+      { name: 'VLESS Vision · 43000', kind: 'vpn', ok: true, status: 0, ms: 3 },
+      { name: 'VLESS XHTTP · 43001', kind: 'vpn', ok: true, status: 0, ms: 4 },
+      { name: 'AmneziaWG · 51820', kind: 'vpn', ok: true, status: 0, ms: 6 },
+      { name: 'PostgreSQL', kind: 'svc', ok: true, status: 0, ms: 2 },
+      { name: 'xray API · 10085', kind: 'svc', ok: true, status: 0, ms: 1 },
     ]
   }
   if (path === '/admin/profiles' && m === 'GET') {

@@ -9,25 +9,23 @@ import (
 	"time"
 )
 
-// AdminDomains checks the public domains' reachability from the server (this
-// tests the real Cloudflare → origin path, the same one users hit).
+// AdminDomains checks reachability of the public web domains AND the VPN entry
+// points from the server. Web checks hit the real Cloudflare → origin path; VPN
+// checks confirm xray (VLESS ports) and AmneziaWG (awg-server) are serving.
+// Note: run from the server, so it can't see the server's own uplink outage —
+// it catches a crashed/blocked service, not an upstream network blip.
 func (h *Handler) AdminDomains(w http.ResponseWriter, r *http.Request) {
 	type dom struct {
 		Name   string `json:"name"`
-		URL    string `json:"url"`
+		Kind   string `json:"kind"` // "web" | "vpn"
 		OK     bool   `json:"ok"`
 		Status int    `json:"status"`
 		MS     int64  `json:"ms"`
 		Error  string `json:"error,omitempty"`
 	}
-	targets := []struct{ name, url string }{
-		{"gw.mvp-n.net", "https://gw.mvp-n.net/health"},
-		{"app.mvp-n.net", "https://app.mvp-n.net/"},
-		{"connect.mvp-n.net", "https://connect.mvp-n.net/health"},
-	}
+
 	// Force IPv4: the host has no IPv6, but the proxied records carry AAAA, so
-	// Go's dialer would otherwise waste an attempt on an unreachable v6 address
-	// (intermittent fast failures, e.g. the gw hairpin).
+	// Go's dialer would otherwise waste an attempt on an unreachable v6 address.
 	client := &http.Client{
 		Timeout:       8 * time.Second,
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
@@ -37,32 +35,78 @@ func (h *Handler) AdminDomains(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 	}
-	out := make([]dom, len(targets))
+
+	httpCheck := func(name, kind, url string) dom {
+		d := dom{Name: name, Kind: kind}
+		start := time.Now()
+		var resp *http.Response
+		var err error
+		for attempt := 0; attempt < 2; attempt++ { // one retry — the hairpin can blip
+			if resp, err = client.Get(url); err == nil {
+				break
+			}
+		}
+		d.MS = time.Since(start).Milliseconds()
+		if err != nil {
+			d.Error = "unreachable"
+			return d
+		}
+		resp.Body.Close()
+		d.Status = resp.StatusCode
+		d.OK = resp.StatusCode >= 200 && resp.StatusCode < 400
+		return d
+	}
+
+	tcpCheck := func(name, kind, addr string) dom {
+		d := dom{Name: name, Kind: kind}
+		start := time.Now()
+		ctx, cancel := context.WithTimeout(r.Context(), 4*time.Second)
+		defer cancel()
+		err := tcpProbe(ctx, addr)
+		d.MS = time.Since(start).Milliseconds()
+		if err != nil {
+			d.Error = "unreachable"
+			return d
+		}
+		d.OK = true
+		return d
+	}
+
+	dbCheck := func() dom {
+		d := dom{Name: "PostgreSQL", Kind: "svc"}
+		start := time.Now()
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+		err := h.DB.PingContext(ctx)
+		d.MS = time.Since(start).Milliseconds()
+		if err != nil {
+			d.Error = "unreachable"
+			return d
+		}
+		d.OK = true
+		return d
+	}
+
+	xh := h.Config.XrayAPIHost // host xray runs on (host.docker.internal in compose)
+	jobs := []func() dom{
+		func() dom { return httpCheck("gw.mvp-n.net", "web", "https://gw.mvp-n.net/health") },
+		func() dom { return httpCheck("app.mvp-n.net", "web", "https://app.mvp-n.net/") },
+		func() dom { return httpCheck("connect.mvp-n.net", "web", "https://connect.mvp-n.net/health") },
+		func() dom { return tcpCheck("VLESS Vision · 43000", "vpn", xh+":43000") },
+		func() dom { return tcpCheck("VLESS XHTTP · 43001", "vpn", xh+":43001") },
+		func() dom { return httpCheck("AmneziaWG · 51820", "vpn", h.Config.AWGApiURL+"/health") },
+		dbCheck,
+		func() dom { return tcpCheck("xray API · 10085", "svc", xh+":"+h.Config.XrayAPIPort) },
+	}
+
+	out := make([]dom, len(jobs))
 	var wg sync.WaitGroup
-	for i, t := range targets {
+	for i, fn := range jobs {
 		wg.Add(1)
-		go func(i int, name, url string) {
+		go func(i int, fn func() dom) {
 			defer wg.Done()
-			d := dom{Name: name, URL: url}
-			start := time.Now()
-			var resp *http.Response
-			var err error
-			for attempt := 0; attempt < 2; attempt++ { // one retry — the hairpin can blip
-				if resp, err = client.Get(url); err == nil {
-					break
-				}
-			}
-			d.MS = time.Since(start).Milliseconds()
-			if err != nil {
-				d.Error = "unreachable"
-				out[i] = d
-				return
-			}
-			resp.Body.Close()
-			d.Status = resp.StatusCode
-			d.OK = resp.StatusCode >= 200 && resp.StatusCode < 400
-			out[i] = d
-		}(i, t.name, t.url)
+			out[i] = fn()
+		}(i, fn)
 	}
 	wg.Wait()
 	h.writeJSON(w, 200, Response{Status: true, StatusCode: 200, Data: out})
