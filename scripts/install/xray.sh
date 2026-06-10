@@ -26,6 +26,14 @@ SHORT_ID=$(openssl rand -hex 4)
 SERVER_IP=$(curl -s https://api.ipify.org)
 EMAIL="seed_${SHORT_ID}@mvp-n.net"
 
+# The api inbound (:10085) must be reachable by the dockerised Go api over the
+# host bridge, but NOT from the public internet. Bind it to the docker bridge
+# gateway (what `host.docker.internal:host-gateway` resolves to) instead of
+# 0.0.0.0, so the port never exists on the public interface — defense in depth
+# on top of the UFW rules applied below. Falls back to the docker0 default.
+XRAY_API_BIND="$(ip -4 -o addr show docker0 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1)"
+[ -z "$XRAY_API_BIND" ] && XRAY_API_BIND="172.17.0.1"
+
 mkdir -p /usr/local/etc/xray /var/log/xray /etc/mvpn
 
 cat > /usr/local/etc/xray/config.json <<EOF
@@ -89,7 +97,7 @@ cat > /usr/local/etc/xray/config.json <<EOF
     },
     {
       "tag": "api",
-      "listen": "0.0.0.0",
+      "listen": "$XRAY_API_BIND",
       "port": 10085,
       "protocol": "dokodemo-door",
       "settings": { "address": "127.0.0.1" },
@@ -110,11 +118,17 @@ cat > /usr/local/etc/xray/config.json <<EOF
 }
 EOF
 
-# IMPORTANT: the api inbound (:10085) listens on 0.0.0.0 so the dockerised Go api
-# can reach it over the host bridge. Firewall it from the public internet:
-#     ufw allow from 172.16.0.0/12 to any port 10085 proto tcp
-#     ufw deny 10085
-log "Reminder: restrict :10085 (xray gRPC API) to the docker bridge via ufw."
+# The api inbound (:10085) is bound to the docker bridge gateway above, so it is
+# not on the public interface. Apply UFW rules too (defense in depth): allow the
+# docker bridge range, deny everything else to that port.
+if command -v ufw >/dev/null 2>&1; then
+  ufw allow from 172.16.0.0/12 to any port 10085 proto tcp >/dev/null 2>&1 || true
+  ufw deny 10085/tcp >/dev/null 2>&1 || true
+  log "UFW: allowed :10085 from 172.16.0.0/12, denied elsewhere."
+else
+  log "Reminder: ufw not found — restrict :10085 (xray gRPC API) to the docker bridge."
+fi
+log "xray api inbound bound to ${XRAY_API_BIND}:10085 (docker bridge only)."
 
 # Save credentials consumed by the Go api (SERVER_IP / XRAY_PUBLIC_KEY / XRAY_SHORT_ID).
 cat > /etc/mvpn/credentials.json <<EOF

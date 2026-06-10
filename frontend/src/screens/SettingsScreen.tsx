@@ -74,7 +74,15 @@ function ThemePreview({ kind }: { kind: 'light' | 'dark' | 'system' }) {
   )
 }
 
-export function SettingsScreen({ onLogout, onMenu }: { onLogout: () => void; onMenu: () => void }) {
+export function SettingsScreen({
+  active,
+  onLogout,
+  onMenu,
+}: {
+  active: boolean
+  onLogout: () => void
+  onMenu: () => void
+}) {
   const { t, lang, setLang } = useT()
   const toast = useToast()
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -109,9 +117,12 @@ export function SettingsScreen({ onLogout, onMenu }: { onLogout: () => void; onM
     }
   }, [])
 
+  // Load/refresh when this tab becomes active. The screen stays mounted across
+  // tab switches, so this is a lazy first load + background refresh that keeps
+  // the current data on screen (no blank flash on every switch).
   useEffect(() => {
-    load()
-  }, [load])
+    if (active) load()
+  }, [active, load])
 
   const toggleNotify = (v: boolean) => {
     setNotify(v)

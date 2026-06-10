@@ -366,7 +366,7 @@ const dict = {
   'about.legal': { en: 'Legal', ru: 'Правовая информация' },
   'about.terms': { en: 'Terms of use', ru: 'Условия использования' },
   'about.privacy': { en: 'Privacy policy', ru: 'Политика конфиденциальности' },
-  'about.version': { en: 'Version 1.1', ru: 'Версия 1.1' },
+  'about.version': { en: 'Version 1.2', ru: 'Версия 1.2' },
   'about.q1': { en: 'What is a config?', ru: 'Что такое конфиг?' },
   'about.a1': {
     en: 'Your personal VPN profile. VLESS imports into Happ, v2RayTun or v2rayNG (link or QR); AmneziaWG into AmneziaVPN (.conf or QR).',

@@ -53,12 +53,16 @@ func main() {
 	mux.HandleFunc("GET /health/deep", h.HealthDeep)
 	mux.HandleFunc("GET /public/status", h.PublicStatus)
 	mux.HandleFunc("GET /to/{id}", h.GetByShortID)
-	mux.HandleFunc("POST /auth/token", h.AuthTelegram)
+	// Rate-limit the auth endpoints per client IP to blunt brute-force / abuse.
+	// /auth/key guesses access keys, so it's the tighter of the two.
+	tokenLimit := middleware.RateLimit(60, 30) // 30 burst, refill 60/min
+	keyLimit := middleware.RateLimit(20, 10)   // 10 burst, refill 20/min
+	mux.Handle("POST /auth/token", tokenLimit(http.HandlerFunc(h.AuthTelegram)))
 	mux.HandleFunc("POST /internal/provision", h.ProvisionDevice)
 	mux.HandleFunc("GET /internal/user-lang", h.UserLang)
 
-	auth := middleware.Auth(cfg.JWTSecret)
-	mux.Handle("POST /auth/key", auth(http.HandlerFunc(h.ActivateKey)))
+	auth := middleware.Auth([]string{cfg.JWTSecret, cfg.JWTSecretPrev}, db)
+	mux.Handle("POST /auth/key", keyLimit(auth(http.HandlerFunc(h.ActivateKey))))
 	mux.Handle("GET /configs", auth(http.HandlerFunc(h.ListConfigs)))
 	mux.Handle("POST /configs", auth(http.HandlerFunc(h.CreateConfig)))
 	mux.Handle("GET /configs/{id}", auth(http.HandlerFunc(h.GetConfig)))
@@ -67,10 +71,6 @@ func main() {
 	mux.Handle("PATCH /configs/{id}/settings", auth(http.HandlerFunc(h.UpdateConfigSettings)))
 	mux.Handle("GET /configs/{id}/serverStats", auth(http.HandlerFunc(h.ServerStats)))
 	mux.Handle("GET /configs/{id}/awgStats", auth(http.HandlerFunc(h.AwgStats)))
-	mux.Handle("GET /configs/{id}/subconfig", auth(http.HandlerFunc(h.GetSubconfig)))
-	mux.Handle("POST /configs/{id}/subconfig", auth(http.HandlerFunc(h.CreateSubconfig)))
-	mux.Handle("PATCH /configs/{id}/subconfig", auth(http.HandlerFunc(h.UpdateSubconfig)))
-	mux.Handle("DELETE /configs/{id}/subconfig", auth(http.HandlerFunc(h.DeleteSubconfig)))
 
 	mux.Handle("GET /profile", auth(http.HandlerFunc(h.Profile)))
 	mux.Handle("GET /profile/devices", auth(http.HandlerFunc(h.ListDevices)))

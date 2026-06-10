@@ -11,19 +11,29 @@
 package main
 
 import (
+	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// secureCompare reports whether two secrets are equal in constant time, so a
+// remote caller can't recover the token byte-by-byte from response timing.
+func secureCompare(a, b string) bool {
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -267,7 +277,8 @@ type Server struct {
 }
 
 func (s *Server) auth(r *http.Request) bool {
-	return r.Header.Get("Authorization") == "Bearer "+s.cfg.AdminToken
+	tok := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	return secureCompare(tok, s.cfg.AdminToken)
 }
 
 func (s *Server) json(w http.ResponseWriter, status int, data any) {
@@ -298,7 +309,10 @@ func (s *Server) createClient(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name string `json:"name"`
 	}
-	_ = json.NewDecoder(r.Body).Decode(&req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err.Error() != "EOF" {
+		s.fail(w, 400, "invalid JSON")
+		return
+	}
 	if req.Name == "" {
 		req.Name = "client-" + uuid.New().String()[:8]
 	}
@@ -435,6 +449,25 @@ func main() {
 	}
 
 	srv := &Server{cfg: cfg, store: newStore(cfg.StoreFile), params: params}
+	httpSrv := &http.Server{
+		Addr:              cfg.ListenAddr,
+		Handler:           srv,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 	log.Printf("[awg] listening on %s (iface=%s)", cfg.ListenAddr, cfg.Interface)
-	log.Fatal(http.ListenAndServe(cfg.ListenAddr, srv))
+	go func() {
+		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	// Graceful shutdown so a deploy/restart lets in-flight requests finish.
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+	log.Println("[awg] shutdown signal received")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	_ = httpSrv.Shutdown(shutdownCtx)
+	log.Println("[awg] stopped")
 }

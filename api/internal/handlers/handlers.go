@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -56,6 +57,18 @@ func (h *Handler) writeOK(w http.ResponseWriter, data any) {
 
 func (h *Handler) writeError(w http.ResponseWriter, code int, errorCode, message string) {
 	h.writeJSON(w, code, Response{Status: false, StatusCode: code, ErrorCode: errorCode, Message: message})
+}
+
+// validInternalToken reports whether the request carries the expected internal
+// secret (X-Internal-Token) for this endpoint, compared in constant time so the
+// token can't be recovered byte-by-byte from response timing. Each internal
+// caller (connect, bot) has its own token. Empty configured token = deny.
+func (h *Handler) validInternalToken(r *http.Request, want string) bool {
+	if want == "" {
+		return false
+	}
+	got := r.Header.Get("X-Internal-Token")
+	return subtle.ConstantTimeCompare([]byte(got), []byte(want)) == 1
 }
 
 func readJSON(r *http.Request, dst any) error {

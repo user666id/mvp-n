@@ -21,7 +21,7 @@ import { useT } from '../lib/i18n'
 import { plural } from '../lib/format'
 import { configMeta, configListLabel } from '../lib/configMeta'
 
-export function ConfigsScreen({ onMenu }: { onMenu: () => void }) {
+export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () => void }) {
   const { t, lang } = useT()
   const toast = useToast()
   const [configs, setConfigs] = useState<Config[]>([])
@@ -41,9 +41,12 @@ export function ConfigsScreen({ onMenu }: { onMenu: () => void }) {
     }
   }, [toast, t])
 
+  // Refresh whenever this tab becomes active. The screen stays mounted across
+  // tab switches (App toggles visibility), so this is a background refresh that
+  // keeps the existing list on screen — no blank skeleton on every switch.
   useEffect(() => {
-    load()
-  }, [load])
+    if (active) load()
+  }, [active, load])
 
   const detail = configs.find((c) => c.id === detailId) ?? null
 

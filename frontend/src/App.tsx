@@ -93,18 +93,27 @@ export default function App() {
       )}
       {phase === 'main' && (
         <>
-          {tab === 'configs' && <ConfigsScreen onMenu={() => setDrawerOpen(true)} />}
-          {tab === 'options' && (
+          {/* Keep all tabs MOUNTED and just toggle visibility, so switching tabs
+              doesn't unmount + reload a screen from a blank skeleton every time.
+              Each screen refreshes itself in the background when it becomes active. */}
+          <div className={tab === 'configs' ? undefined : 'hidden'}>
+            <ConfigsScreen active={tab === 'configs'} onMenu={() => setDrawerOpen(true)} />
+          </div>
+          <div className={tab === 'options' ? undefined : 'hidden'}>
             <PlaceholderScreen
               title={t('tab.options')}
               icon={<Sliders size={40} />}
               text={t('options.soon')}
               onMenu={() => setDrawerOpen(true)}
             />
-          )}
-          {tab === 'settings' && (
-            <SettingsScreen onLogout={handleLogout} onMenu={() => setDrawerOpen(true)} />
-          )}
+          </div>
+          <div className={tab === 'settings' ? undefined : 'hidden'}>
+            <SettingsScreen
+              active={tab === 'settings'}
+              onLogout={handleLogout}
+              onMenu={() => setDrawerOpen(true)}
+            />
+          </div>
           <Drawer
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}

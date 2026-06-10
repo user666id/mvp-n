@@ -51,6 +51,9 @@ docker compose up -d --build
 
 - **Go:** обязателен `gofmt` (CI падает на неформатированных файлах) + `go vet`.
   Перед коммитом: `gofmt -w api connect awg-server`.
+- **Тесты:** `go test ./...` в каждом Go-модуле (гоняется в CI). Локально под
+  Go 1.26 линковка `api` падает на зависимости xray/sing — используй
+  `GOTOOLCHAIN=go1.22.12 go test ./...` (Go сам скачает тулчейн 1.22).
 - **Frontend/bot (TS):** должен проходить `tsc --noEmit`. Сборка фронта —
   `npm run build` (включает type-check).
 - Тексты в Mini App — только через i18n (`t('key')`), без захардкоженных строк.
@@ -63,9 +66,12 @@ GitHub Actions на каждый push в `main` и PR:
 
 | Workflow | Что проверяет |
 |----------|---------------|
-| **Lint** | `gofmt`, `go vet` (api/connect/awg-server), `tsc --noEmit` (frontend) |
+| **Lint** | `gofmt`, `go vet` + `go test` (api/connect/awg-server), `tsc --noEmit` (frontend) |
 | **Build** | `go build` каждого сервиса, `npm run build` фронта |
-| **Deploy** | по push в `main` — деплой на VPS |
+| **Deploy** | по push в `main` — SSH на VPS, `git reset --hard` + `scripts/deploy.sh` |
+
+> VPS тянет код с GitHub по read-only **deploy key** (SSH через порт 443:
+> `ssh://git@ssh.github.com:443/...`), не по встроенному в remote токену.
 
 > Go-модули обязаны иметь актуальный `go.sum` (`go mod tidy`) — иначе
 > `go build` в CI падает с «missing go.sum entry».

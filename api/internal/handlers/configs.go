@@ -30,7 +30,7 @@ func env(key, fallback string) string {
 // Enhanced → port 43001, REALITY+XHTTP, no Vision flow.
 // GameMode → strip flow (lower latency, no Vision).
 func buildURI(clientUUID, location string, enhanced, gameMode bool) string {
-	serverIP := env("SERVER_IP", "<origin-ip>")
+	serverIP := env("SERVER_IP", "")
 	pbk := env("XRAY_PUBLIC_KEY", "")
 	sid := env("XRAY_SHORT_ID", "")
 
@@ -469,21 +469,6 @@ func (h *Handler) GetByShortID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write([]byte(buildURI(clientUUID.String, location, enhanced, gameMode) + "\n"))
-}
-
-// ── Sub-config stubs (not implemented) ───────────────────────────────────────
-
-func (h *Handler) GetSubconfig(w http.ResponseWriter, r *http.Request) {
-	h.writeError(w, 404, "NOT_FOUND", "")
-}
-func (h *Handler) CreateSubconfig(w http.ResponseWriter, r *http.Request) {
-	h.writeError(w, 501, "NOT_IMPLEMENTED", "")
-}
-func (h *Handler) UpdateSubconfig(w http.ResponseWriter, r *http.Request) {
-	h.writeError(w, 501, "NOT_IMPLEMENTED", "")
-}
-func (h *Handler) DeleteSubconfig(w http.ResponseWriter, r *http.Request) {
-	h.writeError(w, 501, "NOT_IMPLEMENTED", "")
 }
 
 func genShortID() string {

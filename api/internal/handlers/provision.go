@@ -29,7 +29,7 @@ type ProvisionRequest struct {
 // the shared ADMIN_TOKEN. On any xray failure it falls back to the config's
 // own UUID so the device keeps working.
 func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
-	if h.Config.AdminToken == "" || r.Header.Get("X-Internal-Token") != h.Config.AdminToken {
+	if !h.validInternalToken(r, h.Config.ConnectInternalToken) {
 		h.writeError(w, 401, "UNAUTHORIZED", "")
 		return
 	}
@@ -133,10 +133,30 @@ func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
 			req.IP, os, devID)
 	default:
 		// New device → enforce the device limit, then mint a UUID + register in xray.
+		//
+		// The count-check and the insert run in ONE transaction that first locks
+		// the owner's users row (FOR UPDATE). Without that lock two simultaneous
+		// provisions for the same user could both read "count < limit" before
+		// either inserts (TOCTOU) and overshoot the limit. The lock serialises
+		// them, so the second request sees the first's row in its own count.
+		tx, err := h.DB.BeginTx(r.Context(), nil)
+		if err != nil {
+			h.writeError(w, 500, "DB_ERROR", err.Error())
+			return
+		}
+		defer tx.Rollback()
+
+		if _, err := tx.ExecContext(r.Context(), `SELECT 1 FROM users WHERE id = $1 FOR UPDATE`, userID); err != nil {
+			h.writeError(w, 500, "DB_ERROR", err.Error())
+			return
+		}
 		if deviceLimit > 0 {
 			var cnt int
-			_ = h.DB.QueryRowContext(r.Context(),
-				`SELECT COUNT(*) FROM devices WHERE user_id = $1 AND is_blocked = false`, userID).Scan(&cnt)
+			if err := tx.QueryRowContext(r.Context(),
+				`SELECT COUNT(*) FROM devices WHERE user_id = $1 AND is_blocked = false`, userID).Scan(&cnt); err != nil {
+				h.writeError(w, 500, "DB_ERROR", err.Error())
+				return
+			}
 			if cnt >= deviceLimit {
 				h.writeError(w, 403, "LIMIT", "device limit reached")
 				return
@@ -155,16 +175,20 @@ func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
 			uuidStr, emailStr = clientUUID.String, ""
 		}
 		if found {
-			_, _ = h.DB.ExecContext(r.Context(),
+			_, _ = tx.ExecContext(r.Context(),
 				`UPDATE devices SET vpn_uuid=$1, vpn_email=$2, ip=$3, last_seen=NOW(), os=COALESCE(NULLIF($4,''), os) WHERE id=$5`,
 				uuidStr, emailStr, req.IP, os, devID)
 		} else {
-			_, _ = h.DB.ExecContext(r.Context(),
+			_, _ = tx.ExecContext(r.Context(),
 				`INSERT INTO devices (user_id, name, client, ip, vpn_uuid, vpn_email, device_uid, os, last_seen)
 				 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())`,
 				userID, name, req.Client, req.IP, uuidStr, emailStr,
 				sql.NullString{String: uid, Valid: uid != ""},
 				sql.NullString{String: os, Valid: os != ""})
+		}
+		if err := tx.Commit(); err != nil {
+			h.writeError(w, 500, "DB_ERROR", err.Error())
+			return
 		}
 	}
 

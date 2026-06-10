@@ -8,19 +8,28 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	_ "github.com/lib/pq"
 )
+
+// secureCompare reports whether two secrets are equal in constant time, so a
+// remote caller can't recover the token byte-by-byte from response timing.
+func secureCompare(a, b string) bool {
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -208,9 +217,15 @@ func (s *server) recordDeviceVisit(userID int64, r *http.Request) {
 		return
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
+		// ON CONFLICT DO NOTHING: two concurrent first-visits can both reach this
+		// insert (update-first found no row yet for either). The partial unique
+		// index devices_uid_uniq makes the race loser conflict instead of creating
+		// a duplicate row; losing the one redundant insert is fine — the next
+		// refresh lands in the UPDATE branch.
 		_, err = s.db.ExecContext(ctx, `
 			INSERT INTO devices (user_id, name, client, ip, device_uid, os, last_seen)
 			VALUES ($1, $2, $3, $4, $5, $6, NOW())
+			ON CONFLICT DO NOTHING
 		`, userID, name, client, ip, sql.NullString{String: uid, Valid: uid != ""},
 			sql.NullString{String: os, Valid: os != ""})
 		if err != nil {
@@ -424,7 +439,7 @@ func (s *server) requireAdmin(r *http.Request) bool {
 		return false
 	}
 	tok := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	return tok == s.cfg.AdminToken
+	return secureCompare(tok, s.cfg.AdminToken)
 }
 
 func (s *server) handleAdminCreate(w http.ResponseWriter, r *http.Request) {
@@ -438,7 +453,10 @@ func (s *server) handleAdminCreate(w http.ResponseWriter, r *http.Request) {
 		VlessURI string `json:"vless_uri"`
 		Location string `json:"location"`
 	}
-	_ = json.NewDecoder(r.Body).Decode(&req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON", 400)
+		return
+	}
 	if req.ShortID == "" || req.VlessURI == "" || req.UserID == 0 {
 		http.Error(w, "short_id, user_id, vless_uri required", 400)
 		return
@@ -523,7 +541,20 @@ func main() {
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	if err := srv.ListenAndServe(); err != nil {
-		log.Fatal(err)
-	}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	// Graceful shutdown: on SIGINT/SIGTERM let in-flight subscription requests
+	// finish before the process exits, so a deploy/restart doesn't cut clients off.
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+	log.Println("connect: shutdown signal received")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	_ = srv.Shutdown(shutdownCtx)
+	log.Println("connect: stopped")
 }

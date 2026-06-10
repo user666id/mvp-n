@@ -15,7 +15,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		"statusCode": 200,
 		"data": map[string]any{
 			"service": "api",
-			"version": "1.0.0",
+			"version": "1.2.0",
 			"uptime":  int(time.Since(startTime).Seconds()),
 		},
 	})

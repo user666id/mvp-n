@@ -19,10 +19,18 @@ type Config struct {
 	DatabaseURL string
 
 	// Auth
-	JWTSecret  string
-	BotToken   string
-	AdminTGIDs []int64
-	AdminToken string // shared secret for internal endpoints (connect → api)
+	JWTSecret     string
+	JWTSecretPrev string // previous JWT secret, accepted during rotation (verify-only)
+	BotToken      string
+	AdminTGIDs    []int64
+	AdminToken    string // legacy shared secret for internal endpoints (fallback)
+
+	// Per-service internal tokens. Each caller of an /internal/* endpoint gets
+	// its own secret, so a leaked token compromises one integration, not all of
+	// them, and each can be rotated independently. Both fall back to the legacy
+	// shared ADMIN_TOKEN so existing deployments keep working untouched.
+	ConnectInternalToken string // connect → POST /internal/provision
+	BotInternalToken     string // bot → GET /internal/user-lang
 
 	// Downstream services
 	AWGApiURL   string
@@ -38,18 +46,21 @@ type Config struct {
 // Load reads configuration from env. Required vars cause a clear error.
 func Load() (*Config, error) {
 	c := &Config{
-		Port:         getenv("PORT", "8081"),
-		DatabaseURL:  os.Getenv("DATABASE_URL"),
-		JWTSecret:    os.Getenv("JWT_SECRET"),
-		BotToken:     os.Getenv("BOT_TOKEN"),
-		AdminTGIDs:   parseIDs(os.Getenv("ADMIN_TG_IDS")),
-		AdminToken:   os.Getenv("ADMIN_TOKEN"),
-		AWGApiURL:    getenv("AWG_API_URL", "http://127.0.0.1:8080"),
-		AWGApiToken:  os.Getenv("AWG_API_TOKEN"),
-		XrayAPIHost:  getenv("XRAY_API_HOST", "127.0.0.1"),
-		XrayAPIPort:  getenv("XRAY_API_PORT", "10085"),
-		ConnectURL:   getenv("CONNECT_URL", "http://127.0.0.1:3000"),
-		NetInterface: getenv("NET_INTERFACE", ""),
+		Port:                 getenv("PORT", "8081"),
+		DatabaseURL:          os.Getenv("DATABASE_URL"),
+		JWTSecret:            os.Getenv("JWT_SECRET"),
+		JWTSecretPrev:        os.Getenv("JWT_SECRET_PREVIOUS"),
+		BotToken:             os.Getenv("BOT_TOKEN"),
+		AdminTGIDs:           parseIDs(os.Getenv("ADMIN_TG_IDS")),
+		AdminToken:           os.Getenv("ADMIN_TOKEN"),
+		ConnectInternalToken: getenv("INTERNAL_TOKEN_CONNECT", os.Getenv("ADMIN_TOKEN")),
+		BotInternalToken:     getenv("INTERNAL_TOKEN_BOT", os.Getenv("ADMIN_TOKEN")),
+		AWGApiURL:            getenv("AWG_API_URL", "http://127.0.0.1:8080"),
+		AWGApiToken:          os.Getenv("AWG_API_TOKEN"),
+		XrayAPIHost:          getenv("XRAY_API_HOST", "127.0.0.1"),
+		XrayAPIPort:          getenv("XRAY_API_PORT", "10085"),
+		ConnectURL:           getenv("CONNECT_URL", "http://127.0.0.1:3000"),
+		NetInterface:         getenv("NET_INTERFACE", ""),
 	}
 	switch {
 	case c.DatabaseURL == "":
@@ -184,16 +195,9 @@ ALTER TABLE vpn_configs ADD COLUMN IF NOT EXISTS game_mode     BOOLEAN NOT NULL 
 ALTER TABLE vpn_configs ADD COLUMN IF NOT EXISTS awg_client_id VARCHAR(64);
 ALTER TABLE vpn_configs ADD COLUMN IF NOT EXISTS awg_conf      TEXT;
 
-CREATE TABLE IF NOT EXISTS subconfigs (
-    id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    config_id   UUID         NOT NULL REFERENCES vpn_configs(id) ON DELETE CASCADE,
-    protocol    VARCHAR(32)  NOT NULL,
-    host        VARCHAR(255) NOT NULL,
-    port        INT          NOT NULL,
-    login       VARCHAR(255),
-    password    VARCHAR(255),
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
+-- subconfigs was scaffolded for a multi-protocol-per-config feature that was
+-- never built (the endpoints only ever returned 404/501). Drop the unused table.
+DROP TABLE IF EXISTS subconfigs;
 
 CREATE TABLE IF NOT EXISTS devices (
     id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -230,6 +234,19 @@ ALTER TABLE devices ADD COLUMN IF NOT EXISTS device_uid   VARCHAR(128);
 -- label (real model when known, else the OS); os always holds just the OS so the
 -- UI can show "{model}" on top and "{OS} · {launcher}" below at the same time.
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS os           VARCHAR(32);
+-- The subscription upsert is "UPDATE first, else INSERT", which can race two
+-- concurrent refreshes into duplicate rows. Enforce uniqueness at the DB level
+-- for the launcher-install-id path (Happ's device_uid) so a race can't create a
+-- duplicate. First drop any existing dupes, keeping the newest row per identity.
+DELETE FROM devices d USING devices d2
+ WHERE d.user_id = d2.user_id
+   AND COALESCE(d.client, '') = COALESCE(d2.client, '')
+   AND d.device_uid IS NOT NULL AND d2.device_uid IS NOT NULL
+   AND d.device_uid = d2.device_uid
+   AND d.id < d2.id;
+CREATE UNIQUE INDEX IF NOT EXISTS devices_uid_uniq
+  ON devices (user_id, COALESCE(client, ''), device_uid)
+  WHERE device_uid IS NOT NULL;
 -- Geolocation/ISP detection was removed (inaccurate over the VPN tunnel — the
 -- source IP is the server's). Drop the now-unused columns.
 ALTER TABLE devices DROP COLUMN IF EXISTS city;

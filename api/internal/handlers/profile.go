@@ -423,7 +423,7 @@ func (h *Handler) SetLanguage(w http.ResponseWriter, r *http.Request) {
 // user hasn't chosen one — the caller then falls back to language_code.
 // Secured with the shared ADMIN_TOKEN (X-Internal-Token header).
 func (h *Handler) UserLang(w http.ResponseWriter, r *http.Request) {
-	if h.Config.AdminToken == "" || r.Header.Get("X-Internal-Token") != h.Config.AdminToken {
+	if !h.validInternalToken(r, h.Config.BotInternalToken) {
 		h.writeError(w, 401, "UNAUTHORIZED", "")
 		return
 	}
@@ -445,8 +445,8 @@ func (h *Handler) UserLang(w http.ResponseWriter, r *http.Request) {
 //
 //  1. For every active config of the user — call xray.RemoveUser
 //     so the VLESS user immediately stops working in xray.
-//  2. DELETE FROM users — CASCADE removes vpn_configs, subconfigs and
-//     devices. access_keys.used_by is SET NULL.
+//  2. DELETE FROM users — CASCADE removes vpn_configs and devices.
+//     access_keys.used_by is SET NULL.
 //  3. connect.mvp-n.net/to/:id will return 404 after the row is gone
 //     → launcher displays the subscription as broken/removed.
 //

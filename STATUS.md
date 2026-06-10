@@ -11,7 +11,7 @@
   - `:43001` — VLESS + REALITY + XHTTP (Усиленный, маскировка под HTTPS, `mode=packet-up`).
 - Один UUID зарегистрирован в обоих inbound'ах — смена режима мгновенна.
 - REALITY `dest=www.microsoft.com:443`, SNI в URI пустой.
-- gRPC management API на `127.0.0.1:10085` (AddUser / RemoveUser / GetStats).
+- gRPC management API на `:10085`, привязан к docker-бриджу (не на публичном интерфейсе) + UFW deny снаружи (AddUser / RemoveUser / GetStats).
 
 ### AmneziaWG
 
@@ -31,8 +31,17 @@
 - **Configs:** создать (VLESS / AWG), список, детали, переименовать, режим, удалить, серверные метрики, AWG-статистика.
 - **Profile:** аккаунт, устройства (VLESS + AWG), переименование/блок/разблок/удаление устройств, лимит устройств, сброс подписки (полная очистка конфигов и устройств), язык UI, удаление аккаунта.
 - **Admin:** выпуск/список/отзыв ключей, профили (+трафик всего/за сегодня), карточка профиля, устройства профиля, блок/разблок, удаление профиля.
-- **Internal:** `/internal/provision` (connect→api), `/internal/user-lang` (бот→api).
+- **Internal:** `/internal/provision` (connect→api), `/internal/user-lang` (бот→api). Токен на каждый сервис (`INTERNAL_TOKEN_CONNECT`/`INTERNAL_TOKEN_BOT`), сравнение constant-time.
 - **Cron:** сбор `server_metrics` (CPU/RAM/сеть) и трафика (xray gRPC → `users.traffic_used`, дневной агрегат `traffic_daily` по МСК).
+
+## Безопасность
+
+- Constant-time сравнение всех внутренних токенов; раздельный токен на каждый сервис.
+- Rate limiting по IP на `/auth/token` (60/мин) и `/auth/key` (20/мин) — защита от перебора ключей.
+- Отзыв JWT: на каждом запросе проверяется владелец (заблокированные/удалённые отсекаются), несмотря на 30-дневный срок токена. Ротация секрета через `JWT_SECRET_PREVIOUS`.
+- Параметризованные SQL, проверка HMAC-подписи `initData`, лимит устройств под блокировкой строки (без гонки), уникальный индекс устройств.
+- nginx: HSTS, `X-Content-Type-Options`, CSP `frame-ancestors` (Telegram), `client_max_body_size`. Контейнеры под лимитами CPU/RAM, Go-сервисы не от root.
+- Тесты: парсер User-Agent, проверка `initData`, учёт трафика, ротация JWT — гоняются в CI (`go test ./...`).
 
 ## Mini App (React 18 + TS + Tailwind)
 
@@ -47,7 +56,7 @@
 
 - Docker Compose: postgres, api, connect, awg-server, bot, db-backup (ежедневный `pg_dump` с ротацией).
 - nginx `:443` (ssl_preread SNI-роутер) + Cloudflare Origin Cert. VPN-трафик идёт мимо nginx, напрямую на xray/AmneziaWG.
-- CI/CD: GitHub Actions (lint + build + deploy по push в `main`); деплой пересобирает только изменившиеся сервисы и реконсилит стек при изменении compose.
+- CI/CD: GitHub Actions (lint + `go test` + build + deploy по push в `main`); деплой пересобирает только изменившиеся сервисы и реконсилит стек при изменении compose. VPS тянет код по SSH-deploy-key (порт 443).
 - Бот `@mvp_n_net_bot`: `/start` → кнопка Mini App; только личные чаты; язык синхронизирован с приложением.
 
 ## Ограничения

@@ -36,4 +36,5 @@
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Локальный запуск, стиль кода, CI, деплой |
 | [STATUS.md](../STATUS.md) | Текущий статус компонентов |
 | [ROADMAP.md](../ROADMAP.md) | План развития |
+| [CHANGELOG.md](../CHANGELOG.md) | История версий (SemVer) |
 | [.env.example](../.env.example) | Все переменные окружения |

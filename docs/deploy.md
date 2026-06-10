@@ -8,179 +8,148 @@
 ## Что происходит при пуше в `main`
 
 ```
-1. GitHub видит коммит → запускает workflow .github/workflows/deploy.yml
-2. Workflow определяет какие папки изменились (api/, connect/, bot/, frontend/, nginx/)
-3. SSH на VPS под user "mvpn"
-4. git pull → reset --hard origin/main
-5. docker compose up -d --build <только изменённые сервисы>
-6. Если изменился frontend/ — пересобираем dist/ и rsync в /var/www/mini-app/
-7. Если изменился nginx/ — копируем конфиг и reload
-8. curl /health на api и connect — проверка
-9. Summary в GitHub Actions UI
+1. GitHub запускает .github/workflows/deploy.yml
+2. Workflow по SSH заходит на VPS под root (appleboy/ssh-action)
+3. cd /opt/mvpn && git fetch origin main && git reset --hard origin/main
+4. bash scripts/deploy.sh <before_sha>:
+   ├─ определяет изменённые папки (api/ connect/ bot/ awg-server/ frontend/)
+   ├─ docker compose up -d --build <только изменённые сервисы>
+   ├─ если изменился docker-compose.yml — реконсиляция стека (--remove-orphans)
+   ├─ если изменился frontend/ — сборка в node:20 и rsync в /var/www/mini-app-f7/
+   └─ docker prune + health-probe (curl /health на api и connect)
 ```
 
-Время деплоя:
-- Только бэкенд (Go) → ~30 секунд
-- + Frontend → +1 минута
-- Полная пересборка (xray-core deps) → ~5 минут
+VPS тянет код с GitHub по read-only **deploy key** (SSH через порт 443 —
+исходящий 22 на VPS закрыт): remote = `ssh://git@ssh.github.com:443/...`,
+ключ `/root/.ssh/github_deploy` прописан в `git config core.sshCommand`.
+
+> **nginx деплой НЕ трогает.** Конфиг nginx ведётся на VPS вручную; репозиторный
+> [`nginx/`](../nginx) — зеркало для справки. Менять — руками (`nginx -t` → reload).
+
+Время деплоя: только Go ~30 c · + frontend ~+1 мин · полная пересборка ~5 мин.
 
 ---
 
 ## Первоначальная настройка VPS (один раз)
 
-### Шаг 1 — Установить базу
+### Шаг 1 — База
 
 ```bash
-# Ubuntu 22.04 LTS — нужны docker, git, nginx
+# Ubuntu 22.04 LTS
 curl -fsSL https://get.docker.com | sh
-apt install git nginx
+apt install -y git nginx
 ```
 
-### Шаг 2 — Запустить bootstrap
+### Шаг 2 — Bootstrap (под root)
 
 ```bash
-# На VPS под root
 cd /tmp
 wget https://raw.githubusercontent.com/user666id/vpn-project/main/scripts/setup-deploy.sh
 chmod +x setup-deploy.sh
-sudo ./setup-deploy.sh
+./setup-deploy.sh
 ```
 
-Скрипт сделает:
-- Создаст deploy-юзера `mvpn` с правом sudo на nginx-reload + rsync
-- Сгенерирует SSH-keypair (ed25519)
-- Положит public key в `authorized_keys`
-- Склонирует репозиторий в `/opt/mvpn`
-- Создаст `/var/www/mini-app/` для фронтенда
-- **Выведет приватный ключ в терминал** — его нужно сохранить в GitHub Secrets
+Скрипт: склонирует репозиторий в `/opt/mvpn`, создаст web-root
+`/var/www/mini-app-f7/`, сгенерирует SSH-ключ для входа GitHub Actions
+(в `~/.ssh/authorized_keys`) и подскажет, как добавить его в GitHub Secrets.
+Приватный ключ **не печатается** в терминал — копируется из файла.
 
-### Шаг 3 — Добавить GitHub Secrets
+### Шаг 3 — Deploy key для доступа VPS → GitHub
 
-Зайти: <https://github.com/user666id/vpn-project/settings/secrets/actions>
+Чтобы `git fetch` на VPS работал без протухающих токенов:
 
-Создать секреты (`Repository secrets → New secret`):
+```bash
+ssh-keygen -t ed25519 -f /root/.ssh/github_deploy -N "" -C "mvpn-vps-deploy"
+cat /root/.ssh/github_deploy.pub    # → добавить как read-only Deploy key:
+# https://github.com/user666id/vpn-project/settings/keys
 
-| Имя | Значение | Откуда взять |
-|-----|----------|--------------|
-| `VPS_HOST` | IP сервера, например `<origin-ip>` | напечатает bootstrap |
-| `VPS_USER` | `mvpn` | напечатает bootstrap |
-| `VPS_PORT` | `22` (или твой нестандартный) | сам решаешь |
-| `VPS_SSH_KEY` | приватный ed25519 ключ полностью с `-----BEGIN-----` / `-----END-----` | напечатает bootstrap |
+cd /opt/mvpn
+git remote set-url origin ssh://git@ssh.github.com:443/user666id/vpn-project.git
+git config core.sshCommand "ssh -i /root/.ssh/github_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+git fetch origin main   # проверка
+```
 
-### Шаг 4 — Создать `.env` на VPS
+Порт 443 (а не 22) — потому что исходящий SSH-порт 22 на VPS обычно закрыт.
+
+### Шаг 4 — GitHub Secrets
+
+<https://github.com/user666id/vpn-project/settings/secrets/actions>
+
+| Имя | Значение |
+|-----|----------|
+| `VPS_HOST` | IP сервера, например `203.0.113.10` |
+| `VPS_USER` | `root` |
+| `VPS_PORT` | `22` (или нестандартный SSH-порт входа) |
+| `VPS_SSH_KEY` | приватный ключ из шага 2 (для входа Actions на VPS) |
+
+### Шаг 5 — `.env` на VPS
+
+```bash
+cd /opt/mvpn && cp .env.example .env && nano .env
+```
+
+Обязательные (стек не стартует без них): `POSTGRES_PASSWORD`, `JWT_SECRET`,
+`BOT_TOKEN`, `ADMIN_TG_IDS`, `AWG_API_TOKEN`, `SERVER_IP`. REALITY-параметры
+`XRAY_PUBLIC_KEY` / `XRAY_SHORT_ID` (из `scripts/install/xray.sh`) — иначе ссылки
+выдаются с пустым `pbk/sid`. Внутренние токены: `INTERNAL_TOKEN_CONNECT` и
+`INTERNAL_TOKEN_BOT` (или legacy `CONNECT_ADMIN_TOKEN`). `MINI_APP_URL` —
+обязательно с путём `/v2/`. Генерация секрета: `openssl rand -hex 24`.
+
+### Шаг 6 — Первый запуск
 
 ```bash
 cd /opt/mvpn
-nano .env
-```
-
-Содержимое (поменяй секреты):
-
-```env
-POSTGRES_PASSWORD=сгенерируй_рандомное_30_символов
-JWT_SECRET=сгенерируй_рандомное_32_символа
-ADMIN_TOKEN=сгенерируй_рандомное_32_символа
-
-BOT_TOKEN=12345:ABC-полный-токен-от-BotFather
-ADMIN_TG_IDS=123456789
-AWG_API_TOKEN=сгенерируй_рандомное_32_символа
-
-PROFILE_TITLE=mvp-n
-SUPPORT_URL=https://t.me/mvp_n_net_bot
-MINI_APP_URL=https://app.mvp-n.net
-API_URL=https://gw.mvp-n.net
-CONNECT_ADMIN_TOKEN=можно_тот_же_что_ADMIN_TOKEN
-```
-
-Генерация рандомных секретов:
-```bash
-openssl rand -hex 16   # → 32 hex символа
-```
-
-### Шаг 5 — Запустить первый раз вручную
-
-```bash
-cd /opt/mvpn
-sudo -u mvpn docker compose up -d --build
+docker compose up -d --build
 sleep 30
-curl http://localhost:8081/health
-curl http://localhost:3000/health
+curl http://localhost:8081/health && curl http://localhost:3000/health
 ```
 
-Если оба ответили `{"status":true}` → готово.
-
-### Шаг 6 — Запустить деплой
-
-Пушни любое изменение в `main` или нажми **Run workflow** в:
-<https://github.com/user666id/vpn-project/actions/workflows/deploy.yml>
+Оба ответили `{"status":true}` → пушим в `main` (или **Run workflow**) для автодеплоя.
 
 ---
 
 ## Проверка деплоя
 
-### В GitHub UI
-1. Открыть Actions: <https://github.com/user666id/vpn-project/actions>
-2. Видна история запусков с зелёным / красным статусом
-3. Клик по запуску → детальные логи
-
-### На VPS
 ```bash
-# Последние операции git
-cd /opt/mvpn && git log --oneline -5
-
-# Статус контейнеров
-docker compose ps
-
-# Логи последнего деплоя
+# GitHub: Actions → история запусков с логами
+cd /opt/mvpn && git log --oneline -5     # последние коммиты на VPS
+docker compose ps                         # статус контейнеров
 docker compose logs --tail 50 api
-docker compose logs --tail 50 connect
 ```
 
 ---
 
-## Откат если что-то сломалось
+## Откат
 
-### Вариант А — Revert коммит в GitHub
 ```bash
-git revert <bad_commit_sha>
-git push
-# деплой запустится автоматически и откатит
-```
+# Вариант А — revert коммит, деплой откатит автоматически
+git revert <bad_sha> && git push
 
-### Вариант Б — Руками на VPS
-```bash
-cd /opt/mvpn
-git log --oneline -10                    # найти предпоследний рабочий коммит
-git reset --hard <good_commit_sha>
-sudo -u mvpn docker compose up -d --build
+# Вариант Б — руками на VPS
+cd /opt/mvpn && git reset --hard <good_sha> && docker compose up -d --build
 ```
 
 ---
 
 ## Безопасность
 
-- **Приватный ключ деплоя** хранится только в GitHub Secrets — никогда в репозитории
-- `.env` на VPS — права 600, никогда не коммитится
-- Deploy-юзер `mvpn` имеет sudo **только** на `nginx -t / reload / cp + rsync`. Никакого root-доступа
-- Workflow запускается **только** на `main` (не на feature-ветках)
-- `concurrency: cancel-in-progress: false` — никогда не прерываем уже идущий деплой
+- Два ключа: вход Actions → VPS (`VPS_SSH_KEY`, в GitHub Secrets) и доступ
+  VPS → GitHub (read-only deploy key, только на VPS). Оба — только SSH, не пароли.
+- Deploy key **read-only** — скомпрометированный ключ не даёт писать в репозиторий.
+- `.env` на VPS — права 600, не коммитится. Токенов/ключей/сертификатов в репо нет.
+- Workflow только на `main`; `concurrency: cancel-in-progress: false` — идущий
+  деплой не прерывается.
+
+## Ротация ключей
+
+- **Вход Actions:** перегенерировать ключ на VPS, обновить `VPS_SSH_KEY` в Secrets,
+  заменить старый в `~/.ssh/authorized_keys`.
+- **Deploy key:** удалить старый в *Settings → Deploy keys*, добавить новый pubkey,
+  обновить `/root/.ssh/github_deploy`.
 
 ---
 
-## Что если SSH-ключ скомпрометирован
+## Branch protection (рекомендуется)
 
-1. На VPS: удалить публичный ключ из `~/.ssh/authorized_keys`
-2. Запустить `scripts/setup-deploy.sh` снова → сгенерирует новый
-3. Обновить `VPS_SSH_KEY` в GitHub Secrets
-
----
-
-## Branch protection (рекомендую)
-
-В GitHub: **Settings → Branches → Add branch protection rule**:
-- Branch: `main`
-- ☑ Require status checks to pass before merging
-  - Required checks: `Go lint`, `Frontend lint`, `Go build`, `Frontend build`
-- ☑ Require pull request before merging
-
-Так нельзя случайно запушить сломанный код в `main` — он сначала проверится CI.
+**Settings → Branches → Add rule** для `main`: require status checks
+(`Go lint`, `Frontend lint`, `Go build`, `Frontend build`) + require PR.

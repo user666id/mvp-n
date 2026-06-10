@@ -24,6 +24,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Caps (not reservations): a runaway process can't starve the host. Sized
+    # well above normal usage; bump if the workload grows.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
 
   api:
     build: ./api
@@ -46,11 +53,18 @@ services:
       CONNECT_URL:    http://connect:3000
       # REALITY params baked into the VLESS URI by the API. MUST be passed in or
       # the link gets empty pbk/sid and clients fail with "empty password".
-      SERVER_IP:        ${SERVER_IP:-<origin-ip>}
+      SERVER_IP:        ${SERVER_IP:?SERVER_IP required}
       XRAY_PUBLIC_KEY:  ${XRAY_PUBLIC_KEY:-}
       XRAY_SHORT_ID:    ${XRAY_SHORT_ID:-}
-      # shared secret for the internal provisioning endpoint (connect → api)
+      # Per-service internal tokens (X-Internal-Token). Each internal caller has
+      # its own secret so a leak compromises one integration, not all of them.
+      # ADMIN_TOKEN stays as the legacy fallback for deployments that haven't
+      # set the per-service tokens yet.
+      INTERNAL_TOKEN_CONNECT: ${INTERNAL_TOKEN_CONNECT:-}
+      INTERNAL_TOKEN_BOT:     ${INTERNAL_TOKEN_BOT:-}
       ADMIN_TOKEN:      ${CONNECT_ADMIN_TOKEN:-}
+      # Previous JWT secret, accepted verify-only during a rotation window.
+      JWT_SECRET_PREVIOUS: ${JWT_SECRET_PREVIOUS:-}
     ports:
       - "127.0.0.1:8081:8081"
     volumes:
@@ -67,6 +81,11 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
 
   connect:
     build: ./connect
@@ -78,7 +97,8 @@ services:
     environment:
       PORT:           "3000"
       DATABASE_URL:   postgres://mvpn:${POSTGRES_PASSWORD}@postgres:5432/mvpn?sslmode=disable
-      ADMIN_TOKEN:    ${CONNECT_ADMIN_TOKEN:-}
+      # connect's own internal token, falling back to the legacy shared one.
+      ADMIN_TOKEN:    ${INTERNAL_TOKEN_CONNECT:-${CONNECT_ADMIN_TOKEN:-}}
       PROFILE_TITLE:  ${PROFILE_TITLE:-mvp-n}
       UPDATE_HOURS:   "12"
       SUPPORT_URL:    ${SUPPORT_URL:-https://t.me/mvp_n_net_bot}
@@ -90,6 +110,11 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
 
   awg-server:
     build: ./awg-server
@@ -107,6 +132,11 @@ services:
       - awg_data:/var/lib/awg-server
       # server keys + obfuscation params, written by scripts/install/amneziawg.sh
       - /etc/mvpn/awg-params.json:/etc/mvpn/awg-params.json:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128m
 
   bot:
     build: ./bot
@@ -117,7 +147,13 @@ services:
       MINI_APP_URL:  ${MINI_APP_URL:-https://app.mvp-n.net/v2/}
       # Read the user's in-app language choice so greetings match the Mini App.
       API_INTERNAL_URL: http://api:8081
-      ADMIN_TOKEN:      ${CONNECT_ADMIN_TOKEN:-}
+      # bot's own internal token, falling back to the legacy shared one.
+      ADMIN_TOKEN:      ${INTERNAL_TOKEN_BOT:-${CONNECT_ADMIN_TOKEN:-}}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
 
   # Automatic PostgreSQL backups with rotation (daily / weekly / monthly).
   # Dumps land in the db_backups volume; losing postgres_data no longer means
@@ -141,6 +177,11 @@ services:
       HEALTHCHECK_PORT:  "8080"
     volumes:
       - db_backups:/backups
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
 
 volumes:
   postgres_data:

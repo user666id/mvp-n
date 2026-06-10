@@ -44,7 +44,7 @@ Mini App. The bot is just the front door: it greets the user and hands them the
    keeps the API call out of the reply's critical path so `/start` stays fast.
 2. **Cache miss** → ask the API once:
    `GET {API_INTERNAL_URL}/internal/user-lang?tg_id=<id>`
-   with header `X-Internal-Token: <ADMIN_TOKEN>` and an **800 ms timeout**.
+   with header `X-Internal-Token: <ADMIN_TOKEN>` and a **2.5 s timeout**.
    - `lang = "en" | "ru"` → use it (the user picked this in the Mini App).
    - empty / error / timeout → fall back to the Telegram `language_code`.
 3. The resolved value is cached for the TTL. A language change in the app
@@ -83,7 +83,7 @@ the bot just uses `language_code` — so it degrades gracefully with no config.
 | `BOT_TOKEN` | да | Token from @BotFather — the **same** bot the API verifies `initData` against. |
 | `MINI_APP_URL` | — | Mini App URL; must match what nginx serves (default `https://app.mvp-n.net/v2/`). |
 | `API_INTERNAL_URL` | — | Internal API base for the language lookup (compose: `http://api:8081`). Unset → skip lookup. |
-| `ADMIN_TOKEN` | — | Shared secret for `/internal/*` endpoints (compose: `${CONNECT_ADMIN_TOKEN}`). Unset → skip lookup. |
+| `ADMIN_TOKEN` | — | Internal token for `/internal/user-lang` (compose: `${INTERNAL_TOKEN_BOT:-${CONNECT_ADMIN_TOKEN:-}}`). Unset → skip lookup. |
 
 ---
 

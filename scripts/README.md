@@ -25,7 +25,7 @@ sudo ./scripts/setup.sh
 scripts/
 ├── deploy.sh             # вызывается CI на VPS: пересборка изменившихся сервисов
 ├── setup.sh              # мастер-скрипт (apt, firewall, запуск install/*)
-├── setup-deploy.sh       # подготовка SSH-доступа для GitHub Actions deploy
+├── setup-deploy.sh       # bootstrap автодеплоя (root): clone, web-root, 2 SSH-ключа
 └── install/
     ├── xanmod.sh         # XanMod kernel + BBRv3
     ├── xray.sh           # Xray-core: 2 inbound'а REALITY + config.json + logrotate

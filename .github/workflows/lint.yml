@@ -37,6 +37,18 @@ jobs:
         working-directory: ./awg-server
         run: go vet ./...
 
+      - name: go test (api)
+        working-directory: ./api
+        run: go test ./...
+
+      - name: go test (connect)
+        working-directory: ./connect
+        run: go test ./...
+
+      - name: go test (awg-server)
+        working-directory: ./awg-server
+        run: go test ./...
+
   frontend:
     name: Frontend lint
     runs-on: ubuntu-latest

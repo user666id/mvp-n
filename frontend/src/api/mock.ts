@@ -11,7 +11,7 @@ function buildUri(id: string, enhanced: boolean, game: boolean) {
   const type = enhanced ? 'xhttp' : 'tcp'
   const xhttp = enhanced ? '&path=%2Fmvpn&mode=packet-up' : ''
   const flow = !enhanced && !game ? '&flow=xtls-rprx-vision' : ''
-  return `vless://${id}@<origin-ip>:${port}?type=${type}&security=reality&pbk=demoPublicKeyXXXXXXXXXXXXXXXXXXXXXXXXXXXX&sid=ab12${xhttp}${flow}&fp=chrome#%F0%9F%87%B3%F0%9F%87%B1%20mvp-n`
+  return `vless://${id}@203.0.113.10:${port}?type=${type}&security=reality&pbk=demoPublicKeyXXXXXXXXXXXXXXXXXXXXXXXXXXXX&sid=ab12${xhttp}${flow}&fp=chrome#%F0%9F%87%B3%F0%9F%87%B1%20mvp-n`
 }
 
 function makeConfig(over: Partial<Config> = {}): Config {

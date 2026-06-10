@@ -3,6 +3,7 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/json"
+	"io"
 	"net/http"
 	"time"
 )
@@ -22,7 +23,11 @@ type AdminCreateKeysRequest struct {
 // Default TTL: 12 hours from creation.
 func (h *Handler) AdminCreateKeys(w http.ResponseWriter, r *http.Request) {
 	var req AdminCreateKeysRequest
-	_ = json.NewDecoder(r.Body).Decode(&req)
+	// Empty body is allowed (all fields default); malformed JSON is a 400.
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+		h.writeError(w, 400, "BAD_REQUEST", "invalid JSON")
+		return
+	}
 	if req.Count <= 0 {
 		req.Count = 1
 	}

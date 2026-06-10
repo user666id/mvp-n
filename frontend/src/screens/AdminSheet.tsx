@@ -58,13 +58,15 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
   })
 
   const loadProfiles = async () => {
-    setProfiles(null)
+    // Don't blank the list to a skeleton on a refetch (e.g. after block/unblock
+    // or re-open) — keep the current rows visible and swap them in when the new
+    // data arrives. The skeleton only shows on the very first load (profiles===null).
     try {
       const r = await adminListProfiles()
       setProfiles(r.profiles)
       setTrafficToday(r.traffic_today)
     } catch {
-      setProfiles([])
+      setProfiles((prev) => prev ?? [])
     }
   }
   const loadKeys = async () => {

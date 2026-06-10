@@ -197,22 +197,20 @@ func (s *Scheduler) collectTraffic(ctx context.Context) error {
 			continue
 		}
 		total := up + down
+		delta, isActive, newBaseline := trafficStep(d.seen.Valid, d.seen.Int64, total)
 		switch {
-		case !d.seen.Valid:
-			// First sample — prime the baseline, don't count or mark active.
-			_, _ = s.db.ExecContext(ctx, `UPDATE devices SET traffic_seen = $1 WHERE id = $2`, total, d.id)
-		case total > d.seen.Int64:
+		case isActive:
 			// Counter grew → device is passing data right now; add the delta.
-			delta := total - d.seen.Int64
 			_, _ = s.db.ExecContext(ctx,
-				`UPDATE devices SET last_active = NOW(), traffic_seen = $1 WHERE id = $2`, total, d.id)
+				`UPDATE devices SET last_active = NOW(), traffic_seen = $1 WHERE id = $2`, newBaseline, d.id)
 			_, _ = s.db.ExecContext(ctx,
 				`UPDATE users SET traffic_used = traffic_used + $1 WHERE id = $2`, delta, d.userID)
 			dayDelta += delta
 			active++
-		case total < d.seen.Int64:
-			// xray restarted → counters reset; resync the baseline (don't count).
-			_, _ = s.db.ExecContext(ctx, `UPDATE devices SET traffic_seen = $1 WHERE id = $2`, total, d.id)
+		case !d.seen.Valid || newBaseline != d.seen.Int64:
+			// First sample (prime baseline) or xray restart (counter reset →
+			// resync baseline). Neither counts toward traffic.
+			_, _ = s.db.ExecContext(ctx, `UPDATE devices SET traffic_seen = $1 WHERE id = $2`, newBaseline, d.id)
 		}
 	}
 	if dayDelta > 0 {
@@ -226,6 +224,29 @@ func (s *Scheduler) collectTraffic(ctx context.Context) error {
 		log.Printf("[cron] collectTraffic: %d/%d devices active", active, len(devs))
 	}
 	return nil
+}
+
+// trafficStep is the pure decision behind collectTraffic for one device sample.
+// Given whether the baseline is primed (seenValid), the last seen cumulative
+// byte total (seen) and the freshly sampled total, it returns:
+//   - delta:       positive bytes to bill the owner (0 when nothing to bill)
+//   - active:      whether the counter grew (device is passing data → online)
+//   - newBaseline: the value to persist as the next traffic_seen
+//
+// Rules: an unprimed device only primes the baseline; a grown counter bills the
+// delta; a shrunk counter means xray restarted (counters reset) so we resync the
+// baseline without billing; an unchanged counter is a no-op.
+func trafficStep(seenValid bool, seen, total int64) (delta int64, active bool, newBaseline int64) {
+	switch {
+	case !seenValid:
+		return 0, false, total
+	case total > seen:
+		return total - seen, true, total
+	case total < seen:
+		return 0, false, total
+	default:
+		return 0, false, seen
+	}
 }
 
 func (s *Scheduler) cleanupKeys(ctx context.Context) error {
