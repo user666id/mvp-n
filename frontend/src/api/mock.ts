@@ -214,6 +214,18 @@ export async function mockRequest(
   if (path === '/admin/profiles' && m === 'GET') {
     return { total: adminProfiles.length, profiles: adminProfiles, traffic_today: 2_400_000_000 }
   }
+  if (path.startsWith('/admin/traffic') && m === 'GET') {
+    const n = 30
+    const days = Array.from({ length: n }, (_, i) => {
+      const d = new Date()
+      d.setDate(d.getDate() - (n - 1 - i))
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      // last day (today) lower — still counting; deterministic-ish sample data
+      const base = 6_000_000_000 + ((i * 37) % 9) * 800_000_000
+      return { day: iso, bytes: i === n - 1 ? 3_900_000_000 : base }
+    })
+    return { days, total: days.reduce((s, d) => s + d.bytes, 0) }
+  }
   const apCfg = path.match(/^\/admin\/profiles\/([^/]+)\/configs$/)
   if (apCfg) {
     return configs

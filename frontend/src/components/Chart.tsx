@@ -1,5 +1,14 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useT } from '../lib/i18n'
+import {
+  CHART_PAD as PAD,
+  ChartGuide,
+  ChartTooltip,
+  niceCeil,
+  pressHaptic,
+  useChartWidth,
+  useScrubHaptics,
+} from './chartkit'
 
 export interface Series {
   values: number[]
@@ -17,34 +26,8 @@ interface Props {
   format: (v: number) => string
   /** formats a y-axis tick; defaults to `format`. Use to drop units on the axis. */
   axisFormat?: (v: number) => string
-  /** Fix the y-axis top (e.g. 100 for a percentage chart). Defaults to auto
-   *  (data max ×1.15), which can make a stable low value look alarmingly high. */
+  /** Fix the y-axis top (e.g. 100 for a percentage chart). Defaults to auto. */
   yMax?: number
-}
-
-const PAD = { l: 34, r: 10, t: 12, b: 20 }
-
-/** Round a value up to a clean 1/2/2.5/5/10 ×10ⁿ ceiling, so an auto-scaled
- *  axis gets headroom (data never touches the top) and tidy tick labels. */
-function niceCeil(v: number): number {
-  if (!(v > 0)) return 1
-  const pow = Math.pow(10, Math.floor(Math.log10(v)))
-  for (const s of [1, 2, 2.5, 5, 10]) {
-    if (s * pow >= v) return s * pow
-  }
-  return 10 * pow
-}
-
-function useWidth<T extends HTMLElement>() {
-  const ref = useRef<T>(null)
-  const [w, setW] = useState(320)
-  useLayoutEffect(() => {
-    if (!ref.current) return
-    const ro = new ResizeObserver(([e]) => setW(e.contentRect.width))
-    ro.observe(ref.current)
-    return () => ro.disconnect()
-  }, [])
-  return [ref, w] as const
 }
 
 const hm = (iso: string, lang: string) =>
@@ -54,18 +37,20 @@ const hm = (iso: string, lang: string) =>
   })
 
 /**
- * Lightweight area chart with a smooth, interpolated drag tooltip:
- * the guide line follows the finger continuously and the value is linearly
- * interpolated between samples (no snapping), matching the reference UX.
+ * Live area chart with a smooth interpolated drag tooltip: the guide line
+ * follows the finger continuously and the value is interpolated between
+ * samples. Used for "here and now" server metrics (CPU / RAM / network) — it
+ * shares the axis, tooltip, crosshair and haptics with the bar chart but stays
+ * a thin line by nature of the data.
  */
 export function AreaChart({ timestamps, series, height = 160, format, axisFormat, yMax: yMaxProp }: Props) {
   const fmtTick = axisFormat ?? format
   const { t, lang } = useT()
-  const [ref, W] = useWidth<HTMLDivElement>()
+  const [ref, W] = useChartWidth<HTMLDivElement>()
   const H = height
   const n = timestamps.length
   const [active, setActive] = useState<number | null>(null) // fractional index
-  const downRef = useRef(false) // pointer is currently pressed/scrubbing
+  const downRef = useRef(false)
 
   const innerW = Math.max(1, W - PAD.l - PAD.r)
   const innerH = H - PAD.t - PAD.b
@@ -95,10 +80,9 @@ export function AreaChart({ timestamps, series, height = 160, format, axisFormat
     setActive(Math.max(0, Math.min(n - 1, frac)))
   }
 
-  // y-axis ticks: 0, mid, max
   const ticks = [0, yMax / 2, yMax]
-
   const nearest = active == null ? null : Math.round(active)
+  useScrubHaptics(nearest)
 
   return (
     <div ref={ref} className="relative w-full" style={{ height: H }}>
@@ -109,10 +93,10 @@ export function AreaChart({ timestamps, series, height = 160, format, axisFormat
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId)
           downRef.current = true
+          pressHaptic()
           onMove(e.clientX, e.currentTarget.getBoundingClientRect().left)
         }}
         onPointerMove={(e) => {
-          // Mouse: follow on hover (smooth). Touch: only while pressed.
           if (e.pointerType !== 'mouse' && !downRef.current) return
           onMove(e.clientX, e.currentTarget.getBoundingClientRect().left)
         }}
@@ -123,15 +107,12 @@ export function AreaChart({ timestamps, series, height = 160, format, axisFormat
           } catch {
             /* ignore */
           }
-          // Keep tooltip for mouse hover; clear once the touch lifts.
           if (e.pointerType !== 'mouse') setActive(null)
         }}
         onPointerCancel={() => {
           downRef.current = false
           setActive(null)
         }}
-        // Don't drop the tooltip while actively scrubbing — only when an
-        // un-pressed (hovering) pointer truly leaves the chart.
         onPointerLeave={() => {
           if (!downRef.current) setActive(null)
         }}
@@ -146,24 +127,18 @@ export function AreaChart({ timestamps, series, height = 160, format, axisFormat
         </defs>
 
         {/* y grid + labels */}
-        {ticks.map((t, i) => (
+        {ticks.map((tk, i) => (
           <g key={i}>
             <line
               x1={PAD.l}
               x2={W - PAD.r}
-              y1={yAt(t)}
-              y2={yAt(t)}
+              y1={yAt(tk)}
+              y2={yAt(tk)}
               stroke="rgb(var(--c-border))"
               strokeWidth="1"
             />
-            <text
-              x={PAD.l - 6}
-              y={yAt(t) + 3}
-              textAnchor="end"
-              fontSize="10"
-              fill="rgb(var(--c-faint))"
-            >
-              {fmtTick(t)}
+            <text x={PAD.l - 6} y={yAt(tk) + 3} textAnchor="end" fontSize="10" fill="rgb(var(--c-faint))">
+              {fmtTick(tk)}
             </text>
           </g>
         ))}
@@ -175,30 +150,14 @@ export function AreaChart({ timestamps, series, height = 160, format, axisFormat
           </g>
         ))}
 
-        {/* drag guide */}
+        {/* drag crosshair + dots (one per series) */}
         {active != null && (
-          <>
-            <line
-              x1={xAt(active)}
-              x2={xAt(active)}
-              y1={PAD.t}
-              y2={PAD.t + innerH}
-              stroke="rgb(var(--c-ink))"
-              strokeOpacity="0.35"
-              strokeWidth="1"
-            />
-            {series.map((s, i) => (
-              <circle
-                key={i}
-                cx={xAt(active)}
-                cy={yAt(valueAt(s.values, active))}
-                r="4"
-                fill={s.color}
-                stroke="rgb(var(--c-canvas))"
-                strokeWidth="2"
-              />
-            ))}
-          </>
+          <ChartGuide
+            x={xAt(active)}
+            top={PAD.t}
+            height={innerH}
+            dots={series.map((s) => ({ cy: yAt(valueAt(s.values, active)), color: s.color }))}
+          />
         )}
 
         {/* x labels (first / mid / last) */}
@@ -217,21 +176,15 @@ export function AreaChart({ timestamps, series, height = 160, format, axisFormat
       </svg>
 
       {active != null && nearest != null && (
-        <div
-          className="pointer-events-none absolute -translate-x-1/2 rounded-xl border border-border bg-surface px-2.5 py-1.5 text-center shadow-pop"
-          style={{
-            left: Math.min(Math.max(xAt(active), 52), W - 52),
-            top: PAD.t,
-          }}
-        >
-          <div className="text-[11px] text-muted">{t('chart.at')} {hm(timestamps[nearest], lang)}</div>
-          {series.map((s, i) => (
-            <div key={i} className="text-[13px] font-medium" style={{ color: s.color }}>
-              {s.tag ? s.tag + ' ' : ''}
-              {format(valueAt(s.values, active))}
-            </div>
-          ))}
-        </div>
+        <ChartTooltip
+          x={xAt(active)}
+          W={W}
+          top={`${t('chart.at')} ${hm(timestamps[nearest], lang)}`}
+          lines={series.map((s) => ({
+            text: (s.tag ? s.tag + ' ' : '') + format(valueAt(s.values, active)),
+            color: s.color,
+          }))}
+        />
       )}
     </div>
   )

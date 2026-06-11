@@ -78,6 +78,13 @@ export interface AdminConfig {
   created_at: string
 }
 
+/** One day of server-wide traffic (GET /admin/traffic). */
+export interface TrafficDay {
+  /** Moscow day, YYYY-MM-DD */
+  day: string
+  bytes: number
+}
+
 /** Live reachability of a public domain (GET /admin/domains). */
 export interface DomainStatus {
   name: string

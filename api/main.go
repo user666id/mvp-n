@@ -88,6 +88,7 @@ func main() {
 	mux.Handle("GET /admin/keys", auth(admin(http.HandlerFunc(h.AdminListKeys))))
 	mux.Handle("DELETE /admin/keys/{id}", auth(admin(http.HandlerFunc(h.AdminRevokeKey))))
 	mux.Handle("GET /admin/domains", auth(admin(http.HandlerFunc(h.AdminDomains))))
+	mux.Handle("GET /admin/traffic", auth(admin(http.HandlerFunc(h.AdminTraffic))))
 	mux.Handle("GET /admin/profiles", auth(admin(http.HandlerFunc(h.AdminListProfiles))))
 	mux.Handle("GET /admin/profiles/{id}", auth(admin(http.HandlerFunc(h.AdminProfile))))
 	mux.Handle("GET /admin/profiles/{id}/devices", auth(admin(http.HandlerFunc(h.AdminProfileDevices))))

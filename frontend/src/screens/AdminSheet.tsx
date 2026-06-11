@@ -10,6 +10,7 @@ import { Avatar } from '../components/ui/Avatar'
 import { Copy, ChevronRight, Ban, Trash, ExternalLink, Refresh, Check } from '../components/icons'
 import { DeviceRow } from '../components/DeviceRow'
 import { ProfileDetails } from '../components/ProfileDetails'
+import { TrafficSheet } from './TrafficSheet'
 import { useToast } from '../components/ui/Toast'
 import { copyText } from '../lib/clipboard'
 import { confirmDialog, notify, openLink } from '../lib/telegram'
@@ -45,6 +46,7 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const [domainsOpen, setDomainsOpen] = useState(false)
   const [keysOpen, setKeysOpen] = useState(false)
   const [profilesOpen, setProfilesOpen] = useState(false)
+  const [trafficOpen, setTrafficOpen] = useState(false)
 
   const shown = (profiles ?? []).filter((p) => {
     const q = query.trim().toLowerCase()
@@ -159,13 +161,17 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
       {/* Single-window navigation: a child sheet hides the parent (gated `open`),
           and each child shows a ‹ back button — so only one window is ever shown. */}
       <Sheet open={open} onClose={onClose} title={t('admin.title')}>
-        {/* traffic — single card, two columns (total / today) */}
+        {/* traffic — total / today; tap opens the by-day chart */}
         <Section header={t('admin.traffic')}>
-          <div className="flex">
+          <button
+            className="flex w-full items-center text-left active:bg-surface-sunken"
+            onClick={() => setTrafficOpen(true)}
+          >
             <TrafficStat label={t('admin.trafficTotalShort')} value={totalTraffic} />
             <div className="w-px self-stretch bg-border" />
             <TrafficStat label={t('admin.trafficTodayShort')} value={todayTraffic} />
-          </div>
+            <ChevronRight size={18} className="mr-3 shrink-0 text-faint" />
+          </button>
         </Section>
 
         <Section>
@@ -309,6 +315,12 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
         onClose={() => setDomainsOpen(false)}
         onBack={() => setDomainsOpen(false)}
       />
+      <TrafficSheet
+        open={trafficOpen}
+        onClose={() => setTrafficOpen(false)}
+        total={profiles ? profiles.reduce((s, p) => s + p.traffic_used, 0) : 0}
+        today={trafficToday ?? 0}
+      />
     </>
   )
 }
@@ -318,7 +330,7 @@ function TrafficStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex-1 px-4 py-3.5">
       <div className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-faint">{label}</div>
-      <div className="mt-1 text-[20px] font-semibold text-ink">{value}</div>
+      <div className="mt-1 font-display text-[19px] font-semibold leading-tight text-ink">{value}</div>
     </div>
   )
 }

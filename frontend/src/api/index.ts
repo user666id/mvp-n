@@ -1,6 +1,6 @@
 import { request, setToken } from './client'
 import type {
-  AccessKey, AccessKeyRow, AdminConfig, AdminProfile, AuthResult, AwgStats, Config, Device, DomainStatus, Profile, Protocol, ServerStats,
+  AccessKey, AccessKeyRow, AdminConfig, AdminProfile, AuthResult, AwgStats, Config, Device, DomainStatus, Profile, Protocol, ServerStats, TrafficDay,
 } from './types'
 import { getInitData } from '../lib/telegram'
 
@@ -135,6 +135,10 @@ export function adminListProfiles() {
 
 export function adminGetDomains() {
   return request<DomainStatus[]>('GET', '/admin/domains')
+}
+
+export function adminGetTraffic(days = 30) {
+  return request<{ days: TrafficDay[]; total: number }>('GET', `/admin/traffic?days=${days}`)
 }
 
 export function adminGetProfileDevices(id: number) {

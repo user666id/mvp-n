@@ -99,6 +99,7 @@ POST   /admin/keys                                  — создать N клю�
 GET    /admin/keys                                  — список ключей
 DELETE /admin/keys/{id}                             — отозвать ключ
 GET    /admin/domains                               — статусы доменов
+GET    /admin/traffic                                — трафик сервера по дням (?days=N) + всего
 GET    /admin/profiles                              — профили + трафик (всего/сегодня)
 GET    /admin/profiles/{id}                         — профиль
 GET    /admin/profiles/{id}/devices                 — устройства профиля

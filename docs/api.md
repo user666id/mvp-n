@@ -99,6 +99,7 @@ POST   /admin/keys                                  → выпустить кл�
 GET    /admin/keys                                  → список ключей
 DELETE /admin/keys/{id}                             → отозвать ключ
 GET    /admin/domains                               → статусы доменов
+GET    /admin/traffic?days=N                         → трафик сервера по дням (1..90, def 30) + всего
 GET    /admin/profiles                              → список профилей (+трафик, счётчики)
 GET    /admin/profiles/{id}                         → профиль по tg_id / internal_id
 GET    /admin/profiles/{id}/devices                 → устройства профиля (VLESS + AWG)
