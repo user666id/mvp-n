@@ -46,7 +46,13 @@ export function BarChart({ data, height = 168, format }: Props) {
   const innerH = H - PAD.t - PAD.b
   const yMax = niceCeil(Math.max(1, ...data.map((d) => d.value)) * 1.1)
 
-  const slot = innerW / Math.max(1, n)
+  // Left-anchored "timeline that fills from the left": cap the slot width so a
+  // few days cluster at the left edge (with room to grow rightward) instead of
+  // stretching across the whole width — a lone bar would otherwise float dead
+  // centre. Once enough days accumulate the cap stops biting and bars fill the
+  // plot edge-to-edge.
+  const MAX_SLOT = 64
+  const slot = Math.min(innerW / Math.max(1, n), MAX_SLOT)
   // Balanced rectangular bars: roughly half the slot (≈equal bar/gap), capped so
   // a handful of days don't render as fat blocks.
   const barW = Math.max(8, Math.min(44, slot * 0.56))
@@ -118,9 +124,8 @@ export function BarChart({ data, height = 168, format }: Props) {
           const isToday = i === n - 1
           const isActive = active === i
           const h = Math.max(0, innerH - (yAt(d.value) - PAD.t))
-          // Today (when not being scrubbed) uses the soft tint; everything else
-          // is the solid accent.
-          const fill = isToday && !isActive ? 'rgb(var(--c-accent-soft))' : 'rgb(var(--c-accent))'
+          // Amber-yellow bars. "Today" (when not being scrubbed) is paler — it's
+          // still accumulating.
           return (
             <rect
               key={d.day}
@@ -129,19 +134,20 @@ export function BarChart({ data, height = 168, format }: Props) {
               width={barW}
               height={d.value > 0 ? h : 1}
               rx={Math.min(5, barW / 2)}
-              fill={fill}
-              fillOpacity={isActive || isToday ? 1 : 0.85}
+              fill="rgb(var(--c-chart-ram))"
+              fillOpacity={isActive ? 1 : isToday ? 0.45 : 0.85}
             />
           )
         })}
 
-        {/* drag crosshair + dot */}
+        {/* drag marker dot (no vertical line — it would bisect the bar) */}
         {active != null && data[active] && (
           <ChartGuide
             x={xCenter(active)}
             top={PAD.t}
             height={innerH}
-            dots={data[active].value > 0 ? [{ cy: yAt(data[active].value), color: 'rgb(var(--c-accent))' }] : []}
+            line={false}
+            dots={data[active].value > 0 ? [{ cy: yAt(data[active].value), color: 'rgb(var(--c-chart-ram))' }] : []}
           />
         )}
 
@@ -165,7 +171,7 @@ export function BarChart({ data, height = 168, format }: Props) {
           x={xCenter(active)}
           W={W}
           top={fmtDay(data[active].day)}
-          lines={[{ text: format(data[active].value), color: 'rgb(var(--c-accent))' }]}
+          lines={[{ text: format(data[active].value), color: 'rgb(var(--c-chart-ram))' }]}
         />
       )}
     </div>

@@ -56,7 +56,7 @@
 
 - Docker Compose: postgres, api, connect, awg-server, bot, db-backup (ежедневный `pg_dump` с ротацией).
 - nginx `:443` (ssl_preread SNI-роутер) + Cloudflare Origin Cert. VPN-трафик идёт мимо nginx, напрямую на xray/AmneziaWG.
-- CI/CD: GitHub Actions (lint + `go test` + build + deploy по push в `main`); деплой пересобирает только изменившиеся сервисы и реконсилит стек при изменении compose. VPS тянет код по SSH-deploy-key (порт 443).
+- CI: GitHub Actions (lint + `go test` + build + security-сканеры). Деплой — pull-модель: systemd-таймер на VPS опрашивает GitHub каждые 2 мин и при новом коммите в `main` запускает `scripts/deploy.sh` (пересборка только изменившихся сервисов, реконсиляция стека при изменении compose). VPS тянет код по read-only SSH-deploy-key (порт 443); Actions на VPS зайти не может — DDoS-защита хостера режет CI-runner'ы.
 - Бот `@mvp_n_net_bot`: `/start` → кнопка Mini App; только личные чаты; язык синхронизирован с приложением.
 
 ## Ограничения

@@ -132,6 +132,7 @@ export interface Device {
 /** Payload behind GET /configs/{id}/serverStats — drives the stat charts. */
 export interface ServerStats {
   hostname: string
+  server_ip: string
   cpu_model: string
   online: boolean
   uptime_days: number

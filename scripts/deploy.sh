@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 #
-# Remote deploy script — runs ON the VPS (invoked by .github/workflows/deploy.yml
-# after it has already fetched + reset the repo to origin/main).
+# Deploy script — runs ON the VPS, invoked by scripts/pull-deploy.sh (the
+# systemd poll timer) after it has fetched + reset the repo to origin/main.
 #
 # Rebuilds only the services whose files changed since $1 (the previous commit
-# sha), rebuilds the frontend if it changed, then health-checks. Keeping the
-# logic in a committed file (run by real bash) avoids the quoting pitfalls of
-# appleboy/ssh-action inline scripts.
+# sha), rebuilds the frontend if it changed, then health-checks.
 #
 # Usage: bash scripts/deploy.sh <before_sha>
 set -euo pipefail

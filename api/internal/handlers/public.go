@@ -31,8 +31,9 @@ func (h *Handler) PublicStatus(w http.ResponseWriter, r *http.Request) {
 // ServerStatsResponse — payload for the Mini App graphs.
 type ServerStatsResponse struct {
 	Hostname   string    `json:"hostname"`
+	ServerIP   string    `json:"server_ip"` // public IPv4 (same one baked into VLESS URIs)
 	CPUModel   string    `json:"cpu_model"`
-	Online     bool      `json:"online"`
+	Online     bool      `json:"online"` // live xray-reachability probe, not a constant
 	UptimeDays int       `json:"uptime_days"`
 	Timestamps []string  `json:"timestamps"`
 	CPU        []float64 `json:"cpu"`
@@ -55,8 +56,9 @@ func (h *Handler) ServerStats(w http.ResponseWriter, r *http.Request) {
 	uptime, _ := metrics.Uptime()
 	resp := ServerStatsResponse{
 		Hostname:   metrics.Hostname(),
+		ServerIP:   env("SERVER_IP", ""),
 		CPUModel:   metrics.CPUModel(),
-		Online:     true,
+		Online:     h.Xray.Healthy(r.Context()),
 		UptimeDays: int(uptime.Hours() / 24),
 		Timestamps: make([]string, 0, len(samples)),
 		CPU:        make([]float64, 0, len(samples)),

@@ -14,7 +14,7 @@
 
 | Документ | Содержание |
 |----------|-----------|
-| [deploy.md](./deploy.md) | Авто-деплой через GitHub Actions, раскладка на VPS |
+| [deploy.md](./deploy.md) | Pull-автодеплой (VPS опрашивает GitHub), раскладка на VPS |
 | [ssl-setup.md](./ssl-setup.md) | Cloudflare Origin Cert для web-доменов |
 
 ## По модулям

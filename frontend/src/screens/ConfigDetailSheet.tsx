@@ -181,6 +181,30 @@ export function ConfigDetailSheet({
           </div>
         )}
 
+        {/* settings — collapsible accordion (VLESS only) */}
+        {!isAwg && (
+        <div className="mb-5">
+          <Collapse title={t('create.advanced')}>
+            <ToggleRow
+              title={t('create.enhanced')}
+              checked={config.enhanced}
+              disabled={config.game_mode}
+              onChange={(v) => onToggle('enhanced', v)}
+            />
+            <ToggleRow
+              title={t('create.game')}
+              checked={config.game_mode}
+              disabled={config.enhanced}
+              onChange={(v) => onToggle('game_mode', v)}
+              last
+            />
+          </Collapse>
+          <p className="px-3 pt-2 text-[13px] leading-snug text-muted">
+            {t('detail.afterChange')}
+          </p>
+        </div>
+        )}
+
         {/* server status → stats (reflects the real server_online flag) */}
         <button
           onClick={onOpenStats}
@@ -206,30 +230,6 @@ export function ConfigDetailSheet({
           </div>
           <ChevronRight size={20} className="text-faint" />
         </button>
-
-        {/* settings — collapsible accordion (VLESS only) */}
-        {!isAwg && (
-        <div className="mb-5">
-          <Collapse title={t('create.advanced')}>
-            <ToggleRow
-              title={t('create.enhanced')}
-              checked={config.enhanced}
-              disabled={config.game_mode}
-              onChange={(v) => onToggle('enhanced', v)}
-            />
-            <ToggleRow
-              title={t('create.game')}
-              checked={config.game_mode}
-              disabled={config.enhanced}
-              onChange={(v) => onToggle('game_mode', v)}
-              last
-            />
-          </Collapse>
-          <p className="px-3 pt-2 text-[13px] leading-snug text-muted">
-            {t('detail.afterChange')}
-          </p>
-        </div>
-        )}
 
         <Section header={t('settings.danger')}>
           <Cell

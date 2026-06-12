@@ -23,9 +23,11 @@ sudo ./scripts/setup.sh
 
 ```
 scripts/
-├── deploy.sh             # вызывается CI на VPS: пересборка изменившихся сервисов
+├── deploy.sh             # пересборка изменившихся сервисов (вызывается pull-deploy.sh)
+├── pull-deploy.sh        # на VPS: git fetch; при новом коммите в main → deploy.sh
 ├── setup.sh              # мастер-скрипт (apt, firewall, запуск install/*)
-├── setup-deploy.sh       # bootstrap автодеплоя (root): clone, web-root, 2 SSH-ключа
+├── setup-deploy.sh       # bootstrap pull-автодеплоя (root): clone, web-root, deploy-key, таймер
+├── systemd/              # mvpn-deploy.service + .timer (опрос GitHub каждые 2 мин)
 └── install/
     ├── xanmod.sh         # XanMod kernel + BBRv3
     ├── xray.sh           # Xray-core: 2 inbound'а REALITY + config.json + logrotate

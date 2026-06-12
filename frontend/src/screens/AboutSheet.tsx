@@ -8,8 +8,14 @@ import { ChevronRight } from '../components/icons'
 import { useToast } from '../components/ui/Toast'
 import { openLink } from '../lib/telegram'
 import { BRAND, BOT } from '../lib/config'
-import { RELEASES, APP_VERSION } from '../lib/changelog'
+import { RELEASES, APP_VERSION, type ChangeKind } from '../lib/changelog'
 import { useT, type TKey } from '../lib/i18n'
+
+const KIND_LABEL: Record<ChangeKind, TKey> = {
+  added: 'about.added',
+  changed: 'about.changed',
+  fixed: 'about.fixed',
+}
 
 export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, lang } = useT()
@@ -122,14 +128,23 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
                 </span>
               }
             >
-              <ul className="flex flex-col gap-1.5 px-4 py-3.5">
-                {r.items.map((it, j) => (
-                  <li key={j} className="flex gap-2 text-[14px] leading-relaxed text-muted">
-                    <span className="text-accent">•</span>
-                    <span>{lang === 'ru' ? it.ru : it.en}</span>
-                  </li>
+              <div className="flex flex-col gap-3 px-4 py-3.5">
+                {r.groups.map((g, gi) => (
+                  <div key={gi} className="flex flex-col gap-1.5">
+                    <div className="text-[12px] font-medium uppercase tracking-[0.04em] text-faint">
+                      {t(KIND_LABEL[g.kind])}
+                    </div>
+                    <ul className="flex flex-col gap-1.5">
+                      {g.items.map((it, j) => (
+                        <li key={j} className="flex gap-2 text-[14px] leading-relaxed text-muted">
+                          <span className="text-accent">•</span>
+                          <span>{lang === 'ru' ? it.ru : it.en}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </Collapse>
           ))}
         </div>

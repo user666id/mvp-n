@@ -68,10 +68,12 @@ GitHub Actions на каждый push в `main` и PR:
 |----------|---------------|
 | **Lint** | `gofmt`, `go vet` + `go test` (api/connect/awg-server), `tsc --noEmit` (frontend) |
 | **Build** | `go build` каждого сервиса, `npm run build` фронта |
-| **Deploy** | по push в `main` — SSH на VPS, `git reset --hard` + `scripts/deploy.sh` |
+| **Security** | `govulncheck` (блокирующий), `gosec`, `npm audit`, CodeQL (Go + JS/TS) |
 
-> VPS тянет код с GitHub по read-only **deploy key** (SSH через порт 443:
-> `ssh://git@ssh.github.com:443/...`), не по встроенному в remote токену.
+> Деплой — **не** через Actions, а pull-моделью: systemd-таймер на VPS опрашивает
+> GitHub каждые 2 мин (DDoS-защита хостера режет CI-runner'ы). VPS тянет код по
+> read-only **deploy key** (SSH через порт 443: `ssh://git@ssh.github.com:443/...`).
+> См. [`docs/deploy.md`](./docs/deploy.md).
 
 > Go-модули обязаны иметь актуальный `go.sum` (`go mod tidy`) — иначе
 > `go build` в CI падает с «missing go.sum entry».
@@ -80,11 +82,12 @@ GitHub Actions на каждый push в `main` и PR:
 
 ## Коммиты и деплой
 
-- Ветка по умолчанию — `main`. Push в неё триггерит автодеплой.
+- Ветка по умолчанию — `main`. Push в неё подхватывается автодеплоем в течение
+  ~2 мин (период опроса таймера на VPS).
 - Деплой пересобирает только изменившиеся сервисы; правки в `docs/`/README
   деплой не трогают.
-- Секреты — только в `.env` (gitignore) и GitHub Actions Secrets. В репозиторий
-  не коммитим токены, ключи, сертификаты.
+- Секреты — только в `.env` на VPS (gitignore). В репозиторий не коммитим
+  токены, ключи, сертификаты.
 
 ---
 

@@ -67,6 +67,8 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("DATABASE_URL is required")
 	case c.JWTSecret == "":
 		return nil, fmt.Errorf("JWT_SECRET is required")
+	case len(c.JWTSecret) < 32:
+		return nil, fmt.Errorf("JWT_SECRET must be at least 32 chars (got %d) — generate with: openssl rand -hex 32", len(c.JWTSecret))
 	case len(c.AdminTGIDs) == 0:
 		return nil, fmt.Errorf("ADMIN_TG_IDS is required (comma-separated Telegram IDs)")
 	}

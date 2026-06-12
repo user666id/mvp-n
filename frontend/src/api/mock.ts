@@ -57,6 +57,7 @@ function stats(): ServerStats {
   }
   return {
     hostname: '89-125-56-74.mvp-n.network',
+    server_ip: '<origin-ip>',
     cpu_model: 'AMD EPYC 7543 32-Core Processor',
     online: true,
     uptime_days: 10,

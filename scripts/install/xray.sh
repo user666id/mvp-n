@@ -23,7 +23,15 @@ KEYS=$(xray x25519)
 PRIVATE_KEY=$(echo "$KEYS" | grep -i "private" | awk '{print $NF}')
 PUBLIC_KEY=$(echo  "$KEYS" | grep -i "public"  | awk '{print $NF}')
 SHORT_ID=$(openssl rand -hex 4)
-SERVER_IP=$(curl -s https://api.ipify.org)
+# Public IP is baked into every REALITY URI — a silent empty value would produce
+# broken configs for all users. Try several providers, then fail hard.
+SERVER_IP=$(curl -fsS --max-time 10 https://api.ipify.org || true)
+[ -z "$SERVER_IP" ] && SERVER_IP=$(curl -fsS --max-time 10 https://ifconfig.me || true)
+[ -z "$SERVER_IP" ] && SERVER_IP=$(curl -fsS --max-time 10 https://icanhazip.com | tr -d '[:space:]' || true)
+if [ -z "$SERVER_IP" ]; then
+  echo "ERROR: could not determine public IP (all providers failed). Set it manually and re-run." >&2
+  exit 1
+fi
 EMAIL="seed_${SHORT_ID}@mvp-n.net"
 
 # The api inbound (:10085) must be reachable by the dockerised Go api over the

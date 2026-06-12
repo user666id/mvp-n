@@ -82,29 +82,35 @@ export function ChartTooltip({
   )
 }
 
-/** Vertical crosshair + marker dot(s) at the focused position. */
+/** Marker dot(s) at the focused position, with an optional vertical crosshair.
+ *  The line reads well over a continuous area chart but bisects a bar (looks
+ *  like a seam), so bar charts pass line={false}. */
 export function ChartGuide({
   x,
   top,
   height,
   dots,
+  line = true,
 }: {
   x: number
   top: number
   height: number
   dots: { cy: number; color: string }[]
+  line?: boolean
 }) {
   return (
     <>
-      <line
-        x1={x}
-        x2={x}
-        y1={top}
-        y2={top + height}
-        stroke="rgb(var(--c-ink))"
-        strokeOpacity="0.35"
-        strokeWidth="1"
-      />
+      {line && (
+        <line
+          x1={x}
+          x2={x}
+          y1={top}
+          y2={top + height}
+          stroke="rgb(var(--c-ink))"
+          strokeOpacity="0.35"
+          strokeWidth="1"
+        />
+      )}
       {dots.map((d, i) => (
         <circle
           key={i}
