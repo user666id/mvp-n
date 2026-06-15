@@ -7,6 +7,7 @@ import { copyText } from '../lib/clipboard'
 import { openLink } from '../lib/telegram'
 import { padId, formatBytes } from '../lib/format'
 import { useT } from '../lib/i18n'
+import { subLabel } from '../lib/subscription'
 
 /** Common subset both the user `Profile` and admin `AdminProfile` satisfy. */
 export interface ProfileDetailsData {
@@ -16,6 +17,9 @@ export interface ProfileDetailsData {
   username?: string | null
   is_admin?: boolean
   is_blocked?: boolean
+  is_active?: boolean
+  paid_until?: string | null
+  is_expired?: boolean
   traffic_used: number
 }
 
@@ -26,6 +30,7 @@ export interface ProfileDetailsData {
 export function ProfileDetails({ p }: { p: ProfileDetailsData }) {
   const { t, lang } = useT()
   const toast = useToast()
+  const sub = subLabel(p, t, lang)
 
   const Row = ({
     k,
@@ -67,6 +72,7 @@ export function ProfileDetails({ p }: { p: ProfileDetailsData }) {
             </span>
             {p.is_admin && <Badge tone="accent">{t('settings.admin')}</Badge>}
             {p.is_blocked && <Badge>{t('devices.blockedShort')}</Badge>}
+            <Badge tone={sub.tone === 'muted' ? 'neutral' : sub.tone}>{sub.text}</Badge>
           </div>
           <div className="text-[13px] text-muted">
             {t('admin.profileFallback', { id: padId(p.internal_id) })}
@@ -93,6 +99,22 @@ export function ProfileDetails({ p }: { p: ProfileDetailsData }) {
           <Row k="Username" v="—" />
         )}
         <Row k={t('admin.internalId')} v={padId(p.internal_id)} />
+        <Row
+          k={t('sub.status')}
+          v={
+            <span
+              className={
+                sub.tone === 'success'
+                  ? 'text-success'
+                  : sub.tone === 'danger'
+                    ? 'text-danger'
+                    : 'text-muted'
+              }
+            >
+              {sub.text}
+            </span>
+          }
+        />
         <Row k={t('admin.traffic')} v={formatBytes(p.traffic_used, lang)} />
       </div>
     </>

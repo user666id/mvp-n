@@ -16,6 +16,26 @@ type Scheduler struct {
 	db        *sql.DB
 	collector *metrics.Collector
 	xray      *xray.Client
+	// expiryReset wipes a user's VPN footprint (configs/devices/xray/AWG) on
+	// subscription expiry. Injected from main (handlers.Handler.ResetSubscription)
+	// to reuse the exact reset path without a package cycle.
+	expiryReset func(context.Context, int64)
+	// paymentCheck verifies pending crypto orders against the chain and extends
+	// paid subscriptions. Injected from main (handlers.Handler.VerifyPayments).
+	paymentCheck func(context.Context) error
+}
+
+// SetExpiryReset wires the subscription-expiry cleanup callback.
+func (s *Scheduler) SetExpiryReset(fn func(context.Context, int64)) { s.expiryReset = fn }
+
+// SetPaymentCheck wires the on-chain payment verification callback.
+func (s *Scheduler) SetPaymentCheck(fn func(context.Context) error) { s.paymentCheck = fn }
+
+func (s *Scheduler) verifyPayments(ctx context.Context) error {
+	if s.paymentCheck == nil {
+		return nil
+	}
+	return s.paymentCheck(ctx)
 }
 
 func New(db *sql.DB, netIface string, xc *xray.Client) *Scheduler {
@@ -59,6 +79,12 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		// Every 6h — prune devices not seen in 48h (e.g. subscription deleted
 		// from the launcher → it stops refreshing) and revoke their VPN users.
 		{"0 */6 * * *", "cleanupDevices", s.cleanupDevices},
+
+		// Every 15 min — wipe configs/access for expired paid subscriptions.
+		{"*/15 * * * *", "revokeExpiredSubs", s.revokeExpiredSubs},
+
+		// Every minute — match on-chain payments to pending orders → extend.
+		{"* * * * *", "verifyPayments", s.verifyPayments},
 
 		// Sunday 05:00 — VACUUM ANALYZE.
 		{"0 5 * * 0", "dbVacuum", s.dbVacuum},
@@ -118,9 +144,11 @@ func (s *Scheduler) reconcileXray(ctx context.Context) error {
 	ensured := 0
 
 	// Per-device users — what subscription clients actually present.
+	// Skip users whose paid subscription expired (NULL paid_until = no time limit).
 	if rows, err := s.db.QueryContext(ctx,
-		`SELECT vpn_email, vpn_uuid FROM devices
-		 WHERE is_blocked = false AND COALESCE(vpn_uuid, '') <> '' AND COALESCE(vpn_email, '') <> ''`); err == nil {
+		`SELECT d.vpn_email, d.vpn_uuid FROM devices d JOIN users u ON u.id = d.user_id
+		 WHERE d.is_blocked = false AND COALESCE(d.vpn_uuid, '') <> '' AND COALESCE(d.vpn_email, '') <> ''
+		   AND (u.paid_until IS NULL OR u.paid_until > NOW())`); err == nil {
 		for rows.Next() {
 			var email, uid string
 			if rows.Scan(&email, &uid) == nil {
@@ -151,6 +179,41 @@ func (s *Scheduler) reconcileXray(ctx context.Context) error {
 
 	if ensured > 0 {
 		log.Printf("[cron] reconcileXray: ensured %d xray users", ensured)
+	}
+	return nil
+}
+
+// revokeExpiredSubs wipes the VPN footprint of users whose PAID subscription has
+// lapsed (paid_until in the past): configs and devices are deleted and xray/AWG
+// access revoked — the ACCOUNT is kept so renewing restores the ability to make
+// new configs. NULL paid_until (key-activated / grandfathered) is never touched.
+// Only targets expired users who still have something to clean, so it's a no-op
+// once they've been wiped.
+func (s *Scheduler) revokeExpiredSubs(ctx context.Context) error {
+	if s.expiryReset == nil {
+		return nil
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT u.id FROM users u
+		WHERE u.paid_until IS NOT NULL AND u.paid_until <= NOW()
+		  AND ( EXISTS (SELECT 1 FROM vpn_configs c WHERE c.user_id = u.id AND c.is_active = true)
+		     OR EXISTS (SELECT 1 FROM devices d     WHERE d.user_id = u.id AND d.is_blocked = false) )`)
+	if err != nil {
+		return err
+	}
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+	for _, id := range ids {
+		s.expiryReset(ctx, id) // deletes configs/devices, revokes xray + AWG
+	}
+	if len(ids) > 0 {
+		log.Printf("[cron] revokeExpiredSubs: wiped %d expired subscriptions", len(ids))
 	}
 	return nil
 }

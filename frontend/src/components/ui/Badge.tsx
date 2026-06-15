@@ -1,11 +1,12 @@
 import React from 'react'
 
-type Tone = 'accent' | 'success' | 'neutral'
+type Tone = 'accent' | 'success' | 'neutral' | 'danger'
 
 const tones: Record<Tone, string> = {
   accent: 'bg-accent text-white',
   success: 'bg-success/15 text-success',
   neutral: 'bg-surface-sunken text-muted',
+  danger: 'bg-danger/15 text-danger',
 }
 
 export function Badge({

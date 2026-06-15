@@ -50,6 +50,34 @@ export interface Profile {
   devices_count: number
   configs_count: number
   device_limit: number
+  paid_until?: string | null // ISO date; null/absent = no time limit (key/grandfathered)
+  is_expired?: boolean // paid subscription that has lapsed
+}
+
+/** Subscription tariff (GET /plans). */
+export interface Plan {
+  days: number
+  usd: number // canonical price; USDT is 1:1, GRAM is converted at the live rate
+}
+export interface PlansResponse {
+  plans: Plan[]
+  assets: { id: string; label: string; network: string }[]
+  gram_usd: number // live USD price of 1 GRAM (0 if unavailable) — for display only
+}
+
+/** A crypto payment order (POST /orders, GET /orders/{id}). */
+export interface Order {
+  id: string
+  asset: string
+  network: string
+  address: string
+  amount: string
+  plan_days: number
+  expires_at?: string
+  status?: 'pending' | 'paid' | 'expired'
+  paid_at?: string
+  created_at?: string
+  tx_hash?: string
 }
 
 /** A user row in the admin profiles list. */
@@ -65,6 +93,8 @@ export interface AdminProfile {
   traffic_used: number
   devices_count: number
   configs_count: number
+  paid_until?: string | null // null = key/lifetime (or not activated)
+  is_expired?: boolean // paid subscription that has lapsed
 }
 
 /** A user's config row in the admin profile view (GET /admin/profiles/{id}/configs). */

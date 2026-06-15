@@ -279,7 +279,7 @@ export function ConfigDetailSheet({
         open={showRaw}
         onClose={() => setShowRaw(false)}
         onBack={() => setShowRaw(false)}
-        title={t('detail.title')}
+        title={t('detail.rawTitle')}
       >
         <p className="mb-3 px-1 text-[14px] leading-snug text-muted">
           {t('detail.rawHint')}

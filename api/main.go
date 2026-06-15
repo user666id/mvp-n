@@ -43,6 +43,8 @@ func main() {
 	defer h.Xray.Close()
 
 	scheduler := cron.New(db, cfg.NetInterface, h.Xray)
+	scheduler.SetExpiryReset(h.ResetSubscription) // wipe VPN footprint on subscription expiry
+	scheduler.SetPaymentCheck(h.VerifyPayments)   // match on-chain payments → extend subscriptions
 	if err := scheduler.Start(ctx); err != nil {
 		log.Fatalf("cron: %v", err)
 	}
@@ -65,6 +67,14 @@ func main() {
 	mux.Handle("POST /auth/key", keyLimit(auth(http.HandlerFunc(h.ActivateKey))))
 	mux.Handle("GET /configs", auth(http.HandlerFunc(h.ListConfigs)))
 	mux.Handle("POST /configs", auth(http.HandlerFunc(h.CreateConfig)))
+
+	// Subscriptions / payments
+	mux.Handle("GET /plans", auth(http.HandlerFunc(h.ListPlans)))
+	mux.Handle("POST /orders", auth(http.HandlerFunc(h.CreateOrder)))
+	mux.Handle("GET /orders/pending", auth(http.HandlerFunc(h.GetPendingOrders)))
+	mux.Handle("GET /orders/history", auth(http.HandlerFunc(h.GetOrderHistory)))
+	mux.Handle("POST /orders/{id}/cancel", auth(http.HandlerFunc(h.CancelOrder)))
+	mux.Handle("GET /orders/{id}", auth(http.HandlerFunc(h.GetOrder)))
 	mux.Handle("GET /configs/{id}", auth(http.HandlerFunc(h.GetConfig)))
 	mux.Handle("DELETE /configs/{id}", auth(http.HandlerFunc(h.DeleteConfig)))
 	mux.Handle("PATCH /configs/{id}/title", auth(http.HandlerFunc(h.RenameConfig)))
@@ -98,6 +108,7 @@ func main() {
 	mux.Handle("POST /admin/profiles/{id}/devices/{did}/block", auth(admin(http.HandlerFunc(h.AdminBlockProfileDevice))))
 	mux.Handle("POST /admin/profiles/{id}/devices/{did}/unblock", auth(admin(http.HandlerFunc(h.AdminUnblockProfileDevice))))
 	mux.Handle("POST /admin/profiles/{id}/block", auth(admin(http.HandlerFunc(h.AdminBlockProfile))))
+	mux.Handle("POST /admin/profiles/{id}/grant", auth(admin(http.HandlerFunc(h.AdminGrantSubscription))))
 	mux.Handle("DELETE /admin/profiles/{id}", auth(admin(http.HandlerFunc(h.AdminDeleteProfile))))
 
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: mux, ReadHeaderTimeout: 10 * time.Second}

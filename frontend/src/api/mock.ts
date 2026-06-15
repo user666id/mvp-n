@@ -3,6 +3,7 @@
 import type { Config, Device, Profile, ServerStats } from './types'
 
 let activated = true // start activated so the configs list is visible in preview
+let paidUntil: string | null = new Date(Date.now() + 25 * 86_400_000).toISOString() // null = key/lifetime
 const uuid = () => crypto.randomUUID()
 const short = () => Math.random().toString(16).slice(2, 14)
 
@@ -56,8 +57,8 @@ function stats(): ServerStats {
     netOut.push(Math.round(Math.random() ** 3 * 6_000_000 + 30_000))
   }
   return {
-    hostname: '89-125-56-74.mvp-n.network',
-    server_ip: '<origin-ip>',
+    hostname: 'nl-1.mvp-n.network',
+    server_ip: '203.0.113.10',
     cpu_model: 'AMD EPYC 7543 32-Core Processor',
     online: true,
     uptime_days: 10,
@@ -87,7 +88,7 @@ function profile(): Profile {
     username: 'user666id',
     first_name: 'mvp-n',
     last_name: '',
-    is_active: true,
+    is_active: activated,
     is_admin: true,
     is_blocked: false,
     created_at: ago(60 * 24 * 30),
@@ -96,18 +97,30 @@ function profile(): Profile {
     devices_count: devices.filter((d) => !d.is_blocked).length,
     configs_count: configs.filter((c) => c.is_active).length,
     device_limit: deviceLimit,
+    paid_until: activated ? paidUntil : null, // null = key/lifetime (or not-yet-activated)
+    is_expired: false,
   }
 }
 
 // ── admin mock data ──
 const adminProfiles = [
-  { id: 123456789, internal_id: 1, username: 'user666id', first_name: 'mvp-n', is_active: true, is_blocked: false, is_admin: true, created_at: ago(43200), traffic_used: 42_949_672_960, devices_count: 4, configs_count: 1 },
-  { id: 552310118, internal_id: 2, username: 'alex_k', first_name: 'Alex', is_active: true, is_blocked: false, is_admin: false, created_at: ago(20000), traffic_used: 8_589_934_592, devices_count: 2, configs_count: 1 },
-  { id: 690221764, internal_id: 3, username: '', first_name: 'Иван', is_active: true, is_blocked: false, is_admin: false, created_at: ago(5000), traffic_used: 1_073_741_824, devices_count: 1, configs_count: 1 },
+  { id: 123456789, internal_id: 1, username: 'user666id', first_name: 'mvp-n', is_active: true, is_blocked: false, is_admin: true, created_at: ago(43200), traffic_used: 42_949_672_960, devices_count: 4, configs_count: 1, paid_until: null, is_expired: false }, // key/lifetime
+  { id: 552310118, internal_id: 2, username: 'alex_k', first_name: 'Alex', is_active: true, is_blocked: false, is_admin: false, created_at: ago(20000), traffic_used: 8_589_934_592, devices_count: 2, configs_count: 1, paid_until: new Date(Date.now() + 12 * 86_400_000).toISOString(), is_expired: false }, // paid, active
+  { id: 690221764, internal_id: 3, username: '', first_name: 'Иван', is_active: true, is_blocked: false, is_admin: false, created_at: ago(5000), traffic_used: 1_073_741_824, devices_count: 1, configs_count: 1, paid_until: new Date(Date.now() - 3 * 86_400_000).toISOString(), is_expired: true }, // paid, expired
 ]
 let adminKeys: any[] = [
   { id: uuid(), key: 'A1B2-C3D4', comment: '', expires_at: ago(-600), created_at: ago(120), is_valid: true },
 ]
+
+// Mock orders: pending → 'paid' ~6s after creation (simulates on-chain confirm).
+const mockOrders: Record<string, { created: number; plan_days: number; asset: string; amount: string; address: string }> = {}
+const cancelledOrders = new Set<string>()
+const paidOrders = new Set<string>()
+const USD_PRICE: Record<number, number> = { 7: 2, 30: 5, 90: 15, 365: 45 }
+const GRAM_USD = 1.79 // demo live rate
+const mockNet = (a: string) => (a === 'USDT_TRC20' ? 'TRC20' : 'TON')
+const mockAddr = (a: string) =>
+  a === 'USDT_TRC20' ? 'YOUR_TRON_WALLET_ADDRESS' : 'YOUR_TON_WALLET_ADDRESS'
 
 const delay = (ms = 280) => new Promise((r) => setTimeout(r, ms))
 
@@ -126,7 +139,83 @@ export async function mockRequest(
   if (path === '/auth/key') {
     if (!body?.key?.trim()) throw { errorCode: 'BAD_REQUEST', message: 'key required' }
     activated = true
+    paidUntil = null // a key grants lifetime access (бессрочно)
     return { activated: true, internal_id: 1 }
+  }
+
+  if (path === '/plans')
+    return {
+      plans: [
+        { days: 7, usd: 2 },
+        { days: 30, usd: 5 },
+        { days: 90, usd: 15 },
+        { days: 365, usd: 45 },
+      ],
+      assets: [
+        { id: 'TON', label: 'GRAM', network: 'TON' },
+        { id: 'USDT_TON', label: 'USDT', network: 'TON' },
+        { id: 'USDT_TRC20', label: 'USDT', network: 'TRC20' },
+      ],
+      gram_usd: GRAM_USD,
+    }
+
+  if (path === '/orders' && m === 'POST') {
+    const id = uuid()
+    const asset = body?.asset || 'TON'
+    const days = body?.plan_days || 30
+    const usd = USD_PRICE[days] ?? 5
+    const base = asset === 'TON' ? usd / GRAM_USD : usd // GRAM at live rate, USDT 1:1
+    const amount = (base + 0.0037).toFixed(4)
+    mockOrders[id] = { created: Date.now(), plan_days: days, asset, amount, address: mockAddr(asset) }
+    return {
+      id, asset, network: mockNet(asset), address: mockAddr(asset), amount, plan_days: days,
+      expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
+    }
+  }
+
+  if (path === '/orders/history' && m === 'GET') {
+    // A couple of demo past payments + any session order that has been paid.
+    const demo: any[] = [
+      { id: 'h1', asset: 'TON', network: 'TON', amount: '2.7970', plan_days: 30, status: 'paid', paid_at: new Date(Date.now() - 20 * 86_400_000).toISOString(), created_at: new Date(Date.now() - 20 * 86_400_000).toISOString(), tx_hash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2:0' },
+      { id: 'h2', asset: 'USDT_TON', network: 'TON', amount: '15.0000', plan_days: 90, status: 'paid', paid_at: new Date(Date.now() - 95 * 86_400_000).toISOString(), created_at: new Date(Date.now() - 95 * 86_400_000).toISOString(), tx_hash: 'f0e1d2c3b4a5968778695a4b3c2d1e0f' },
+    ]
+    const session = Object.entries(mockOrders)
+      .filter(([, o]) => Date.now() - o.created > 6000)
+      .map(([id, o]) => ({ id, asset: o.asset, network: mockNet(o.asset), amount: o.amount, plan_days: o.plan_days, status: 'paid', paid_at: new Date(o.created + 6000).toISOString(), created_at: new Date(o.created).toISOString(), tx_hash: 'deadbeef'.repeat(8) }))
+    return [...session, ...demo].sort((a, b) => +new Date(b.paid_at || b.created_at) - +new Date(a.paid_at || a.created_at))
+  }
+
+  if (path === '/orders/pending' && m === 'GET') {
+    // All still-open orders (not cancelled, not yet paid), newest first.
+    return Object.entries(mockOrders)
+      .filter(([id, o]) => !cancelledOrders.has(id) && !paidOrders.has(id) && Date.now() - o.created <= 30 * 60_000)
+      .sort((a, b) => b[1].created - a[1].created)
+      .map(([id, o]) => ({
+        id, status: 'pending', asset: o.asset, network: mockNet(o.asset),
+        amount: o.amount, address: o.address, plan_days: o.plan_days,
+        expires_at: new Date(o.created + 30 * 60_000).toISOString(),
+      }))
+  }
+
+  if (path.match(/^\/orders\/[^/]+\/cancel$/) && m === 'POST') {
+    cancelledOrders.add(path.split('/')[2])
+    return { cancelled: true }
+  }
+
+  if (path.startsWith('/orders/') && m === 'GET') {
+    const o = mockOrders[path.split('/')[2]]
+    if (!o) throw { errorCode: 'NOT_FOUND', message: 'order not found' }
+    const paid = Date.now() - o.created > 6000
+    if (paid) {
+      paidOrders.add(path.split('/')[2])
+      activated = true // a paid order activates a brand-new buyer
+      paidUntil = new Date(Date.now() + o.plan_days * 86_400_000).toISOString() // term = plan length
+    }
+    return {
+      id: path.split('/')[2], status: paid ? 'paid' : 'pending',
+      asset: o.asset, network: mockNet(o.asset), amount: o.amount, address: o.address, plan_days: o.plan_days,
+      ...(paid ? { paid_at: new Date().toISOString() } : {}),
+    }
   }
 
   if (path === '/configs' && m === 'GET') return configs.filter((c) => c.is_active)

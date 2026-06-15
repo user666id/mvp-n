@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Spinner } from '../components/ui/Spinner'
 import { AreaChart } from '../components/Chart'
-import { Globe, Clock, Cloud, Monitor } from '../components/icons'
+import { Globe, Clock, Monitor } from '../components/icons'
 import { getServerStats, type ServerStats } from '../api'
 import { bytesRate } from '../lib/format'
 import { useT } from '../lib/i18n'
@@ -72,10 +72,9 @@ function StatsBody({ stats }: { stats: ServerStats }) {
       </div>
 
       <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-surface">
-        <InfoRow icon={<Globe size={20} />} text={stats.hostname} />
+        <InfoRow icon={<Globe size={20} />} text={`🇳🇱 ${t('stats.location')}`} />
         {stats.server_ip && <InfoRow icon={<Monitor size={20} />} text={stats.server_ip} />}
-        <InfoRow icon={<Clock size={20} />} text={t('stats.uptime', { n: stats.uptime_days })} />
-        <InfoRow icon={<Cloud size={20} />} text={stats.cpu_model} last />
+        <InfoRow icon={<Clock size={20} />} text={t('stats.uptime', { n: stats.uptime_days })} last />
       </div>
 
       <ChartCard title={t('stats.cpu')}>

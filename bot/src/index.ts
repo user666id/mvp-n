@@ -21,11 +21,12 @@ const bot = new Bot(BOT_TOKEN)
 
 // ── Texts ────────────────────────────────────────────────────────────────────
 // Default language is English; Russian-speaking users get the Russian copy.
+// Minimal: one line + the button. No greeting, no brand line, no value prop.
 const WELCOME = {
-  en: ['mvp-n', '', 'Press the button below to open.'].join('\n'),
-  ru: ['mvp-n', '', 'Нажмите кнопку ниже, чтобы открыть.'].join('\n'),
+  ru: 'Нажмите кнопку ниже, чтобы открыть.',
+  en: 'Tap the button below to open.',
 }
-const BUTTON = { en: 'Open console', ru: 'Открыть консоль' }
+const BUTTON = { en: 'Open', ru: 'Открыть' }
 
 // Insert into a Map capped at `cap` entries. Map keeps insertion order, so the
 // first key is the oldest — drop it when over capacity. Re-inserting an existing
@@ -125,12 +126,14 @@ bot.catch((err) => {
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 async function main() {
-  // The bottom-left "Меню" button just exposes /start (no direct app launch).
-  // Localized command label: English by default, Russian for ru users.
+  // The bottom-left menu button launches the Mini App directly (one tap to open),
+  // Claude-style. Localized command label: English by default, Russian for ru.
   await Promise.all([
-    bot.api.setChatMenuButton({ menu_button: { type: 'commands' } }),
-    bot.api.setMyCommands([{ command: 'start', description: 'Restart' }]),
-    bot.api.setMyCommands([{ command: 'start', description: 'Перезапустить' }], {
+    bot.api.setChatMenuButton({
+      menu_button: { type: 'web_app', text: 'mvp-n', web_app: { url: MINI_APP_URL } },
+    }),
+    bot.api.setMyCommands([{ command: 'start', description: 'Open mvp-n' }]),
+    bot.api.setMyCommands([{ command: 'start', description: 'Открыть mvp-n' }], {
       language_code: 'ru',
     }),
   ])

@@ -19,7 +19,15 @@ export class ApiError extends Error {
 }
 
 // Hung requests in the Telegram WebView would otherwise spin forever — abort them.
-const TIMEOUT_MS = 20000
+// Kept tight so a stalled mobile connection fails fast and we can retry, instead
+// of leaving the user on a spinner for 20s.
+const TIMEOUT_MS = 12000
+
+// Transient (timeout / network) GET retries. Mobile Telegram WebViews drop
+// requests often; without this a single blip leaves a screen stuck empty until
+// the user re-opens the app. GETs only — never replay a POST (could double-apply).
+const GET_RETRIES = 2
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 async function rawFetch(
   method: string,
@@ -78,6 +86,7 @@ export async function request<T>(
   path: string,
   body?: unknown,
   retried = false,
+  netTries = 0,
 ): Promise<T> {
   if (USE_MOCK) return mockRequest(method, path, body) as Promise<T>
 
@@ -86,6 +95,11 @@ export async function request<T>(
     res = await rawFetch(method, path, body, true)
   } catch (e: any) {
     const code = e?.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK'
+    // Retry idempotent reads through a flaky connection before surfacing an error.
+    if (method.toUpperCase() === 'GET' && netTries < GET_RETRIES) {
+      await sleep(400 * (netTries + 1))
+      return request<T>(method, path, body, retried, netTries + 1)
+    }
     throw new ApiError(code, e?.message || 'network error')
   }
 

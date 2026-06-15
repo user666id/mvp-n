@@ -4,8 +4,7 @@ import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { Collapse } from '../components/ui/Collapse'
 import { Logo } from '../components/Logo'
-import { ChevronRight } from '../components/icons'
-import { useToast } from '../components/ui/Toast'
+import { ChevronRight, ExternalLink } from '../components/icons'
 import { openLink } from '../lib/telegram'
 import { BRAND, BOT } from '../lib/config'
 import { RELEASES, APP_VERSION, type ChangeKind } from '../lib/changelog'
@@ -19,8 +18,12 @@ const KIND_LABEL: Record<ChangeKind, TKey> = {
 
 export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, lang } = useT()
-  const toast = useToast()
   const [updatesOpen, setUpdatesOpen] = useState(false)
+
+  // Hosted legal pages on their own subdomain (clean URLs), opened in the
+  // external browser. Follows the current UI language.
+  const legalUrl = (doc: 'terms' | 'privacy') =>
+    `https://legal.mvp-n.net/${doc}?lang=${lang}`
 
   const faq: { q: TKey; a: TKey }[] = [
     { q: 'about.q1', a: 'about.a1' },
@@ -71,6 +74,20 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
           />
         </Section>
 
+        <Section header={t('about.legal')}>
+          <Cell
+            title={t('about.terms')}
+            after={<ExternalLink size={18} className="text-faint" />}
+            onClick={() => openLink(legalUrl('terms'))}
+          />
+          <Cell
+            title={t('about.privacy')}
+            after={<ExternalLink size={18} className="text-faint" />}
+            onClick={() => openLink(legalUrl('privacy'))}
+            last
+          />
+        </Section>
+
         <div className="mb-2 px-3 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
           {t('about.faq')}
         </div>
@@ -81,21 +98,6 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
             </Collapse>
           ))}
         </div>
-
-        <Section header={t('about.legal')}>
-          <Cell
-            title={t('about.terms')}
-            after={<ChevronRight size={20} />}
-            onClick={() => toast(t('common.soon'))}
-          />
-          <Cell
-            title={t('about.privacy')}
-            subtitle="Zero-Logs"
-            after={<ChevronRight size={20} />}
-            onClick={() => toast(t('common.soon'))}
-            last
-          />
-        </Section>
 
         <div className="flex flex-col items-center gap-1.5 pb-2">
           <span className="rounded-full bg-accent-soft px-3.5 py-1 text-[12px] font-medium text-accent">

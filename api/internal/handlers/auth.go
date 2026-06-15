@@ -27,9 +27,9 @@ type tgUser struct {
 
 // ── POST /auth/token ─────────────────────────────────────────────────────────
 //
-// Verifies Telegram WebApp initData and issues a 30-day JWT.
-// Does NOT create a user record. Frontend uses `user_exists` and
-// `is_active` to route between activation screen and main UI.
+// Verifies Telegram WebApp initData, creates/refreshes the user's profile
+// (WITHOUT granting VPN access — is_active stays false until a key/payment), and
+// issues a 30-day JWT. The Mini App always opens; activation happens in-app.
 
 type AuthTelegramRequest struct {
 	InitData string `json:"init_data"`
@@ -52,24 +52,23 @@ func (h *Handler) AuthTelegram(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Look up but do NOT create.
+	// Create the profile on first login and keep names in sync — but DON'T grant
+	// access: is_active/paid_until are left untouched (NULL/false for new rows),
+	// so the user lands in the app and activates with a key/payment there.
 	var (
 		internalID int
 		isActive   bool
-		exists     bool
+		exists     = true
 	)
-	row := h.DB.QueryRowContext(r.Context(),
-		`SELECT internal_id, is_active FROM users WHERE id = $1 AND deleted_at IS NULL`,
-		user.ID,
-	)
-	switch err := row.Scan(&internalID, &isActive); {
-	case err == sql.ErrNoRows:
-		exists = false
-	case err != nil:
+	if err := h.DB.QueryRowContext(r.Context(), `
+		INSERT INTO users (id, username, first_name, last_name)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (id) DO UPDATE
+		SET username = EXCLUDED.username, first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name
+		RETURNING internal_id, is_active`,
+		user.ID, user.Username, user.FirstName, user.LastName).Scan(&internalID, &isActive); err != nil {
 		h.writeError(w, 500, "DB_ERROR", err.Error())
 		return
-	default:
-		exists = true
 	}
 
 	// Issue JWT with TG-derived fields. We embed first_name/last_name/username
@@ -263,9 +262,14 @@ func verifyTelegramInitData(initData, botToken string) (tgUser, error) {
 		return tgUser{}, errBadInitData
 	}
 
+	// initData.auth_date is fixed at app launch and never refreshes while the
+	// Mini App stays open, so the silent re-auth (client re-sends cached initData
+	// on a 401) would fail once the app has been open a while. A 24h window keeps
+	// replay protection meaningful while letting long-lived sessions self-heal
+	// instead of forcing the user to relaunch.
 	if ad := params.Get("auth_date"); ad != "" {
 		ts, _ := strconv.ParseInt(ad, 10, 64)
-		if time.Now().Unix()-ts > 600 {
+		if time.Now().Unix()-ts > 24*60*60 {
 			return tgUser{}, errStaleInitData
 		}
 	}
@@ -274,5 +278,5 @@ func verifyTelegramInitData(initData, botToken string) (tgUser, error) {
 
 var (
 	errBadInitData   = errors.New("invalid initData signature")
-	errStaleInitData = errors.New("initData is older than 10 minutes")
+	errStaleInitData = errors.New("initData is older than 24 hours")
 )

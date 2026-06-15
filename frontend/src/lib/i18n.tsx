@@ -27,21 +27,20 @@ const dict = {
 
   // ── tabs ─────────────────────────────────────────────────────────────────
   'tab.configs': { en: 'Configs', ru: 'Конфиги' },
-  'tab.options': { en: 'Options', ru: 'Опции' },
   'tab.settings': { en: 'Settings', ru: 'Настройки' },
 
   // ── auth / key ─────────────────────────────────────────────────────────────
   'auth.welcome': {
-    en: 'Sign in with Telegram. You’ll need an access key from the administrator.',
-    ru: 'Войдите через Telegram. Для активации нужен ключ доступа от администратора.',
+    en: 'Sign in with Telegram, then buy a subscription or activate an access key.',
+    ru: 'Войдите через Telegram, затем оформите подписку или активируйте ключ доступа.',
   },
   'auth.login': { en: 'Sign in with Telegram', ru: 'Войти через Telegram' },
   'auth.loginFailed': { en: 'Sign-in failed', ru: 'Не удалось войти' },
   'key.title': { en: 'Access key', ru: 'Ключ доступа' },
   'key.activateTitle': { en: 'Activation', ru: 'Активация' },
   'key.activateHint': {
-    en: 'Enter the access key from the administrator.',
-    ru: 'Введите ключ доступа от администратора.',
+    en: 'Enter your access key.',
+    ru: 'Введите ключ доступа.',
   },
   'key.hint': {
     en: 'One-time key from the administrator.',
@@ -49,10 +48,77 @@ const dict = {
   },
   'key.placeholder': { en: 'XXXX-XXXX', ru: 'XXXX-XXXX' },
   'key.activate': { en: 'Activate', ru: 'Активировать' },
+  'key.or': { en: 'or', ru: 'или' },
   'key.invalid': { en: 'Invalid key', ru: 'Неверный ключ' },
 
   // ── configs ──────────────────────────────────────────────────────────────
   'configs.title': { en: 'Configs', ru: 'Конфиги' },
+  'sub.unlimited': { en: 'Lifetime access', ru: 'Бессрочно' },
+  'sub.until': { en: 'Active until {d}', ru: 'Активна до {d}' },
+  'sub.expired': { en: 'Subscription expired', ru: 'Подписка истекла' },
+  'sub.status': { en: 'Subscription', ru: 'Подписка' },
+  'sub.lifetimeShort': { en: 'Lifetime', ru: 'Бессрочно' },
+  'sub.none': { en: 'No subscription', ru: 'Нет подписки' },
+  'sub.activeTitle': { en: 'Subscription active', ru: 'Подписка активна' },
+  'sub.history': { en: 'Payment history', ru: 'История платежей' },
+  'sub.historyEmpty': { en: 'No payments yet', ru: 'Платежей пока нет' },
+  'sub.statusPaid': { en: 'Paid', ru: 'Оплачено' },
+  'sub.statusExpired': { en: 'Expired', ru: 'Истёк' },
+  'sub.viewTx': { en: 'View transaction', ru: 'Транзакция' },
+  'sub.lifetimeHint': {
+    en: 'Granted by an access key — it never expires.',
+    ru: 'Доступ выдан по ключу — без срока действия.',
+  },
+  'sub.noneHint': {
+    en: 'Buy a subscription or activate an access key to use the VPN.',
+    ru: 'Купите подписку или активируйте ключ, чтобы пользоваться VPN.',
+  },
+  'sub.byKey': { en: 'Key', ru: 'Ключ' },
+  'sub.byPaid': { en: 'Paid', ru: 'Оплата' },
+  'sub.expiredHint': {
+    en: 'Renew it to use the VPN and create configs again.',
+    ru: 'Продлите, чтобы снова пользоваться VPN и создавать конфиги.',
+  },
+  'sub.renew': { en: 'Renew', ru: 'Продлить' },
+  'sub.buy': { en: 'Buy subscription', ru: 'Купить подписку' },
+  'sub.haveKey': { en: 'I have a key', ru: 'У меня есть ключ' },
+  'sub.connectTitle': { en: 'Activate access', ru: 'Подключите доступ' },
+  'sub.connectHint': {
+    en: 'Buy a subscription or activate an access key to use the VPN.',
+    ru: 'Купите подписку или активируйте ключ, чтобы пользоваться VPN.',
+  },
+  'pay.title': { en: 'Subscription', ru: 'Подписка' },
+  'pay.currency': { en: 'Currency', ru: 'Валюта' },
+  'pay.plan': { en: 'Plan', ru: 'Тариф' },
+  'pay.pay': { en: 'Pay {a}', ru: 'Оплатить {a}' },
+  'pay.d7': { en: '7 days', ru: '7 дней' },
+  'pay.d30': { en: '30 days', ru: '30 дней' },
+  'pay.d90': { en: '90 days', ru: '90 дней' },
+  'pay.d365': { en: '365 days', ru: '365 дней' },
+  'pay.sendExactly': { en: 'Send exactly', ru: 'Отправьте ровно' },
+  'pay.network': { en: 'network', ru: 'сеть' },
+  'pay.amount': { en: 'Amount', ru: 'Сумма' },
+  'pay.waiting': { en: 'Waiting for payment…', ru: 'Ждём оплату…' },
+  'pay.exactHint': {
+    en: 'Send the exact amount — that’s how we match your payment.',
+    ru: 'Отправьте точную сумму — по ней мы находим ваш платёж.',
+  },
+  'pay.autoHint': {
+    en: 'Access opens automatically once the network confirms (usually 1–2 min). You can close this — the payment won’t be lost, just come back here.',
+    ru: 'Доступ откроется автоматически после подтверждения в сети (обычно 1–2 мин). Можно закрыть — платёж не потеряется, просто вернитесь сюда.',
+  },
+  'pay.resumeTitle': { en: 'Unfinished payment', ru: 'Незавершённый платёж' },
+  'pay.resumeBtn': { en: 'Continue', ru: 'Продолжить' },
+  'pay.pendingTitle': { en: 'Payment processing', ru: 'Платёж обрабатывается' },
+  'pay.pendingHint': {
+    en: 'We’re waiting for the network to confirm your payment. Access opens automatically — usually within 1–2 minutes.',
+    ru: 'Ждём подтверждения вашего платежа в сети. Доступ откроется автоматически — обычно в течение 1–2 минут.',
+  },
+  'pay.pendingView': { en: 'View payment', ru: 'Открыть оплату' },
+  'pay.done': { en: 'Paid!', ru: 'Оплачено!' },
+  'pay.doneHint': { en: 'Your subscription is extended.', ru: 'Подписка продлена.' },
+  'pay.failed': { en: 'Couldn’t start payment', ru: 'Не удалось начать оплату' },
+  'pay.expired': { en: 'Order expired', ru: 'Срок заказа истёк' },
   'configs.empty': {
     en: 'You don’t have any configs yet. Create your first one to connect.',
     ru: 'У вас пока нет конфигов. Создайте первый, чтобы подключиться.',
@@ -183,6 +249,7 @@ const dict = {
     en: 'Scan in your app (Happ, v2RayTun).',
     ru: 'Отсканируйте в приложении (Happ, v2RayTun).',
   },
+  'detail.rawTitle': { en: 'VLESS link', ru: 'VLESS-ссылка' },
   'detail.rawHint': {
     en: 'Import into any app.',
     ru: 'Импортируйте в любое приложение.',
@@ -315,18 +382,18 @@ const dict = {
   'settings.themeSystem': { en: 'System', ru: 'Система' },
   'settings.themeLight': { en: 'Light', ru: 'Светлая' },
   'settings.themeDark': { en: 'Dark', ru: 'Тёмная' },
-  'settings.subscriptions': { en: 'Subscriptions', ru: 'Подписки' },
+  'settings.subscriptions': { en: 'Connection', ru: 'Подключение' },
   'settings.devices': { en: 'Connected devices', ru: 'Подключённые устройства' },
   'settings.devicesSub': { en: '{n} {u} connected', ru: 'Подключено {n} {u}' },
-  'settings.subSettings': { en: 'Subscription settings', ru: 'Настройки подписки' },
-  'settings.deviceLimit': { en: 'Device limit', ru: 'Лимит устройств' },
+  'settings.subSettings': { en: 'Device limit', ru: 'Лимит устройств' },
+  'settings.deviceLimit': { en: 'Maximum devices', ru: 'Максимум устройств' },
   'settings.noLimit': { en: 'no limit', ru: 'без лимита' },
   'settings.subSettingsSub': { en: 'Device limit: {v}', ru: 'Лимит устройств: {v}' },
   'settings.subSettingsHint': {
-    en: 'Max devices per subscription. Empty = no limit.',
-    ru: 'Лимит устройств на подписку. Пусто — без лимита.',
+    en: 'Maximum number of devices. Empty = no limit.',
+    ru: 'Максимальное число устройств. Пусто — без лимита.',
   },
-  'settings.subSaved': { en: 'Subscription settings saved', ru: 'Настройки подписки сохранены' },
+  'settings.subSaved': { en: 'Device limit saved', ru: 'Лимит устройств сохранён' },
   'settings.reset': { en: 'Reset configs', ru: 'Сбросить конфиги' },
   'settings.resetSub': {
     en: 'Deletes all your configs and devices',
@@ -349,6 +416,10 @@ const dict = {
     en: 'Delete your account and all configs? This can’t be undone.',
     ru: 'Удалить аккаунт и все конфиги? Действие необратимо.',
   },
+  'settings.deleteAccountConfirmSub': {
+    en: 'Delete your account, all configs AND your active subscription? The subscription will be lost (no refund) and this can’t be undone.',
+    ru: 'Удалить аккаунт, все конфиги И активную подписку? Подписка будет потеряна без возврата средств. Действие необратимо.',
+  },
   'settings.adminCantDelete': {
     en: 'The admin account cannot be deleted',
     ru: 'Аккаунт администратора нельзя удалить',
@@ -356,7 +427,6 @@ const dict = {
   'settings.deleteAccountFailed': { en: 'Failed to delete account', ru: 'Не удалось удалить аккаунт' },
 
   // ── about ──────────────────────────────────────────────────────────────────
-  'common.soon': { en: 'Soon', ru: 'Скоро' },
   'about.title': { en: 'About', ru: 'О сервисе' },
   'about.tagline': {
     en: 'Secure and anonymous access.',
@@ -371,7 +441,7 @@ const dict = {
   'about.changed': { en: 'Changed', ru: 'Изменено' },
   'about.fixed': { en: 'Fixed', ru: 'Исправлено' },
   'about.legal': { en: 'Legal', ru: 'Правовая информация' },
-  'about.terms': { en: 'Terms of use', ru: 'Условия использования' },
+  'about.terms': { en: 'Usage policy', ru: 'Политика использования' },
   'about.privacy': { en: 'Privacy policy', ru: 'Политика конфиденциальности' },
   'about.versionLabel': { en: 'Version', ru: 'Версия' },
   'about.q1': { en: 'What is a config?', ru: 'Что такое конфиг?' },
@@ -421,6 +491,7 @@ const dict = {
   // ── charts / server stats ─────────────────────────────────────────────────
   'chart.at': { en: 'at', ru: 'в' },
   'stats.title': { en: 'Server statistics', ru: 'Статистика сервера' },
+  'stats.location': { en: 'Netherlands', ru: 'Нидерланды' },
   'stats.unavailable': { en: 'Statistics unavailable', ru: 'Статистика недоступна' },
   'stats.online': { en: 'Server is up', ru: 'Сервер работает' },
   'stats.offline': { en: 'Server unavailable', ru: 'Сервер недоступен' },
@@ -431,12 +502,6 @@ const dict = {
   'stats.footer': {
     en: 'Updated every 10 minutes.',
     ru: 'Обновление раз в 10 минут.',
-  },
-
-  // ── options ────────────────────────────────────────────────────────────────
-  'options.soon': {
-    en: 'This section is under development. Additional features are coming soon.',
-    ru: 'Раздел в разработке. Скоро здесь появятся дополнительные возможности.',
   },
 } as const
 

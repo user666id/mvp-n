@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/user666id/vpn-project/api/internal/xray"
@@ -47,14 +48,22 @@ func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
 		gameMode    bool
 		clientUUID  sql.NullString
 		deviceLimit int
+		paidUntil   sql.NullTime
 	)
 	err := h.DB.QueryRowContext(r.Context(), `
-		SELECT vc.user_id, u.internal_id, vc.location, vc.enhanced, vc.game_mode, vc.client_uuid, u.device_limit
+		SELECT vc.user_id, u.internal_id, vc.location, vc.enhanced, vc.game_mode, vc.client_uuid, u.device_limit, u.paid_until
 		FROM vpn_configs vc JOIN users u ON u.id = vc.user_id
 		WHERE vc.short_id = $1 AND vc.is_active = true`, req.ShortID).
-		Scan(&userID, &internalID, &location, &enhanced, &gameMode, &clientUUID, &deviceLimit)
+		Scan(&userID, &internalID, &location, &enhanced, &gameMode, &clientUUID, &deviceLimit, &paidUntil)
 	if err != nil {
 		h.writeError(w, 404, "NOT_FOUND", "config not found")
+		return
+	}
+	// Subscription gate: NULL paid_until = no time limit (key-activated /
+	// grandfathered). A timestamp in the past = expired → refuse provisioning
+	// (account & configs are kept; renewing paid_until restores access).
+	if paidUntil.Valid && !paidUntil.Time.After(time.Now()) {
+		h.writeError(w, 403, "SUBSCRIPTION_EXPIRED", "subscription expired")
 		return
 	}
 

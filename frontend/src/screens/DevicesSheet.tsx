@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useForegroundRefetch } from '../lib/useForeground'
 import { Sheet } from '../components/ui/Sheet'
 import { Button } from '../components/ui/Button'
 import { Section } from '../components/ui/Card'
@@ -56,6 +57,9 @@ export function DevicesSheet({
     if (open) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Re-load when the app returns to the foreground while the sheet is open.
+  useForegroundRefetch(open, load)
 
   const refresh = async () => {
     await load()

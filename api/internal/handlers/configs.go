@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/user666id/vpn-project/api/internal/middleware"
@@ -166,11 +167,17 @@ func (h *Handler) CreateConfig(w http.ResponseWriter, r *http.Request) {
 	uid, _ := middleware.UserID(r.Context())
 	var isActive bool
 	var internalID int
+	var paidUntil sql.NullTime
 	err := h.DB.QueryRowContext(r.Context(),
-		`SELECT is_active, internal_id FROM users WHERE id = $1 AND deleted_at IS NULL`, uid,
-	).Scan(&isActive, &internalID)
+		`SELECT is_active, internal_id, paid_until FROM users WHERE id = $1 AND deleted_at IS NULL`, uid,
+	).Scan(&isActive, &internalID, &paidUntil)
 	if err != nil || !isActive {
 		h.writeError(w, 403, "NOT_ACTIVATED", "account not activated")
+		return
+	}
+	// Expired paid subscription → no new configs until renewed (NULL = no limit).
+	if !subscriptionActive(paidUntil, time.Now()) {
+		h.writeError(w, 403, "SUBSCRIPTION_EXPIRED", "subscription expired")
 		return
 	}
 

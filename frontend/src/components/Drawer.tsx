@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Layers, Sliders, Settings } from './icons'
+import { Layers, Settings } from './icons'
 import { BRAND } from '../lib/config'
 import { useT, type TKey } from '../lib/i18n'
-import type { Tab } from './TabBar'
+
+export type Tab = 'configs' | 'settings'
 
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 const DUR = 320
 
 const items: { id: Tab; key: TKey; Icon: typeof Layers }[] = [
   { id: 'configs', key: 'tab.configs', Icon: Layers },
-  { id: 'options', key: 'tab.options', Icon: Sliders },
   { id: 'settings', key: 'tab.settings', Icon: Settings },
 ]
 

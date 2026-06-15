@@ -16,6 +16,7 @@ import { copyText } from '../lib/clipboard'
 import { confirmDialog, notify, openLink } from '../lib/telegram'
 import { padId, formatBytes } from '../lib/format'
 import { configMeta, configListLabel } from '../lib/configMeta'
+import { subLabel } from '../lib/subscription'
 import { useT } from '../lib/i18n'
 import {
   adminBlockProfile, adminBlockProfileDevice, adminCreateKeys, adminDeleteProfile,
@@ -288,6 +289,10 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
                       {name && <span className="truncate text-[14px] text-muted">{name}</span>}
                       {p.is_admin && <Badge tone="accent">{t('settings.admin')}</Badge>}
                       {p.is_blocked && <Badge>{t('devices.blockedShort')}</Badge>}
+                      {(() => {
+                        const s = subLabel(p, t, lang)
+                        return <Badge tone={s.tone === 'muted' ? 'neutral' : s.tone}>{s.text}</Badge>
+                      })()}
                     </div>
                     <div className="truncate text-[12.5px] text-muted">
                       {t('admin.devShort', { n: p.devices_count })} · {formatBytes(p.traffic_used, lang)}
@@ -391,7 +396,7 @@ function DomainStatusSheet({
                     <>
                       <span className={'h-2.5 w-2.5 shrink-0 rounded-full ' + (d.ok ? 'bg-success' : 'bg-danger')} />
                       <div className="min-w-0 flex-1">
-                        <div className={'truncate text-[15px] font-medium ' + (kind === 'web' ? 'text-accent' : 'text-ink')}>
+                        <div className="truncate text-[15px] font-medium text-ink">
                           {d.name}
                         </div>
                         <div className="text-[12.5px] text-muted">
@@ -399,7 +404,7 @@ function DomainStatusSheet({
                           {d.status ? ` · ${d.status}` : ''} · {d.ms} ms
                         </div>
                       </div>
-                      {kind === 'web' && <ExternalLink size={16} className="shrink-0 text-accent" />}
+                      {kind === 'web' && <ExternalLink size={16} className="shrink-0 text-faint" />}
                     </>
                   )
                   return kind === 'web' ? (

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useForegroundRefetch } from '../lib/useForeground'
 import { PageHeader } from '../components/PageHeader'
 import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
@@ -10,15 +11,17 @@ import { Spinner } from '../components/ui/Spinner'
 import { Avatar } from '../components/ui/Avatar'
 import { useToast } from '../components/ui/Toast'
 import {
-  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, ShieldCheck, Vibrate,
+  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, ShieldCheck, Users, Vibrate,
 } from '../components/icons'
 import { ProfileDetails } from '../components/ProfileDetails'
 import { DevicesSheet } from './DevicesSheet'
 import { AboutSheet } from './AboutSheet'
 import { AdminSheet } from './AdminSheet'
+import { SubscriptionSheet } from './SubscriptionSheet'
 import { confirmDialog, notify, hapticsEnabled, getTheme, setTheme, type ThemePref } from '../lib/telegram'
 import { padId, formatBytes, plural } from '../lib/format'
 import { useT } from '../lib/i18n'
+import { subLabel } from '../lib/subscription'
 import {
   ApiError, deleteAccount, getProfile, resetSubscriptionLink, setDeviceLimit, setLanguage, type Profile,
 } from '../api'
@@ -90,6 +93,7 @@ export function SettingsScreen({
   const [devicesOpen, setDevicesOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [subOpen, setSubOpen] = useState(false)
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
   const [haptics, setHaptics] = useState(hapticsEnabled())
@@ -123,6 +127,9 @@ export function SettingsScreen({
   useEffect(() => {
     if (active) load()
   }, [active, load])
+
+  // Re-load when the app returns to the foreground (suspended WebView / stale data).
+  useForegroundRefetch(active, load)
 
   const toggleNotify = (v: boolean) => {
     setNotify(v)
@@ -169,7 +176,10 @@ export function SettingsScreen({
       toast(t('settings.adminLocked'))
       return
     }
-    if (!(await confirmDialog(t('settings.deleteAccountConfirm')))) return
+    // Warn that an active/lifetime subscription is lost on delete (non-refundable).
+    const hasSub = profile && subLabel(profile, t, lang).tone === 'success'
+    const msg = hasSub ? t('settings.deleteAccountConfirmSub') : t('settings.deleteAccountConfirm')
+    if (!(await confirmDialog(msg))) return
     setBusy(true)
     try {
       await deleteAccount()
@@ -233,11 +243,22 @@ export function SettingsScreen({
           </button>
         </Section>
 
+        {/* subscription — status + buy/renew live in their own pane (Claude style) */}
+        <Section>
+          <Cell
+            before={<ShieldCheck size={20} />}
+            after={<ValueChevron value={profile ? subLabel(profile, t, lang).text : ''} />}
+            title={t('sub.status')}
+            onClick={() => profile && setSubscriptionOpen(true)}
+            last
+          />
+        </Section>
+
         {/* admin entry (admins only); About lives in the header ⓘ button */}
         {profile?.is_admin && (
           <Section>
             <Cell
-              before={<ShieldCheck size={20} />}
+              before={<Users size={20} />}
               after={<ChevronRight size={20} />}
               title={t('settings.adminPanel')}
               onClick={() => setAdminOpen(true)}
@@ -246,7 +267,44 @@ export function SettingsScreen({
           </Section>
         )}
 
-        {/* appearance — language + theme, one consistent group */}
+        {/* notifications */}
+        <Section header={t('settings.notifications')}>
+          <Cell
+            before={<Bell size={20} />}
+            title={t('settings.notifyTitle')}
+            after={<Switch checked={notify_} onChange={toggleNotify} />}
+            last
+          />
+        </Section>
+
+        {/* subscriptions */}
+        <Section header={t('settings.subscriptions')}>
+          <Cell
+            before={<Phone size={20} />}
+            after={<ValueChevron value={`${devCount} ${deviceUnit(devCount, lang)}`} />}
+            title={t('settings.devices')}
+            onClick={() => setDevicesOpen(true)}
+          />
+          <Cell
+            before={<Sliders size={20} />}
+            after={
+              <ValueChevron
+                value={profile?.device_limit ? profile.device_limit : t('settings.noLimit')}
+              />
+            }
+            title={t('settings.subSettings')}
+            onClick={() => setSubOpen(true)}
+          />
+          <Cell
+            before={<Refresh size={20} />}
+            after={<ChevronRight size={20} />}
+            title={t('settings.reset')}
+            onClick={doReset}
+            last
+          />
+        </Section>
+
+        {/* appearance — language + theme + haptics, near the bottom (Claude style) */}
         <Section header={t('settings.appearance')}>
           <div className="border-b border-border px-4 py-3.5">
             <div className="mb-2 text-[13px] text-muted">{t('settings.language')}</div>
@@ -306,43 +364,6 @@ export function SettingsScreen({
           />
         </Section>
 
-        {/* notifications */}
-        <Section header={t('settings.notifications')}>
-          <Cell
-            before={<Bell size={20} />}
-            title={t('settings.notifyTitle')}
-            after={<Switch checked={notify_} onChange={toggleNotify} />}
-            last
-          />
-        </Section>
-
-        {/* subscriptions */}
-        <Section header={t('settings.subscriptions')}>
-          <Cell
-            before={<Phone size={20} />}
-            after={<ValueChevron value={`${devCount} ${deviceUnit(devCount, lang)}`} />}
-            title={t('settings.devices')}
-            onClick={() => setDevicesOpen(true)}
-          />
-          <Cell
-            before={<Sliders size={20} />}
-            after={
-              <ValueChevron
-                value={profile?.device_limit ? profile.device_limit : t('settings.noLimit')}
-              />
-            }
-            title={t('settings.subSettings')}
-            onClick={() => setSubOpen(true)}
-          />
-          <Cell
-            before={<Refresh size={20} />}
-            after={<ChevronRight size={20} />}
-            title={t('settings.reset')}
-            onClick={doReset}
-            last
-          />
-        </Section>
-
         {/* log out — bottom of the list, left-aligned row (Claude) */}
         <Section>
           <Cell
@@ -396,6 +417,13 @@ export function SettingsScreen({
           </Button>
         </div>
       </Sheet>
+
+      <SubscriptionSheet
+        open={subscriptionOpen}
+        onClose={() => setSubscriptionOpen(false)}
+        profile={profile}
+        onChanged={load}
+      />
 
       <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
 

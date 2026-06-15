@@ -17,6 +17,51 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '1.5',
+    date: '2026-06-15',
+    groups: [
+      {
+        kind: 'added',
+        items: [
+          {
+            en: 'Paid subscriptions — pay with crypto (GRAM or USDT on TON / TRC20), or activate a key for lifetime access.',
+            ru: 'Платные подписки — оплата криптой (GRAM или USDT, сети TON / TRC20) или активация по ключу с бессрочным доступом.',
+          },
+          {
+            en: 'Subscription section with status, renewal and payment history (with transaction links).',
+            ru: 'Раздел «Подписка»: статус, продление и история платежей (со ссылкой на транзакцию).',
+          },
+          {
+            en: 'Legal documents — Usage Policy and Privacy Policy on the web (EN / RU).',
+            ru: 'Юридические документы — «Политика использования» и «Политика конфиденциальности» в вебе (EN / RU).',
+          },
+        ],
+      },
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'Cleaner interface — tidied settings and navigation, refined dark theme.',
+            ru: 'Интерфейс стал чище — прибраны настройки и навигация, выверена тёмная тема.',
+          },
+          {
+            en: 'Updated the VPN core and app libraries for security and freshness.',
+            ru: 'Обновлены ядро VPN и библиотеки приложения — безопасность и актуальность.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        items: [
+          {
+            en: 'Devices and profile no longer get stuck on a flaky connection; an unfinished payment resumes after a reload.',
+            ru: 'Устройства и профиль больше не «зависают» при плохой связи; незавершённая оплата возобновляется после перезагрузки.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '1.4',
     date: '2026-06-12',
     groups: [

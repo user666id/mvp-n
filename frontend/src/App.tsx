@@ -1,19 +1,15 @@
 import { useEffect, useState } from 'react'
 import { ToastProvider } from './components/ui/Toast'
-import { type Tab } from './components/TabBar'
-import { Drawer } from './components/Drawer'
+import { Drawer, type Tab } from './components/Drawer'
 import { AuthScreen } from './screens/AuthScreen'
-import { KeyScreen } from './screens/KeyScreen'
 import { ConfigsScreen } from './screens/ConfigsScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
-import { PlaceholderScreen } from './screens/PlaceholderScreen'
 import { Spinner } from './components/ui/Spinner'
-import { Sliders } from './components/icons'
-import { ApiError, activateKey, authTelegram, clearToken, getToken, setLanguage } from './api'
+import { ApiError, authTelegram, clearToken, getToken, setLanguage } from './api'
 import { notify } from './lib/telegram'
 import { useT } from './lib/i18n'
 
-type Phase = 'auth' | 'key' | 'loading' | 'main' | 'error'
+type Phase = 'auth' | 'loading' | 'main' | 'error'
 
 export default function App() {
   const { t } = useT()
@@ -27,9 +23,9 @@ export default function App() {
     setBusy(true)
     setError(null)
     try {
-      const res = await authTelegram()
+      await authTelegram()
       notify('success')
-      setPhase(res.needs_activation ? 'key' : 'main')
+      setPhase('main') // always enter the app; activation (key/payment) happens in-app
     } catch (e) {
       notify('error')
       setError(e instanceof ApiError ? e.message : t('auth.loginFailed'))
@@ -67,25 +63,9 @@ export default function App() {
     setPhase('auth')
   }
 
-  const handleActivate = async (key: string) => {
-    setBusy(true)
-    setError(null)
-    try {
-      await activateKey(key)
-      notify('success')
-      setPhase('main')
-    } catch (e) {
-      notify('error')
-      setError(e instanceof ApiError ? e.message : t('key.invalid'))
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
     <ToastProvider>
       {phase === 'auth' && <AuthScreen onLogin={handleLogin} busy={busy} error={error} />}
-      {phase === 'key' && <KeyScreen onActivate={handleActivate} busy={busy} error={error} />}
       {phase === 'loading' && (
         <div className="grid min-h-screen place-items-center text-accent">
           <Spinner size={32} />
@@ -98,14 +78,6 @@ export default function App() {
               Each screen refreshes itself in the background when it becomes active. */}
           <div className={tab === 'configs' ? undefined : 'hidden'}>
             <ConfigsScreen active={tab === 'configs'} onMenu={() => setDrawerOpen(true)} />
-          </div>
-          <div className={tab === 'options' ? undefined : 'hidden'}>
-            <PlaceholderScreen
-              title={t('tab.options')}
-              icon={<Sliders size={40} />}
-              text={t('options.soon')}
-              onMenu={() => setDrawerOpen(true)}
-            />
           </div>
           <div className={tab === 'settings' ? undefined : 'hidden'}>
             <SettingsScreen

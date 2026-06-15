@@ -88,7 +88,7 @@ func TestVerifyInitData_WrongTokenRejected(t *testing.T) {
 func TestVerifyInitData_StaleRejected(t *testing.T) {
 	params := map[string]string{
 		"user":      `{"id":42}`,
-		"auth_date": strconv.FormatInt(time.Now().Add(-30*time.Minute).Unix(), 10),
+		"auth_date": strconv.FormatInt(time.Now().Add(-25*time.Hour).Unix(), 10),
 	}
 	initData := encodeInitData(params, signInitData(params, testBotToken))
 

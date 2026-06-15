@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"net"
 	"net/http"
 	"strconv"
@@ -92,6 +93,8 @@ func (h *Handler) AdminDomains(w http.ResponseWriter, r *http.Request) {
 		func() dom { return httpCheck("gw.mvp-n.net", "web", "https://gw.mvp-n.net/health") },
 		func() dom { return httpCheck("app.mvp-n.net", "web", "https://app.mvp-n.net/") },
 		func() dom { return httpCheck("connect.mvp-n.net", "web", "https://connect.mvp-n.net/health") },
+		func() dom { return httpCheck("legal.mvp-n.net/terms", "web", "https://legal.mvp-n.net/terms") },
+		func() dom { return httpCheck("legal.mvp-n.net/privacy", "web", "https://legal.mvp-n.net/privacy") },
 		func() dom { return tcpCheck("VLESS Vision · 43000", "vpn", xh+":43000") },
 		func() dom { return tcpCheck("VLESS XHTTP · 43001", "vpn", xh+":43001") },
 		func() dom { return httpCheck("AmneziaWG · 51820", "vpn", h.Config.AWGApiURL+"/health") },
@@ -114,17 +117,28 @@ func (h *Handler) AdminDomains(w http.ResponseWriter, r *http.Request) {
 
 // AdminProfileRow — compact profile row for admin list.
 type AdminProfileRow struct {
-	ID           int64     `json:"id"`
-	InternalID   int       `json:"internal_id"`
-	Username     string    `json:"username"`
-	FirstName    string    `json:"first_name"`
-	IsActive     bool      `json:"is_active"`
-	IsBlocked    bool      `json:"is_blocked"`
-	IsAdmin      bool      `json:"is_admin"`
-	CreatedAt    time.Time `json:"created_at"`
-	TrafficUsed  int64     `json:"traffic_used"`
-	DevicesCount int       `json:"devices_count"`
-	ConfigsCount int       `json:"configs_count"`
+	ID           int64      `json:"id"`
+	InternalID   int        `json:"internal_id"`
+	Username     string     `json:"username"`
+	FirstName    string     `json:"first_name"`
+	IsActive     bool       `json:"is_active"`
+	IsBlocked    bool       `json:"is_blocked"`
+	IsAdmin      bool       `json:"is_admin"`
+	CreatedAt    time.Time  `json:"created_at"`
+	TrafficUsed  int64      `json:"traffic_used"`
+	DevicesCount int        `json:"devices_count"`
+	ConfigsCount int        `json:"configs_count"`
+	PaidUntil    *time.Time `json:"paid_until,omitempty"` // nil = key/lifetime (or not activated)
+	IsExpired    bool       `json:"is_expired"`           // paid_until set and in the past
+}
+
+// applySub fills PaidUntil/IsExpired from a nullable paid_until column.
+func (p *AdminProfileRow) applySub(paidUntil sql.NullTime) {
+	if paidUntil.Valid {
+		t := paidUntil.Time
+		p.PaidUntil = &t
+		p.IsExpired = !t.After(time.Now())
+	}
 }
 
 // AdminListProfiles returns all users with stats.
@@ -136,7 +150,8 @@ func (h *Handler) AdminListProfiles(w http.ResponseWriter, r *http.Request) {
 		        u.traffic_used,
 		        (SELECT COUNT(*) FROM devices WHERE user_id = u.id)
 		          + (SELECT COUNT(*) FROM vpn_configs WHERE user_id = u.id AND protocol = 'awg' AND is_active = true),
-		        (SELECT COUNT(*) FROM vpn_configs WHERE user_id = u.id AND is_active = true)
+		        (SELECT COUNT(*) FROM vpn_configs WHERE user_id = u.id AND is_active = true),
+		        u.paid_until
 		FROM users u
 		WHERE u.deleted_at IS NULL
 		ORDER BY u.internal_id ASC
@@ -150,13 +165,15 @@ func (h *Handler) AdminListProfiles(w http.ResponseWriter, r *http.Request) {
 	out := []AdminProfileRow{}
 	for rows.Next() {
 		var p AdminProfileRow
+		var paidUntil sql.NullTime
 		if err := rows.Scan(
 			&p.ID, &p.InternalID, &p.Username, &p.FirstName,
 			&p.IsActive, &p.IsBlocked, &p.CreatedAt,
-			&p.TrafficUsed, &p.DevicesCount, &p.ConfigsCount,
+			&p.TrafficUsed, &p.DevicesCount, &p.ConfigsCount, &paidUntil,
 		); err != nil {
 			continue
 		}
+		p.applySub(paidUntil)
 		p.IsAdmin = h.Config.IsAdmin(p.ID)
 		out = append(out, p)
 	}
@@ -186,6 +203,7 @@ func (h *Handler) AdminProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var p AdminProfileRow
+	var paidUntil sql.NullTime
 	err = h.DB.QueryRowContext(r.Context(), `
 		SELECT  u.id, u.internal_id,
 		        COALESCE(u.username, ''), COALESCE(u.first_name, ''),
@@ -193,18 +211,20 @@ func (h *Handler) AdminProfile(w http.ResponseWriter, r *http.Request) {
 		        u.traffic_used,
 		        (SELECT COUNT(*) FROM devices WHERE user_id = u.id)
 		          + (SELECT COUNT(*) FROM vpn_configs WHERE user_id = u.id AND protocol = 'awg' AND is_active = true),
-		        (SELECT COUNT(*) FROM vpn_configs WHERE user_id = u.id AND is_active = true)
+		        (SELECT COUNT(*) FROM vpn_configs WHERE user_id = u.id AND is_active = true),
+		        u.paid_until
 		FROM users u
 		WHERE u.id = $1 OR u.internal_id = $1
 	`, id).Scan(
 		&p.ID, &p.InternalID, &p.Username, &p.FirstName,
 		&p.IsActive, &p.IsBlocked, &p.CreatedAt,
-		&p.TrafficUsed, &p.DevicesCount, &p.ConfigsCount,
+		&p.TrafficUsed, &p.DevicesCount, &p.ConfigsCount, &paidUntil,
 	)
 	if err != nil {
 		h.writeError(w, 404, "NOT_FOUND", "user not found")
 		return
 	}
+	p.applySub(paidUntil)
 	p.IsAdmin = h.Config.IsAdmin(p.ID)
 	h.writeJSON(w, 200, Response{Status: true, StatusCode: 200, Data: p})
 }

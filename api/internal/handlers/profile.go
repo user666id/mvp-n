@@ -28,7 +28,9 @@ type ProfileResponse struct {
 	TrafficLimit int64     `json:"traffic_limit"` // 0 = unlimited
 	DevicesCount int       `json:"devices_count"`
 	ConfigsCount int       `json:"configs_count"`
-	DeviceLimit  int       `json:"device_limit"` // 0 = unlimited
+	DeviceLimit  int       `json:"device_limit"`         // 0 = unlimited
+	PaidUntil    *time.Time `json:"paid_until,omitempty"` // nil = no time limit (key/grandfathered)
+	IsExpired    bool      `json:"is_expired"`           // paid_until set and in the past
 }
 
 // Profile returns the current user's full profile.
@@ -45,6 +47,7 @@ func (h *Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	h.syncTelegramFields(r.Context(), uid)
 
 	var p ProfileResponse
+	var paidUntil sql.NullTime
 	err := h.DB.QueryRowContext(r.Context(), `
 		SELECT  u.id, u.internal_id,
 		        COALESCE(u.username, ''), COALESCE(u.first_name, ''), COALESCE(u.last_name, ''),
@@ -53,19 +56,24 @@ func (h *Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		        (SELECT COUNT(*) FROM devices WHERE user_id = u.id AND is_blocked = false)
 		          + (SELECT COUNT(*) FROM vpn_configs WHERE user_id = u.id AND protocol = 'awg' AND is_active = true),
 		        (SELECT COUNT(*) FROM vpn_configs WHERE user_id = u.id AND is_active  = true),
-		        u.device_limit
+		        u.device_limit, u.paid_until
 		FROM users u
 		WHERE u.id = $1 AND u.deleted_at IS NULL
 	`, uid).Scan(
 		&p.ID, &p.InternalID, &p.Username, &p.FirstName, &p.LastName,
 		&p.IsActive, &p.IsBlocked, &p.CreatedAt,
-		&p.TrafficUsed, &p.DevicesCount, &p.ConfigsCount, &p.DeviceLimit,
+		&p.TrafficUsed, &p.DevicesCount, &p.ConfigsCount, &p.DeviceLimit, &paidUntil,
 	)
 	if err != nil {
 		h.writeError(w, 404, "USER_NOT_FOUND", "user not found")
 		return
 	}
 
+	if paidUntil.Valid {
+		t := paidUntil.Time
+		p.PaidUntil = &t
+		p.IsExpired = !t.After(time.Now())
+	}
 	p.IsAdmin = h.Config.IsAdmin(p.ID)
 	p.TrafficLimit = 0
 
@@ -309,6 +317,11 @@ func (h *Handler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
 // resetUserSubscription fully wipes a user's account: revokes and deletes ALL
 // configs (VLESS users dropped from xray, AmneziaWG peers removed) and ALL
 // devices. A clean slate. Shared by the self endpoint and the admin endpoint.
+// ResetSubscription wipes a user's VPN footprint (configs, devices, xray + AWG
+// peers). Exported so the expiry cron can reuse the exact same reset path that
+// the in-app "reset subscription" uses.
+func (h *Handler) ResetSubscription(ctx context.Context, uid int64) { h.resetUserSubscription(ctx, uid) }
+
 func (h *Handler) resetUserSubscription(ctx context.Context, uid int64) {
 	var internalID int
 	_ = h.DB.QueryRowContext(ctx,

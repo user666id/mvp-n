@@ -1,19 +1,27 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useForegroundRefetch } from '../lib/useForeground'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { ListSkeleton } from '../components/ui/Skeleton'
-import { ChevronRight, Layers, Plus } from '../components/icons'
+import { Spinner } from '../components/ui/Spinner'
+import { ChevronRight, Layers, Lock, Plus } from '../components/icons'
 import { useToast } from '../components/ui/Toast'
 import { CreateConfigSheet } from './CreateConfigSheet'
 import { ConfigDetailSheet } from './ConfigDetailSheet'
 import { ServerStatsSheet } from './ServerStatsSheet'
+import { SubscribeSheet } from './SubscribeSheet'
+import { KeyEntrySheet } from './KeyEntrySheet'
 import {
   createConfig,
   deleteConfig,
   getConfigs,
+  getProfile,
+  getPendingOrders,
   renameConfig,
   updateSettings,
   type Config,
+  type Order,
+  type Profile,
   type Protocol,
 } from '../api'
 import { notify } from '../lib/telegram'
@@ -25,15 +33,26 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
   const { t, lang } = useT()
   const toast = useToast()
   const [configs, setConfigs] = useState<Config[]>([])
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [statsOpen, setStatsOpen] = useState(false)
+  const [subOpen, setSubOpen] = useState(false)
+  const [keyOpen, setKeyOpen] = useState(false)
+  const [pending, setPending] = useState<Order[]>([])
 
   const load = useCallback(async () => {
     try {
-      setConfigs(await getConfigs())
+      const [cfgs, prof, pend] = await Promise.all([
+        getConfigs(),
+        getProfile().catch(() => null),
+        getPendingOrders().catch(() => []),
+      ])
+      setConfigs(cfgs)
+      if (prof) setProfile(prof)
+      setPending(pend)
     } catch {
       toast(t('configs.loadFailed'))
     } finally {
@@ -48,8 +67,23 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
     if (active) load()
   }, [active, load])
 
-  const detail = configs.find((c) => c.id === detailId) ?? null
+  // Re-load when the app returns to the foreground (suspended WebView / stale data).
+  useForegroundRefetch(active, load)
 
+  // While a payment is pending, poll so access flips on automatically once the
+  // on-chain check credits it (cron runs ~every minute) — no manual refresh.
+  useEffect(() => {
+    if (!active || pending.length === 0) return
+    const id = window.setInterval(load, 8000)
+    return () => window.clearInterval(id)
+  }, [active, pending, load])
+
+  const detail = configs.find((c) => c.id === detailId) ?? null
+  const expired = !!profile?.is_expired
+  // VPN access is gated behind a key/payment. We only LOCK when we have a profile
+  // that says so — a transient profile-fetch failure (null) keeps the normal UI
+  // rather than falsely locking out a paid user.
+  const hasAccess = profile ? profile.is_active && !expired : true
   const handleCreate = async (opts: {
     protocol: Protocol
     enhanced: boolean
@@ -103,18 +137,62 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
       <div className="px-4">
         {loading ? (
           <ListSkeleton rows={2} />
-        ) : configs.length === 0 ? (
-          <div className="flex flex-col items-center px-6 pt-[16vh] text-center">
-            <Layers size={40} className="text-faint" />
-            <p className="mb-6 mt-4 max-w-[260px] text-[15px] leading-relaxed text-muted">
-              {t('configs.empty')}
+        ) : !hasAccess && pending.length > 0 ? (
+          /* ── A payment is in flight: don't tempt the user to pay again. Show a
+                "processing" state that resolves automatically (we poll). ── */
+          <div className="flex flex-col items-center px-6 pt-[14vh] text-center">
+            <span className="grid h-16 w-16 place-items-center rounded-3xl bg-surface-sunken text-accent">
+              <Spinner size={28} />
+            </span>
+            <h2 className="font-display mt-5 text-[21px] font-semibold leading-tight text-ink">
+              {t('pay.pendingTitle')}
+            </h2>
+            <p className="mb-7 mt-2 max-w-[290px] text-[14px] leading-relaxed text-muted">
+              {t('pay.pendingHint')}
             </p>
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus size={20} /> {t('configs.create')}
+            <Button stretched variant="secondary" onClick={() => setSubOpen(true)}>
+              {t('pay.pendingView')}
             </Button>
+          </div>
+        ) : !hasAccess ? (
+          /* ── Not activated / expired: prominent activate block in place of the
+                configs list. Buy a subscription OR enter an access key. ── */
+          <div className="flex flex-col items-center px-6 pt-[13vh] text-center">
+            <span className="grid h-16 w-16 place-items-center rounded-3xl bg-accent-soft text-accent">
+              <Lock size={30} />
+            </span>
+            <h2 className="font-display mt-5 text-[21px] font-semibold leading-tight text-ink">
+              {expired ? t('sub.expired') : t('sub.connectTitle')}
+            </h2>
+            <p className="mb-7 mt-2 max-w-[290px] text-[14px] leading-relaxed text-muted">
+              {expired ? t('sub.expiredHint') : t('sub.connectHint')}
+            </p>
+            <Button stretched onClick={() => setSubOpen(true)}>
+              {expired ? t('sub.renew') : t('sub.buy')}
+            </Button>
+            <button
+              onClick={() => setKeyOpen(true)}
+              className="mt-4 text-[14px] font-medium text-accent active:opacity-70"
+            >
+              {t('sub.haveKey')}
+            </button>
           </div>
         ) : (
           <>
+            {/* Subscription status lives in Settings → Subscription now — the
+                Configs screen stays clean (just the configs list + create). */}
+            {configs.length === 0 ? (
+              <div className="flex flex-col items-center px-6 pt-[10vh] text-center">
+                <Layers size={40} className="text-faint" />
+                <p className="mb-6 mt-4 max-w-[260px] text-[15px] leading-relaxed text-muted">
+                  {t('configs.empty')}
+                </p>
+                <Button onClick={() => setCreateOpen(true)}>
+                  <Plus size={20} /> {t('configs.create')}
+                </Button>
+              </div>
+            ) : (
+              <>
             <div className="flex flex-col gap-2.5">
               {configs.map((c) => (
                 <button
@@ -153,15 +231,17 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
                 </button>
               ))}
             </div>
-            <div className="py-4 text-center text-[13px] text-faint">
-              {t('configs.count', { n: configs.length, u: configCountUnit(configs.length, lang) })}
-            </div>
+                <div className="py-4 text-center text-[13px] text-faint">
+                  {t('configs.count', { n: configs.length, u: configCountUnit(configs.length, lang) })}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
 
       {/* Floating pill action (Claude "New project" pattern) */}
-      {configs.length > 0 && (
+      {hasAccess && configs.length > 0 && (
         <button
           onClick={() => setCreateOpen(true)}
           aria-label={t('configs.create')}
@@ -192,6 +272,8 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
         onClose={() => setStatsOpen(false)}
         configId={detailId}
       />
+      <SubscribeSheet open={subOpen} onClose={() => setSubOpen(false)} onPaid={load} />
+      <KeyEntrySheet open={keyOpen} onClose={() => setKeyOpen(false)} onActivated={load} />
     </div>
   )
 }

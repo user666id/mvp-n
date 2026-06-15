@@ -1,6 +1,6 @@
 import { request, setToken } from './client'
 import type {
-  AccessKey, AccessKeyRow, AdminConfig, AdminProfile, AuthResult, AwgStats, Config, Device, DomainStatus, Profile, Protocol, ServerStats, TrafficDay,
+  AccessKey, AccessKeyRow, AdminConfig, AdminProfile, AuthResult, AwgStats, Config, Device, DomainStatus, Order, PlansResponse, Profile, Protocol, ServerStats, TrafficDay,
 } from './types'
 import { getInitData } from '../lib/telegram'
 
@@ -69,6 +69,33 @@ export function getAwgStats(id: string) {
 
 export function getProfile() {
   return request<Profile>('GET', '/profile')
+}
+
+export function getPlans() {
+  return request<PlansResponse>('GET', '/plans')
+}
+
+export function createOrder(planDays: number, asset: string) {
+  return request<Order>('POST', '/orders', { plan_days: planDays, asset })
+}
+
+export function getOrder(id: string) {
+  return request<Order>('GET', '/orders/' + id)
+}
+
+/** The caller's still-open orders (resume after a reload; list + cancel). */
+export function getPendingOrders() {
+  return request<Order[]>('GET', '/orders/pending')
+}
+
+/** Cancel one of the caller's pending orders. */
+export function cancelOrder(id: string) {
+  return request<{ cancelled: boolean }>('POST', `/orders/${id}/cancel`)
+}
+
+/** The caller's paid orders, newest first — for the payment-history view. */
+export function getOrderHistory() {
+  return request<Order[]>('GET', '/orders/history')
 }
 
 export function getDevices() {

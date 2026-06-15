@@ -41,6 +41,10 @@ type Config struct {
 
 	// Host metrics
 	NetInterface string
+
+	// Crypto payment receiving addresses (public — shown to payers).
+	TONWallet  string // TON address for GRAM (Toncoin) + USDT-TON jetton
+	TronWallet string // TRON address for USDT-TRC20
 }
 
 // Load reads configuration from env. Required vars cause a clear error.
@@ -61,6 +65,10 @@ func Load() (*Config, error) {
 		XrayAPIPort:          getenv("XRAY_API_PORT", "10085"),
 		ConnectURL:           getenv("CONNECT_URL", "http://127.0.0.1:3000"),
 		NetInterface:         getenv("NET_INTERFACE", ""),
+		// Public receiving addresses (overridable via env). Defaults baked in so
+		// payments work out-of-the-box on deploy without a manual .env edit.
+		TONWallet:  getenv("TON_WALLET", "YOUR_TON_WALLET_ADDRESS"),
+		TronWallet: getenv("TRON_WALLET", "YOUR_TRON_WALLET_ADDRESS"),
 	}
 	switch {
 	case c.DatabaseURL == "":
@@ -165,6 +173,23 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS traffic_used BIGINT NOT NULL DEFAULT 
 -- Preferred UI language chosen in the Mini App ('en'/'ru'). NULL = not chosen,
 -- so the bot falls back to the Telegram language_code.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS lang VARCHAR(8);
+-- Paid subscription expiry. NULL = no time limit (key-activated / grandfathered
+-- users keep unlimited access). A timestamp = paid subscription; access is
+-- granted only while paid_until > NOW(). Expiry suspends access, never deletes.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS paid_until TIMESTAMPTZ;
+
+-- internal_id is a display number (0001, 0002, …), not referenced anywhere as a
+-- FK (relations use the Telegram id). SERIAL never reuses gaps, so deleting a
+-- user left a hole and the next signup jumped ahead (e.g. 0009–0015 deleted →
+-- next was 0016). Assign the LOWEST free positive integer instead, so numbers
+-- stay compact and gaps get refilled. (Sporadic-signup app — a rare concurrent
+-- collision just fails the INSERT and the client retries.)
+CREATE OR REPLACE FUNCTION next_internal_id() RETURNS int AS $$
+  SELECT COALESCE(MIN(s), 1)
+  FROM generate_series(1, (SELECT COALESCE(MAX(internal_id), 0) + 1 FROM users)) AS s
+  WHERE s NOT IN (SELECT internal_id FROM users WHERE internal_id IS NOT NULL);
+$$ LANGUAGE sql;
+ALTER TABLE users ALTER COLUMN internal_id SET DEFAULT next_internal_id();
 
 CREATE TABLE IF NOT EXISTS access_keys (
     id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -276,4 +301,22 @@ CREATE TABLE IF NOT EXISTS traffic_daily (
     day   DATE   PRIMARY KEY,
     bytes BIGINT NOT NULL DEFAULT 0
 );
+
+-- Crypto payment intents. A pending order reserves a UNIQUE amount (base price +
+-- small delta) on a receiving address so an incoming on-chain transfer can be
+-- matched back to the order without needing a memo (works for exchange payouts).
+CREATE TABLE IF NOT EXISTS orders (
+    id         UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    BIGINT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_days  INT           NOT NULL,
+    asset      VARCHAR(16)   NOT NULL,            -- TON | USDT_TON | USDT_TRC20
+    amount     NUMERIC(20,9) NOT NULL,            -- exact unique amount to match
+    address    VARCHAR(128)  NOT NULL,            -- receiving address shown to payer
+    status     VARCHAR(16)   NOT NULL DEFAULT 'pending', -- pending | paid | expired
+    tx_hash    VARCHAR(128),
+    created_at TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    paid_at    TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ   NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_orders_pending ON orders(asset, status) WHERE status = 'pending';
 `

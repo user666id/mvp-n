@@ -1,6 +1,6 @@
 # Multi-stage build for the Go API.
 # Optimized for fast incremental rebuilds via separate go.mod cache layer.
-FROM golang:1.22-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 RUN apk add --no-cache git
 
