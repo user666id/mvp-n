@@ -41,6 +41,21 @@
   --c-chart-net: 124 173 164;
 }
 
+/* Dark-theme shade overrides (data-shade set by applyScheme). Only the neutral
+   greys change — text/accent stay. 'warm' is the base .dark above. */
+.dark[data-shade='neutral'] {
+  --c-canvas: 10 10 10; /* #0A0A0A — neutral, no brown tint */
+  --c-surface: 20 20 20; /* #141414 — cards slightly lifted off the page */
+  --c-surface-sunken: 28 28 28; /* #1C1C1C */
+  --c-border: 38 38 38; /* #262626 */
+}
+.dark[data-shade='black'] {
+  --c-canvas: 0 0 0; /* #000000 — true OLED black */
+  --c-surface: 14 14 14; /* #0E0E0E */
+  --c-surface-sunken: 22 22 22; /* #161616 */
+  --c-border: 34 34 34; /* #222222 */
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
 }

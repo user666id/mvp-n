@@ -137,11 +137,22 @@ export function deleteAccount() {
 
 // ── admin ────────────────────────────────────────────────────────────────────
 
-export function adminCreateKeys(opts: { count?: number; comment?: string; ttl_hours?: number }) {
+export function adminCreateKeys(opts: {
+  count?: number
+  comment?: string
+  ttl_hours?: number
+  /** Subscription length the key grants. 0 = lifetime; N = N days. */
+  plan_days?: number
+}) {
   return request<{ count: number; expires_at: string; ttl_hours: number; keys: AccessKey[] }>(
     'POST',
     '/admin/keys',
-    { count: opts.count ?? 1, comment: opts.comment ?? '', ttl_hours: opts.ttl_hours ?? 12 },
+    {
+      count: opts.count ?? 1,
+      comment: opts.comment ?? '',
+      ttl_hours: opts.ttl_hours ?? 12,
+      plan_days: opts.plan_days ?? 0,
+    },
   )
 }
 

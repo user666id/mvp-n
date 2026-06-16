@@ -91,8 +91,7 @@ export function ProfileDetails({ p }: { p: ProfileDetailsData }) {
           <Row
             k="Username"
             v={'@' + p.username}
-            accent
-            icon={<ExternalLink size={14} className="shrink-0 text-accent" />}
+            icon={<ExternalLink size={15} className="shrink-0 text-faint" />}
             onClick={() => openLink('https://t.me/' + p.username)}
           />
         ) : (

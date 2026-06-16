@@ -17,6 +17,71 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '1.6',
+    date: '2026-06-16',
+    groups: [
+      {
+        kind: 'added',
+        items: [
+          {
+            en: 'A review step before payment — check the plan, currency and amount, then confirm.',
+            ru: 'Шаг подтверждения перед оплатой — проверяете тариф, валюту и сумму, затем подтверждаете.',
+          },
+        ],
+      },
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'Settings reorganised — notifications now live under “App”, and subscription is part of “Subscription & connection”.',
+            ru: 'Настройки переустроены — уведомления теперь в разделе «Приложение», а подписка объединена с подключением.',
+          },
+          {
+            en: 'The success screen now tells a first purchase apart from a renewal.',
+            ru: 'Экран успешной оплаты теперь различает первую покупку и продление.',
+          },
+          {
+            en: 'Consistent links and clearer icons throughout, plus a confirmation before anything destructive.',
+            ru: 'Единообразные ссылки и понятные значки по всему приложению, а перед опасными действиями — подтверждение.',
+          },
+          {
+            en: 'Rewritten Help section — clearer answers and a step-by-step on how to connect.',
+            ru: 'Переписан раздел «Помощь» — понятнее ответы и пошаговая инструкция, как подключиться.',
+          },
+          {
+            en: 'Access keys can now grant a fixed term (7/30/90/365 days), not only lifetime.',
+            ru: 'Ключи доступа теперь могут давать доступ на срок (7/30/90/365 дней), а не только бессрочно.',
+          },
+          {
+            en: 'Dark theme now has three background shades — Warm, Neutral and Black (Settings → App).',
+            ru: 'У тёмной темы теперь три оттенка фона — Тёплый, Нейтральный и Чёрный (Настройки → Приложение).',
+          },
+          {
+            en: 'Source code is now public — a link to the open mirror was added under About → Useful links.',
+            ru: 'Исходный код теперь открыт — в «О сервисе → Полезные ссылки» добавлена ссылка на публичное зеркало.',
+          },
+          {
+            en: 'Source relicensed to AGPL-3.0, and a Licenses section (third-party attributions) added under About.',
+            ru: 'Код перелицензирован на AGPL-3.0, в «О сервисе» добавлен раздел «Лицензии» (сторонние компоненты).',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        items: [
+          {
+            en: 'The unfinished-payment list refreshes the moment you step back — no need to re-open the app.',
+            ru: 'Список незавершённых платежей обновляется сразу при возврате — перезаходить больше не нужно.',
+          },
+          {
+            en: 'AmneziaWG traffic is now counted in your usage stats (previously only VLESS was).',
+            ru: 'Трафик AmneziaWG теперь учитывается в статистике (раньше считался только VLESS).',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5',
     date: '2026-06-15',
     groups: [

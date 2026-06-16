@@ -36,6 +36,7 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const [trafficToday, setTrafficToday] = useState<number | null>(null)
   const [keys, setKeys] = useState<AccessKeyRow[] | null>(null)
   const [count, setCount] = useState('1')
+  const [keyDays, setKeyDays] = useState(0) // 0 = lifetime; else 7/30/90/365
   const [genBusy, setGenBusy] = useState(false)
   const [sel, setSel] = useState<AdminProfile | null>(null)
   // Retained copy so the profile sheet can play its exit slide after sel clears.
@@ -91,7 +92,7 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const generate = async () => {
     setGenBusy(true)
     try {
-      await adminCreateKeys({ count: Math.max(1, Number(count) || 1) })
+      await adminCreateKeys({ count: Math.max(1, Number(count) || 1), plan_days: keyDays })
       notify('success')
       toast(t('admin.keysGenerated'))
       await loadKeys()
@@ -118,6 +119,12 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
       : k.is_valid ? { label: t('admin.keyActive'), tone: 'success' as const }
         : { label: t('admin.keyExpired'), tone: 'neutral' as const }
 
+  // Subscription length a key grants: lifetime (0/absent) or N days.
+  const keyDayLabel = (d?: number) =>
+    !d ? t('admin.keyLifetime')
+      : ({ 7: t('pay.d7'), 30: t('pay.d30'), 90: t('pay.d90'), 365: t('pay.d365') } as Record<number, string>)[d] ||
+        `${d} d`
+
   const unusedKeys = (keys ?? []).filter((k) => !k.used_at)
   const usedKeys = (keys ?? []).filter((k) => k.used_at)
 
@@ -140,6 +147,7 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
             → {padId(k.used_by_internal)}
           </span>
         )}
+        <span className="shrink-0 text-[11.5px] text-faint">{keyDayLabel(k.plan_days)}</span>
         <Badge tone={st.tone}>{st.label}</Badge>
         <button
           onClick={() => revoke(k)}
@@ -203,6 +211,25 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
         title={t('admin.keys')}
       >
         <Section header={t('admin.newKey')}>
+          <div className="px-4 pt-3.5">
+            <label className="text-[12px] text-faint">{t('admin.keyDuration')}</label>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {[0, 7, 30, 90, 365].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setKeyDays(d)}
+                  className={
+                    'rounded-full border px-3.5 py-1.5 text-[13px] font-medium ' +
+                    (keyDays === d
+                      ? 'border-accent bg-accent text-white'
+                      : 'border-border bg-surface text-muted')
+                  }
+                >
+                  {keyDayLabel(d)}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex items-end gap-2 px-4 py-3.5">
             <div className="w-20">
               <label className="text-[12px] text-faint">{t('admin.count')}</label>
@@ -505,6 +532,8 @@ function AdminProfileSheet({
       toast(t('admin.cantBlockAdmin'))
       return
     }
+    // Blocking cuts the user off entirely — confirm. Unblocking is restorative, no prompt.
+    if (!profile.is_blocked && !(await confirmDialog(t('admin.blockProfileConfirm')))) return
     setBusy(true)
     try {
       await adminBlockProfile(profile.id)

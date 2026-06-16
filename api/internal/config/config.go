@@ -201,6 +201,10 @@ CREATE TABLE IF NOT EXISTS access_keys (
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_access_keys_unused ON access_keys(expires_at) WHERE used_at IS NULL;
+-- Subscription length a key grants on redemption. NULL = lifetime (no expiry, the
+-- original key behaviour); a positive N = paid_until is set to now + N days when
+-- the key is activated. Lets admins issue time-limited promo / trial keys.
+ALTER TABLE access_keys ADD COLUMN IF NOT EXISTS plan_days INT;
 
 CREATE TABLE IF NOT EXISTS vpn_configs (
     id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -221,6 +225,10 @@ ALTER TABLE vpn_configs ADD COLUMN IF NOT EXISTS game_mode     BOOLEAN NOT NULL 
 -- AmneziaWG: awg-server client id (to revoke the peer) + the generated .conf
 ALTER TABLE vpn_configs ADD COLUMN IF NOT EXISTS awg_client_id VARCHAR(64);
 ALTER TABLE vpn_configs ADD COLUMN IF NOT EXISTS awg_conf      TEXT;
+-- AmneziaWG traffic accounting: last sampled cumulative rx+tx for the peer (from
+-- awg-server), mirroring devices.traffic_seen for VLESS. The collectTraffic cron
+-- bills the positive delta to users.traffic_used. NULL until first primed.
+ALTER TABLE vpn_configs ADD COLUMN IF NOT EXISTS traffic_seen BIGINT;
 
 -- subconfigs was scaffolded for a multi-protocol-per-config feature that was
 -- never built (the endpoints only ever returned 404/501). Drop the unused table.

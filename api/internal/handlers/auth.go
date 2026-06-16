@@ -147,13 +147,14 @@ func (h *Handler) ActivateKey(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Lock & validate the key. Must be unused AND not expired.
 	var keyID string
+	var planDays sql.NullInt64 // NULL = lifetime; N = grants N days of access
 	err = tx.QueryRowContext(r.Context(), `
-		SELECT id FROM access_keys
+		SELECT id, plan_days FROM access_keys
 		WHERE key        = $1
 		  AND used_at    IS NULL
 		  AND expires_at > NOW()
 		FOR UPDATE
-	`, req.Key).Scan(&keyID)
+	`, req.Key).Scan(&keyID, &planDays)
 	if err == sql.ErrNoRows {
 		// Distinguish "wrong key" from "expired/used".
 		var exists bool
@@ -172,7 +173,25 @@ func (h *Handler) ActivateKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Create user record (only now, at activation time).
+	// 2. Capture the user's pre-existing access state so a time-limited key can't
+	//    silently DOWNGRADE someone who already has lifetime (key) access. A
+	//    lifetime user is one who already exists, is active, and has no expiry.
+	var wasLifetime bool
+	var existActive bool
+	var existPaidUntil sql.NullTime
+	switch err := tx.QueryRowContext(r.Context(),
+		`SELECT is_active, paid_until FROM users WHERE id = $1`, userID,
+	).Scan(&existActive, &existPaidUntil); err {
+	case nil:
+		wasLifetime = existActive && !existPaidUntil.Valid
+	case sql.ErrNoRows:
+		wasLifetime = false
+	default:
+		h.writeError(w, 500, "DB_ERROR", err.Error())
+		return
+	}
+
+	// 3. Create user record (only now, at activation time).
 	//    If user already exists (e.g. soft-deleted earlier or admin), update profile fields.
 	_, err = tx.ExecContext(r.Context(), `
 		INSERT INTO users (id, username, first_name, last_name, is_active)
@@ -189,7 +208,28 @@ func (h *Handler) ActivateKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Burn the key.
+	// 3a. Apply the key's subscription length.
+	//   - lifetime key (plan_days NULL) → clear any expiry (unlimited access).
+	//   - timed key (N days) → set paid_until = max(existing, now) + N days, so it
+	//     STACKS on an active paid sub. Skip if the user is already lifetime —
+	//     a promo key must never shorten unlimited access.
+	switch {
+	case !planDays.Valid:
+		if _, err = tx.ExecContext(r.Context(),
+			`UPDATE users SET paid_until = NULL WHERE id = $1`, userID); err != nil {
+			h.writeError(w, 500, "DB_ERROR", err.Error())
+			return
+		}
+	case !wasLifetime:
+		if _, err = tx.ExecContext(r.Context(),
+			`UPDATE users SET paid_until = GREATEST(COALESCE(paid_until, NOW()), NOW())
+			   + ($2 * INTERVAL '1 day') WHERE id = $1`, userID, planDays.Int64); err != nil {
+			h.writeError(w, 500, "DB_ERROR", err.Error())
+			return
+		}
+	}
+
+	// 4. Burn the key.
 	if _, err = tx.ExecContext(r.Context(),
 		`UPDATE access_keys SET used_by = $1, used_at = NOW() WHERE id = $2`,
 		userID, keyID,
@@ -203,7 +243,7 @@ func (h *Handler) ActivateKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 4. Read back internal_id for response.
+	// 5. Read back internal_id for response.
 	var internalID int
 	_ = h.DB.QueryRowContext(r.Context(),
 		`SELECT internal_id FROM users WHERE id = $1`, userID,

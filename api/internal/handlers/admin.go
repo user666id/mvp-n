@@ -11,11 +11,15 @@ import (
 // AdminCreateKeysRequest — POST /admin/keys body.
 //   - count:    how many keys to create (1..100, default 1)
 //   - comment:  free-text note (e.g. "summer 2026 batch")
-//   - ttl_hours: override default 12h TTL (1..168)
+//   - ttl_hours: override default 12h TTL (1..168) — how long the key stays
+//     redeemable, NOT the subscription it grants
+//   - plan_days: subscription length the key grants on redemption. 0 (default) =
+//     lifetime; a positive value (e.g. 7/30/90/365) sets paid_until = now + N days.
 type AdminCreateKeysRequest struct {
 	Count    int    `json:"count"`
 	Comment  string `json:"comment"`
 	TTLHours int    `json:"ttl_hours"`
+	PlanDays int    `json:"plan_days"`
 }
 
 // AdminCreateKeys creates N access keys with TTL.
@@ -41,6 +45,15 @@ func (h *Handler) AdminCreateKeys(w http.ResponseWriter, r *http.Request) {
 	if req.TTLHours > 168 {
 		req.TTLHours = 168 // 7 days max
 	}
+	// plan_days: NULL = lifetime; otherwise the days of access the key grants.
+	// Negative is meaningless → treat as lifetime; cap at a sane maximum.
+	var planDays any // NULL by default (lifetime)
+	if req.PlanDays > 0 {
+		if req.PlanDays > 3650 {
+			req.PlanDays = 3650 // 10 years cap
+		}
+		planDays = req.PlanDays
+	}
 
 	type genKey struct {
 		Key       string    `json:"key"`
@@ -56,9 +69,9 @@ func (h *Handler) AdminCreateKeys(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_, err = h.DB.ExecContext(r.Context(), `
-			INSERT INTO access_keys (key, comment, expires_at)
-			VALUES ($1, $2, $3)
-		`, k, req.Comment, expiresAt)
+			INSERT INTO access_keys (key, comment, expires_at, plan_days)
+			VALUES ($1, $2, $3, $4)
+		`, k, req.Comment, expiresAt, planDays)
 		if err != nil {
 			h.writeError(w, 500, "DB_ERROR", err.Error())
 			return
@@ -72,6 +85,7 @@ func (h *Handler) AdminCreateKeys(w http.ResponseWriter, r *http.Request) {
 			"count":      len(keys),
 			"expires_at": expiresAt,
 			"ttl_hours":  req.TTLHours,
+			"plan_days":  req.PlanDays,
 			"keys":       keys,
 		},
 	})
@@ -81,7 +95,7 @@ func (h *Handler) AdminCreateKeys(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) AdminListKeys(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.DB.QueryContext(r.Context(), `
 		SELECT k.id, k.key, COALESCE(k.comment, ''), k.used_by, u.internal_id,
-		       k.used_at, k.expires_at, k.created_at,
+		       k.used_at, k.expires_at, k.created_at, k.plan_days,
 		       (k.used_at IS NULL AND k.expires_at > NOW()) AS is_valid
 		FROM access_keys k
 		LEFT JOIN users u ON u.id = k.used_by
@@ -103,13 +117,14 @@ func (h *Handler) AdminListKeys(w http.ResponseWriter, r *http.Request) {
 		UsedAt         *time.Time `json:"used_at,omitempty"`
 		ExpiresAt      time.Time  `json:"expires_at"`
 		CreatedAt      time.Time  `json:"created_at"`
+		PlanDays       *int       `json:"plan_days,omitempty"` // nil = lifetime
 		IsValid        bool       `json:"is_valid"`
 	}
 	out := []keyRow{}
 	for rows.Next() {
 		var k keyRow
 		if err := rows.Scan(&k.ID, &k.Key, &k.Comment, &k.UsedBy, &k.UsedByInternal,
-			&k.UsedAt, &k.ExpiresAt, &k.CreatedAt, &k.IsValid); err != nil {
+			&k.UsedAt, &k.ExpiresAt, &k.CreatedAt, &k.PlanDays, &k.IsValid); err != nil {
 			continue
 		}
 		out = append(out, k)

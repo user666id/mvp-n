@@ -272,7 +272,12 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
         onClose={() => setStatsOpen(false)}
         configId={detailId}
       />
-      <SubscribeSheet open={subOpen} onClose={() => setSubOpen(false)} onPaid={load} />
+      <SubscribeSheet
+        open={subOpen}
+        onClose={() => setSubOpen(false)}
+        onPaid={load}
+        renewing={!!profile?.is_expired}
+      />
       <KeyEntrySheet open={keyOpen} onClose={() => setKeyOpen(false)} onActivated={load} />
     </div>
   )

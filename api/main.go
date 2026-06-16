@@ -43,6 +43,7 @@ func main() {
 	defer h.Xray.Close()
 
 	scheduler := cron.New(db, cfg.NetInterface, h.Xray)
+	scheduler.SetAwg(h.Awg)                        // account AmneziaWG peer traffic too
 	scheduler.SetExpiryReset(h.ResetSubscription) // wipe VPN footprint on subscription expiry
 	scheduler.SetPaymentCheck(h.VerifyPayments)   // match on-chain payments → extend subscriptions
 	if err := scheduler.Start(ctx); err != nil {

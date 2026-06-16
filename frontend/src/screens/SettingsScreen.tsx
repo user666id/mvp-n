@@ -11,14 +11,17 @@ import { Spinner } from '../components/ui/Spinner'
 import { Avatar } from '../components/ui/Avatar'
 import { useToast } from '../components/ui/Toast'
 import {
-  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, ShieldCheck, Users, Vibrate,
+  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, Star, ShieldCheck, Vibrate,
 } from '../components/icons'
 import { ProfileDetails } from '../components/ProfileDetails'
 import { DevicesSheet } from './DevicesSheet'
 import { AboutSheet } from './AboutSheet'
 import { AdminSheet } from './AdminSheet'
 import { SubscriptionSheet } from './SubscriptionSheet'
-import { confirmDialog, notify, hapticsEnabled, getTheme, setTheme, type ThemePref } from '../lib/telegram'
+import {
+  confirmDialog, notify, hapticsEnabled, getTheme, setTheme, getDarkShade, setDarkShade,
+  isDarkActive, type ThemePref, type DarkShade,
+} from '../lib/telegram'
 import { padId, formatBytes, plural } from '../lib/format'
 import { useT } from '../lib/i18n'
 import { subLabel } from '../lib/subscription'
@@ -98,6 +101,7 @@ export function SettingsScreen({
   const [adminOpen, setAdminOpen] = useState(false)
   const [haptics, setHaptics] = useState(hapticsEnabled())
   const [theme, setThemeState] = useState<ThemePref>(getTheme())
+  const [shade, setShadeState] = useState<DarkShade>(getDarkShade())
   const [limit, setLimit] = useState('')
 
   const toggleHaptics = (v: boolean) => {
@@ -108,6 +112,10 @@ export function SettingsScreen({
   const changeTheme = (v: ThemePref) => {
     setThemeState(v)
     setTheme(v)
+  }
+  const changeShade = (s: DarkShade) => {
+    setShadeState(s)
+    setDarkShade(s)
   }
   const [busy, setBusy] = useState(false)
 
@@ -243,22 +251,11 @@ export function SettingsScreen({
           </button>
         </Section>
 
-        {/* subscription — status + buy/renew live in their own pane (Claude style) */}
-        <Section>
-          <Cell
-            before={<ShieldCheck size={20} />}
-            after={<ValueChevron value={profile ? subLabel(profile, t, lang).text : ''} />}
-            title={t('sub.status')}
-            onClick={() => profile && setSubscriptionOpen(true)}
-            last
-          />
-        </Section>
-
-        {/* admin entry (admins only); About lives in the header ⓘ button */}
+        {/* admin entry (admins only) — kept at the top; About lives in the header ⓘ button */}
         {profile?.is_admin && (
           <Section>
             <Cell
-              before={<Users size={20} />}
+              before={<ShieldCheck size={20} />}
               after={<ChevronRight size={20} />}
               title={t('settings.adminPanel')}
               onClick={() => setAdminOpen(true)}
@@ -267,18 +264,14 @@ export function SettingsScreen({
           </Section>
         )}
 
-        {/* notifications */}
-        <Section header={t('settings.notifications')}>
-          <Cell
-            before={<Bell size={20} />}
-            title={t('settings.notifyTitle')}
-            after={<Switch checked={notify_} onChange={toggleNotify} />}
-            last
-          />
-        </Section>
-
-        {/* subscriptions */}
+        {/* Subscription + VPN connection — one group */}
         <Section header={t('settings.subscriptions')}>
+          <Cell
+            before={<Star size={20} />}
+            after={<ValueChevron value={profile ? subLabel(profile, t, lang).text : ''} />}
+            title={t('sub.status')}
+            onClick={() => profile && setSubscriptionOpen(true)}
+          />
           <Cell
             before={<Phone size={20} />}
             after={<ValueChevron value={`${devCount} ${deviceUnit(devCount, lang)}`} />}
@@ -304,8 +297,13 @@ export function SettingsScreen({
           />
         </Section>
 
-        {/* appearance — language + theme + haptics, near the bottom (Claude style) */}
+        {/* App — notifications + appearance, near the bottom */}
         <Section header={t('settings.appearance')}>
+          <Cell
+            before={<Bell size={20} />}
+            title={t('settings.notifyTitle')}
+            after={<Switch checked={notify_} onChange={toggleNotify} />}
+          />
           <div className="border-b border-border px-4 py-3.5">
             <div className="mb-2 text-[13px] text-muted">{t('settings.language')}</div>
             <Segmented
@@ -356,6 +354,45 @@ export function SettingsScreen({
               ))}
             </div>
           </div>
+          {/* Dark-theme shade: warm (default) / neutral / true black.
+              Only shown when dark is actually in effect (hidden in light). */}
+          {(theme === 'dark' || (theme === 'system' && isDarkActive())) && (
+          <div className="border-b border-border px-4 py-3.5">
+            <div className="mb-2.5 text-[13px] text-muted">{t('settings.darkShade')}</div>
+            <div className="flex gap-2.5">
+              {(
+                [
+                  ['warm', t('settings.shadeWarm'), '#20201E', '#191917'],
+                  ['neutral', t('settings.shadeNeutral'), '#0A0A0A', '#141414'],
+                  ['black', t('settings.shadeBlack'), '#000000', '#0E0E0E'],
+                ] as const
+              ).map(([val, label, bg, card]) => (
+                <button
+                  key={val}
+                  onClick={() => changeShade(val)}
+                  className="flex flex-1 flex-col items-center gap-1.5"
+                >
+                  <div
+                    className={
+                      'flex h-12 w-full items-center justify-center overflow-hidden rounded-xl border-2 transition-colors ' +
+                      (shade === val ? 'border-accent' : 'border-border')
+                    }
+                    style={{ background: bg }}
+                  >
+                    <span className="h-5 w-8 rounded-md" style={{ background: card }} />
+                  </div>
+                  <span
+                    className={
+                      'text-[12.5px] ' + (shade === val ? 'font-medium text-ink' : 'text-muted')
+                    }
+                  >
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          )}
           <Cell
             before={<Vibrate size={20} />}
             title={t('settings.haptics')}

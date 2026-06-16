@@ -4,6 +4,9 @@ export const BRAND = 'mvp-n'
 /** Telegram bot handle (footer / links). */
 export const BOT = '@mvp_n_net_bot'
 
+/** Public source mirror (sanitised) — shown in About → Useful links. */
+export const GITHUB_URL = 'https://github.com/user666id/mvp-n'
+
 /** REST API base — `gw.mvp-n.net` proxies to the API on :8081. Override with VITE_API_BASE. */
 export const API_BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ??

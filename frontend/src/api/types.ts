@@ -141,6 +141,8 @@ export interface AccessKeyRow {
   used_at?: string
   expires_at: string
   created_at: string
+  /** Subscription length the key grants on redemption. Absent/0 = lifetime. */
+  plan_days?: number
   is_valid: boolean
 }
 

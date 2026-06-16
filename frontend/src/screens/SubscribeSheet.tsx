@@ -7,7 +7,7 @@ import { CurrencyIcon } from '../components/CurrencyIcon'
 import { Check, Copy } from '../components/icons'
 import { useToast } from '../components/ui/Toast'
 import { copyText } from '../lib/clipboard'
-import { notify } from '../lib/telegram'
+import { notify, confirmDialog } from '../lib/telegram'
 import {
   getPlans,
   createOrder,
@@ -19,7 +19,7 @@ import {
 } from '../api'
 import { useT } from '../lib/i18n'
 
-type Step = 'select' | 'pay' | 'done'
+type Step = 'select' | 'confirm' | 'pay' | 'done'
 type Asset = { id: string; label: string; network: string }
 
 /** Buy / renew a subscription. Pick plan + asset → get a unique-amount payment
@@ -28,10 +28,13 @@ export function SubscribeSheet({
   open,
   onClose,
   onPaid,
+  renewing = false,
 }: {
   open: boolean
   onClose: () => void
   onPaid: () => void
+  /** true = the user already had a subscription (renew), false = first purchase. */
+  renewing?: boolean
 }) {
   const { t } = useT()
   const toast = useToast()
@@ -65,17 +68,24 @@ export function SubscribeSheet({
         if (r.assets[0]) setAsset(r.assets[0].id)
       })
       .catch(() => toast(t('pay.failed')))
-    // Unfinished payments are listed on the select step (continue / cancel) —
-    // we never force the QR screen, so "Renew" still lets the user pick a plan.
-    loadPending()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Always refresh the unfinished-payments list whenever we land on the select
+  // step — covers EVERY path back here (‹ back from QR, an order expiring, the
+  // initial open). Relying on the back handler alone missed cases (e.g. expiry),
+  // which is why a freshly-created order sometimes didn't show until re-opening.
+  useEffect(() => {
+    if (open && step === 'select') loadPending()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, step])
 
   const resume = (o: Order) => {
     setOrder(o)
     setStep('pay')
   }
   const cancel = async (o: Order) => {
+    if (!(await confirmDialog(t('pay.cancelConfirm')))) return
     setPending((prev) => prev.filter((x) => x.id !== o.id))
     try {
       await cancelOrder(o.id)
@@ -147,10 +157,7 @@ export function SubscribeSheet({
       onClose={onClose}
       onBack={
         step !== 'select'
-          ? () => {
-              setStep('select')
-              loadPending() // surface the just-created order in the list
-            }
+          ? () => setStep('select') // the step→select effect refreshes the pending list
           : undefined
       }
       title={t('pay.title')}
@@ -234,10 +241,45 @@ export function SubscribeSheet({
             ))}
           </div>
 
-          <Button onClick={startPay} loading={busy} stretched>
-            {t('pay.pay', { a: priceStr(plans.find((p) => p.days === days) || ({ usd: 0 } as Plan)) })}
+          <Button onClick={() => setStep('confirm')} stretched>
+            {t('common.continue')}
           </Button>
         </>
+      )}
+
+      {step === 'confirm' && (
+        <div className="flex flex-col">
+          <p className="mb-4 px-1 text-[14px] leading-relaxed text-muted">{t('pay.confirmHint')}</p>
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
+              <span className="text-[13px] text-faint">{t('pay.plan')}</span>
+              <span className="text-[15px] font-medium text-ink">{dayName(days)}</span>
+            </div>
+            <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
+              <span className="text-[13px] text-faint">{t('pay.currency')}</span>
+              <span className="flex items-center gap-2 text-[15px] font-medium text-ink">
+                <CurrencyIcon asset={asset} size={20} /> {label}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
+              <span className="text-[13px] text-faint">{t('pay.networkLabel')}</span>
+              <span className="text-[15px] text-ink">{network}</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <span className="text-[13px] text-faint">{t('pay.amount')}</span>
+              <span className="text-[15px] font-semibold text-ink">
+                {isGram && '≈ '}
+                {priceStr(plans.find((p) => p.days === days) || ({ usd: 0 } as Plan))}
+              </span>
+            </div>
+          </div>
+          {isGram && (
+            <p className="mt-3 px-1 text-[12px] leading-snug text-faint">{t('pay.approxHint')}</p>
+          )}
+          <Button onClick={startPay} loading={busy} stretched className="mt-6">
+            {t('pay.toPayment')}
+          </Button>
+        </div>
       )}
 
       {step === 'pay' && order && (
@@ -281,7 +323,9 @@ export function SubscribeSheet({
             <Check size={32} strokeWidth={2.5} />
           </span>
           <h3 className="font-display mt-4 text-[20px] font-semibold text-ink">{t('pay.done')}</h3>
-          <p className="mt-1 text-[14px] text-muted">{t('pay.doneHint')}</p>
+          <p className="mt-1 text-[14px] text-muted">
+            {renewing ? t('pay.doneRenewed') : t('pay.doneActivated')}
+          </p>
           <Button onClick={onClose} stretched className="mt-6">
             {t('common.close')}
           </Button>

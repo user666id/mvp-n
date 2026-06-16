@@ -27,9 +27,17 @@ export const tg: TgWebApp | undefined = (window as any).Telegram?.WebApp
 export const inTelegram = Boolean(tg?.initData)
 
 const CANVAS_LIGHT = '#faf9f5'
-const CANVAS_DARK = '#0e0e0e'
+// Per-shade dark page colour (kept in sync with the .dark[data-shade] CSS so the
+// Telegram header/background match the in-app canvas exactly).
+const DARK_CANVAS: Record<DarkShade, string> = {
+  warm: '#20201e',
+  neutral: '#0a0a0a',
+  black: '#000000',
+}
 
 export type ThemePref = 'system' | 'light' | 'dark'
+/** Sub-choice for the dark theme: warm (default), neutral near-black, or true black. */
+export type DarkShade = 'warm' | 'neutral' | 'black'
 
 /** User's theme choice; 'system' (default) follows the Telegram theme. */
 export function getTheme(): ThemePref {
@@ -42,14 +50,38 @@ export function setTheme(p: ThemePref) {
   applyScheme()
 }
 
+/** Dark-theme shade; defaults to 'warm' (the original Claude-matched palette). */
+export function getDarkShade(): DarkShade {
+  const v = localStorage.getItem('mvpn_dark_shade')
+  return v === 'neutral' || v === 'black' ? v : 'warm'
+}
+
+export function setDarkShade(s: DarkShade) {
+  localStorage.setItem('mvpn_dark_shade', s)
+  applyScheme()
+}
+
+/** Whether the dark scheme is currently in effect (manual dark, or system=dark).
+ *  Used to hide the dark-shade picker when the UI is light. */
+export function isDarkActive(): boolean {
+  const pref = getTheme()
+  return pref === 'system' ? tg?.colorScheme === 'dark' : pref === 'dark'
+}
+
 /** Resolve to dark/light: honour the manual override, else follow Telegram. */
 function applyScheme() {
   const pref = getTheme()
   const dark = pref === 'system' ? tg?.colorScheme === 'dark' : pref === 'dark'
-  document.documentElement.classList.toggle('dark', dark)
+  const shade = getDarkShade()
+  const root = document.documentElement
+  root.classList.toggle('dark', dark)
+  // data-shade drives the .dark[data-shade] overrides; only meaningful in dark.
+  if (dark) root.dataset.shade = shade
+  else delete root.dataset.shade
+  const canvas = dark ? DARK_CANVAS[shade] : CANVAS_LIGHT
   try {
-    tg?.setHeaderColor?.(dark ? CANVAS_DARK : CANVAS_LIGHT)
-    tg?.setBackgroundColor?.(dark ? CANVAS_DARK : CANVAS_LIGHT)
+    tg?.setHeaderColor?.(canvas)
+    tg?.setBackgroundColor?.(canvas)
   } catch {}
 }
 

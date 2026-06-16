@@ -5,7 +5,7 @@ import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { Badge } from '../components/ui/Badge'
-import { ShieldCheck, Lock, Clock, ChevronRight, ExternalLink } from '../components/icons'
+import { Star, Lock, Clock, ChevronRight, ExternalLink } from '../components/icons'
 import { SubscribeSheet } from './SubscribeSheet'
 import { openLink } from '../lib/telegram'
 import { useT } from '../lib/i18n'
@@ -67,7 +67,7 @@ export function SubscriptionSheet({
             (danger ? 'bg-danger/12 text-danger' : 'bg-surface-sunken text-muted')
           }
         >
-          {danger ? <Lock size={28} /> : <ShieldCheck size={28} />}
+          {danger ? <Lock size={28} /> : <Star size={28} />}
         </span>
         <h3
           className={
@@ -101,7 +101,12 @@ export function SubscriptionSheet({
         </div>
       )}
 
-      <SubscribeSheet open={buyOpen} onClose={() => setBuyOpen(false)} onPaid={onChanged} />
+      <SubscribeSheet
+        open={buyOpen}
+        onClose={() => setBuyOpen(false)}
+        onPaid={onChanged}
+        renewing={state === 'active' || state === 'expired'}
+      />
       <PaymentHistorySheet open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </Sheet>
   )

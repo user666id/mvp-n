@@ -4,9 +4,9 @@ import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { Collapse } from '../components/ui/Collapse'
 import { Logo } from '../components/Logo'
-import { ChevronRight, ExternalLink } from '../components/icons'
+import { ChevronRight, ExternalLink, Github, Telegram } from '../components/icons'
 import { openLink } from '../lib/telegram'
-import { BRAND, BOT } from '../lib/config'
+import { BRAND, BOT, GITHUB_URL } from '../lib/config'
 import { RELEASES, APP_VERSION, type ChangeKind } from '../lib/changelog'
 import { useT, type TKey } from '../lib/i18n'
 
@@ -19,6 +19,19 @@ const KIND_LABEL: Record<ChangeKind, TKey> = {
 export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, lang } = useT()
   const [updatesOpen, setUpdatesOpen] = useState(false)
+  const [licensesOpen, setLicensesOpen] = useState(false)
+
+  // Third-party attributions shown under About → Licenses.
+  const licenses = [
+    { name: 'mvp-n', license: 'AGPL-3.0', url: `${GITHUB_URL}/blob/main/LICENSE` },
+    { name: 'Hanken Grotesk', license: 'OFL-1.1', url: 'https://openfontlicense.org/open-font-license-official-text/' },
+    { name: 'Inter', license: 'OFL-1.1', url: 'https://github.com/rsms/inter/blob/master/LICENSE.txt' },
+    { name: 'React', license: 'MIT', url: 'https://github.com/facebook/react/blob/main/LICENSE' },
+    { name: 'Vite', license: 'MIT', url: 'https://github.com/vitejs/vite/blob/main/LICENSE' },
+    { name: 'Tailwind CSS', license: 'MIT', url: 'https://github.com/tailwindlabs/tailwindcss/blob/main/LICENSE' },
+    { name: 'grammY', license: 'MIT', url: 'https://github.com/grammyjs/grammY/blob/main/LICENSE' },
+    { name: 'Go', license: 'BSD-3-Clause', url: 'https://go.dev/LICENSE' },
+  ]
 
   // Hosted legal pages on their own subdomain (clean URLs), opened in the
   // external browser. Follows the current UI language.
@@ -56,10 +69,17 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
         <Section header={t('about.links')}>
           <Cell
+            before={<Telegram size={20} />}
             title={t('about.bot')}
             subtitle={BOT}
-            after={<ChevronRight size={20} />}
+            after={<ExternalLink size={18} className="text-faint" />}
             onClick={() => openLink('https://t.me/mvp_n_net_bot')}
+          />
+          <Cell
+            before={<Github size={20} />}
+            title={t('about.github')}
+            after={<ExternalLink size={18} className="text-faint" />}
+            onClick={() => openLink(GITHUB_URL)}
           />
           <Cell
             title={t('about.whatsnew')}
@@ -84,6 +104,11 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
             title={t('about.privacy')}
             after={<ExternalLink size={18} className="text-faint" />}
             onClick={() => openLink(legalUrl('privacy'))}
+          />
+          <Cell
+            title={t('about.licenses')}
+            after={<ChevronRight size={20} className="text-faint" />}
+            onClick={() => setLicensesOpen(true)}
             last
           />
         </Section>
@@ -150,6 +175,28 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
             </Collapse>
           ))}
         </div>
+      </Sheet>
+
+      {/* Licenses — third-party attributions */}
+      <Sheet
+        open={licensesOpen}
+        onClose={() => setLicensesOpen(false)}
+        onBack={() => setLicensesOpen(false)}
+        title={t('about.licenses')}
+      >
+        <p className="mb-4 px-1 text-[13px] leading-relaxed text-muted">{t('about.licensesHint')}</p>
+        <Section>
+          {licenses.map((l, i) => (
+            <Cell
+              key={l.name}
+              title={l.name}
+              subtitle={l.license}
+              after={<ExternalLink size={18} className="text-faint" />}
+              onClick={() => openLink(l.url)}
+              last={i === licenses.length - 1}
+            />
+          ))}
+        </Section>
       </Sheet>
     </>
   )

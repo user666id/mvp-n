@@ -272,6 +272,7 @@ export async function mockRequest(
   if (path === '/admin/keys' && m === 'POST') {
     const n = Math.min(100, Math.max(1, Number(body?.count) || 1))
     const ttl = Number(body?.ttl_hours) || 12
+    const planDays = Number(body?.plan_days) || 0 // 0 = lifetime
     const exp = new Date(Date.now() + ttl * 3600_000).toISOString()
     const hex = () => Math.random().toString(16).slice(2, 6).toUpperCase()
     const keys = Array.from({ length: n }, () => ({ key: `${hex()}-${hex()}`, expires_at: exp }))
@@ -279,9 +280,10 @@ export async function mockRequest(
       adminKeys.unshift({
         id: uuid(), key: k.key, comment: '', expires_at: exp,
         created_at: new Date().toISOString(), is_valid: true,
+        ...(planDays > 0 ? { plan_days: planDays } : {}),
       }),
     )
-    return { count: n, expires_at: exp, ttl_hours: ttl, keys }
+    return { count: n, expires_at: exp, ttl_hours: ttl, plan_days: planDays, keys }
   }
   if (path === '/admin/keys' && m === 'GET') return adminKeys
   const keyDel = path.match(/^\/admin\/keys\/([^/]+)$/)

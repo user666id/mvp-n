@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
+	"github.com/user666id/vpn-project/api/internal/awg"
 	"github.com/user666id/vpn-project/api/internal/metrics"
 	"github.com/user666id/vpn-project/api/internal/xray"
 )
@@ -16,6 +17,9 @@ type Scheduler struct {
 	db        *sql.DB
 	collector *metrics.Collector
 	xray      *xray.Client
+	// awg is the AmneziaWG control client (awg-server). Optional; when set,
+	// collectTraffic also bills per-peer rx/tx so AWG traffic is accounted for.
+	awg *awg.Client
 	// expiryReset wipes a user's VPN footprint (configs/devices/xray/AWG) on
 	// subscription expiry. Injected from main (handlers.Handler.ResetSubscription)
 	// to reuse the exact reset path without a package cycle.
@@ -24,6 +28,9 @@ type Scheduler struct {
 	// paid subscriptions. Injected from main (handlers.Handler.VerifyPayments).
 	paymentCheck func(context.Context) error
 }
+
+// SetAwg wires the AmneziaWG client so collectTraffic can account AWG peers.
+func (s *Scheduler) SetAwg(c *awg.Client) { s.awg = c }
 
 // SetExpiryReset wires the subscription-expiry cleanup callback.
 func (s *Scheduler) SetExpiryReset(fn func(context.Context, int64)) { s.expiryReset = fn }
@@ -229,53 +236,102 @@ func (s *Scheduler) revokeExpiredSubs(ctx context.Context) error {
 // The first sample for a device only primes the baseline (traffic_seen) so old,
 // pre-existing traffic isn't counted as a sudden spike or false "online".
 func (s *Scheduler) collectTraffic(ctx context.Context) error {
-	if s.xray == nil {
-		return nil
-	}
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, user_id, COALESCE(vpn_email, ''), traffic_seen FROM devices WHERE COALESCE(vpn_email, '') <> ''`)
-	if err != nil {
-		return err
-	}
-	type dev struct {
-		id     string
-		userID int64
-		email  string
-		seen   sql.NullInt64
-	}
-	var devs []dev
-	for rows.Next() {
-		var d dev
-		if rows.Scan(&d.id, &d.userID, &d.email, &d.seen) == nil {
-			devs = append(devs, d)
-		}
-	}
-	rows.Close()
-
 	active := 0
 	var dayDelta int64 // sum of all positive deltas this pass → today's traffic
-	for _, d := range devs {
-		up, down, err := s.xray.GetTraffic(ctx, d.email, false)
+
+	// ── VLESS (xray per-user stats, keyed by device.vpn_email) ──
+	if s.xray != nil {
+		rows, err := s.db.QueryContext(ctx,
+			`SELECT id, user_id, COALESCE(vpn_email, ''), traffic_seen FROM devices WHERE COALESCE(vpn_email, '') <> ''`)
 		if err != nil {
-			continue
+			return err
 		}
-		total := up + down
-		delta, isActive, newBaseline := trafficStep(d.seen.Valid, d.seen.Int64, total)
-		switch {
-		case isActive:
-			// Counter grew → device is passing data right now; add the delta.
-			_, _ = s.db.ExecContext(ctx,
-				`UPDATE devices SET last_active = NOW(), traffic_seen = $1 WHERE id = $2`, newBaseline, d.id)
-			_, _ = s.db.ExecContext(ctx,
-				`UPDATE users SET traffic_used = traffic_used + $1 WHERE id = $2`, delta, d.userID)
-			dayDelta += delta
-			active++
-		case !d.seen.Valid || newBaseline != d.seen.Int64:
-			// First sample (prime baseline) or xray restart (counter reset →
-			// resync baseline). Neither counts toward traffic.
-			_, _ = s.db.ExecContext(ctx, `UPDATE devices SET traffic_seen = $1 WHERE id = $2`, newBaseline, d.id)
+		type dev struct {
+			id     string
+			userID int64
+			email  string
+			seen   sql.NullInt64
+		}
+		var devs []dev
+		for rows.Next() {
+			var d dev
+			if rows.Scan(&d.id, &d.userID, &d.email, &d.seen) == nil {
+				devs = append(devs, d)
+			}
+		}
+		rows.Close()
+
+		for _, d := range devs {
+			up, down, err := s.xray.GetTraffic(ctx, d.email, false)
+			if err != nil {
+				continue
+			}
+			total := up + down
+			delta, isActive, newBaseline := trafficStep(d.seen.Valid, d.seen.Int64, total)
+			switch {
+			case isActive:
+				// Counter grew → device is passing data right now; add the delta.
+				_, _ = s.db.ExecContext(ctx,
+					`UPDATE devices SET last_active = NOW(), traffic_seen = $1 WHERE id = $2`, newBaseline, d.id)
+				_, _ = s.db.ExecContext(ctx,
+					`UPDATE users SET traffic_used = traffic_used + $1 WHERE id = $2`, delta, d.userID)
+				dayDelta += delta
+				active++
+			case !d.seen.Valid || newBaseline != d.seen.Int64:
+				// First sample (prime baseline) or xray restart (counter reset →
+				// resync baseline). Neither counts toward traffic.
+				_, _ = s.db.ExecContext(ctx, `UPDATE devices SET traffic_seen = $1 WHERE id = $2`, newBaseline, d.id)
+			}
 		}
 	}
+
+	// ── AmneziaWG (awg-server per-peer rx/tx, keyed by vpn_configs.awg_client_id) ──
+	// Same delta logic as VLESS; the peer's cumulative rx+tx is the counter and
+	// traffic_seen on the config row is the persisted baseline.
+	if s.awg != nil {
+		arows, err := s.db.QueryContext(ctx,
+			`SELECT id, user_id, COALESCE(awg_client_id, ''), traffic_seen FROM vpn_configs
+			 WHERE COALESCE(awg_client_id, '') <> '' AND is_active = true`)
+		if err != nil {
+			return err
+		}
+		type acfg struct {
+			id     string
+			userID int64
+			cid    string
+			seen   sql.NullInt64
+		}
+		var cfgs []acfg
+		for arows.Next() {
+			var c acfg
+			if arows.Scan(&c.id, &c.userID, &c.cid, &c.seen) == nil {
+				cfgs = append(cfgs, c)
+			}
+		}
+		arows.Close()
+
+		for _, c := range cfgs {
+			st, err := s.awg.GetStats(ctx, c.cid)
+			if err != nil || st == nil {
+				continue
+			}
+			total := st.RX + st.TX
+			delta, isActive, newBaseline := trafficStep(c.seen.Valid, c.seen.Int64, total)
+			switch {
+			case isActive:
+				_, _ = s.db.ExecContext(ctx,
+					`UPDATE vpn_configs SET traffic_seen = $1 WHERE id = $2`, newBaseline, c.id)
+				_, _ = s.db.ExecContext(ctx,
+					`UPDATE users SET traffic_used = traffic_used + $1 WHERE id = $2`, delta, c.userID)
+				dayDelta += delta
+				active++
+			case !c.seen.Valid || newBaseline != c.seen.Int64:
+				// First sample (prime baseline) or awg-server counter reset.
+				_, _ = s.db.ExecContext(ctx, `UPDATE vpn_configs SET traffic_seen = $1 WHERE id = $2`, newBaseline, c.id)
+			}
+		}
+	}
+
 	if dayDelta > 0 {
 		// Accumulate into today's bucket, day boundary at 00:00 Moscow (UTC+3).
 		_, _ = s.db.ExecContext(ctx, `
@@ -284,7 +340,7 @@ func (s *Scheduler) collectTraffic(ctx context.Context) error {
 			ON CONFLICT (day) DO UPDATE SET bytes = traffic_daily.bytes + EXCLUDED.bytes`, dayDelta)
 	}
 	if active > 0 {
-		log.Printf("[cron] collectTraffic: %d/%d devices active", active, len(devs))
+		log.Printf("[cron] collectTraffic: %d peers active, +%d bytes", active, dayDelta)
 	}
 	return nil
 }
