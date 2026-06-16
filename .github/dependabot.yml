@@ -1,0 +1,56 @@
+version: 2
+# Minor/patch updates are batched into ONE grouped PR per ecosystem (less noise).
+# Major bumps still open their own PR — they need individual review (e.g. React 19,
+# Tailwind 4, Vite 8). Weekly cadence.
+updates:
+  # ── Go modules (one per service) ──
+  - package-ecosystem: gomod
+    directory: /api
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      api-gomod:
+        patterns: ['*']
+        update-types: [minor, patch]
+  - package-ecosystem: gomod
+    directory: /connect
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      connect-gomod:
+        patterns: ['*']
+        update-types: [minor, patch]
+  - package-ecosystem: gomod
+    directory: /awg-server
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      awg-gomod:
+        patterns: ['*']
+        update-types: [minor, patch]
+  # ── npm ──
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      frontend-npm:
+        patterns: ['*']
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /bot
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      bot-npm:
+        patterns: ['*']
+        update-types: [minor, patch]
+  # ── CI actions themselves ──
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ['*']
+        update-types: [minor, patch]
