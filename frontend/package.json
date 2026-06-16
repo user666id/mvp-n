@@ -1,7 +1,7 @@
 {
   "name": "mvpn-miniapp",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ton/core": "^0.63.1",
+    "@tonconnect/ui-react": "^3.0.0",
+    "buffer": "^6.0.3",
     "qrcode": "^1.5.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

@@ -17,6 +17,21 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '1.7',
+    date: '2026-06-16',
+    groups: [
+      {
+        kind: 'added',
+        items: [
+          {
+            en: 'Pay from your TON wallet via TON Connect (Telegram Wallet, Tonkeeper) — for both GRAM and USDT-TON. Copying the address & QR still works as before.',
+            ru: 'Оплата из TON-кошелька через TON Connect (Telegram Wallet, Tonkeeper) — для GRAM и USDT-TON. Ручной адрес и QR по-прежнему доступны.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '1.6',
     date: '2026-06-16',
     groups: [

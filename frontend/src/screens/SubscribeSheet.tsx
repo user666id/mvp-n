@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Button } from '../components/ui/Button'
 import { Spinner } from '../components/ui/Spinner'
 import { Qr } from '../components/Qr'
 import { CurrencyIcon } from '../components/CurrencyIcon'
-import { Check, Copy } from '../components/icons'
+import { Check, Copy, QrCode } from '../components/icons'
 import { useToast } from '../components/ui/Toast'
 import { copyText } from '../lib/clipboard'
 import { notify, confirmDialog } from '../lib/telegram'
@@ -18,6 +18,10 @@ import {
   type Order,
 } from '../api'
 import { useT } from '../lib/i18n'
+
+// Lazy: pulls in @tonconnect/ui only when the GRAM confirm step renders the
+// wallet button, keeping the SDK out of the initial bundle.
+const WalletPay = lazy(() => import('./WalletPay'))
 
 type Step = 'select' | 'confirm' | 'pay' | 'done'
 type Asset = { id: string; label: string; network: string }
@@ -124,6 +128,9 @@ export function SubscribeSheet({
   // Prices are pegged to USD. USDT is 1:1; GRAM is converted at the live rate
   // (approximate here — the exact amount is locked when the order is created).
   const isGram = asset === 'TON'
+  // TON-network assets can pay via TON Connect (native GRAM or USD₮ jetton);
+  // USDT-TRC20 is TRON, so it stays manual-only.
+  const isTonNet = asset === 'TON' || asset === 'USDT_TON'
   const priceNum = (p: Plan) => (isGram ? (gramUsd > 0 ? p.usd / gramUsd : 0) : p.usd)
   const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2))
   const priceStr = (p: Plan) => `${fmtNum(priceNum(p))} ${label}`
@@ -141,6 +148,15 @@ export function SubscribeSheet({
     } finally {
       setBusy(false)
     }
+  }
+
+  // GRAM (native TON): create/reuse the order, hand its exact unique amount +
+  // address to the connected wallet. The actual wallet call lives in the lazily
+  // loaded WalletPay component; here we just own the order state.
+  const makeWalletOrder = async () => {
+    const o = order ?? (await createOrder(days, asset))
+    setOrder(o)
+    return o
   }
 
   const copy = (s: string) => copyText(s).then(() => toast(t('common.copied')))
@@ -276,9 +292,39 @@ export function SubscribeSheet({
           {isGram && (
             <p className="mt-3 px-1 text-[12px] leading-snug text-faint">{t('pay.approxHint')}</p>
           )}
-          <Button onClick={startPay} loading={busy} stretched className="mt-6">
-            {t('pay.toPayment')}
-          </Button>
+          {isTonNet ? (
+            <>
+              {/* TON-network (GRAM native / USD₮ jetton): pay via the connected
+                  wallet. Lazy — the SDK loads only when this step renders. */}
+              <Suspense
+                fallback={
+                  <Button loading stretched className="mt-6">
+                    {t('pay.payWallet')}
+                  </Button>
+                }
+              >
+                <WalletPay
+                  asset={asset}
+                  makeOrder={makeWalletOrder}
+                  onConfirmed={() => setStep('pay')}
+                  onCancel={() => toast(t('pay.walletCancelled'))}
+                />
+              </Suspense>
+              <Button
+                onClick={startPay}
+                loading={busy}
+                variant="secondary"
+                stretched
+                className="mt-3"
+              >
+                <QrCode size={18} /> {t('pay.payManual')}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={startPay} loading={busy} stretched className="mt-6">
+              {t('pay.toPayment')}
+            </Button>
+          )}
         </div>
       )}
 

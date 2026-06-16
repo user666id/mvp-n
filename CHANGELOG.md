@@ -3,6 +3,31 @@
 Все заметные изменения проекта. Формат — [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
 версии — [SemVer](https://semver.org/lang/ru/).
 
+## [1.7.0] — 2026-06-16
+
+Оплата через **TON Connect** (Telegram Wallet, Tonkeeper) для GRAM — оплата в один
+тап из кошелька вместо ручного перевода.
+
+### Добавлено
+- **TON Connect.** `@tonconnect/ui-react` + манифест `frontend/public/tonconnect-manifest.json`
+  (`/v2/`), провайдер в `main.tsx`. На шаге подтверждения для GRAM — кнопка
+  «Оплатить в кошельке»: `createOrder` → `tonConnectUI.sendTransaction(address,
+  amount_nanotons)` → существующий поллинг. Сопоставление платежа — по **уникальной
+  сумме** (как раньше), без изменений в бэкенде. Ручной адрес/QR оставлены вторичной
+  кнопкой.
+- **USDT-TON через TON Connect (jetton, фаза 2).** Сборка TEP-74 jetton-transfer
+  (`@ton/core`): резолв jetton-кошелька владельца через tonapi, перевод USD₮ на наш
+  TON-кошелёк с ~0.05 TON газа; сопоставление по сумме (как и раньше). Jetton требует
+  подключения кошелька первым шагом («Подключить кошелёк» → «Оплатить»). Кнопка
+  «Оплатить в кошельке» теперь и для USDT-TON. Buffer полифилится глобально в `main.tsx`.
+- USDT-TRC20 (TRON) остаётся ручной оплатой (TON Connect — только сеть TON).
+- TON Connect вынесен в ленивый чанк (первый экран 243→112 КБ gzip).
+
+### Изменено
+- **CSP (nginx, вручную):** в `connect-src` добавлены `raw.githubusercontent.com`
+  (список кошельков), `bridge.tonapi.io` (Tonkeeper), `walletbot.me` (Telegram Wallet),
+  `tonapi.io` (резолв jetton-кошелька для USDT-TON).
+
 ## [1.6.0] — 2026-06-16
 
 Доводка оплаты и интерфейса по обратной связи: шаг подтверждения перед оплатой,

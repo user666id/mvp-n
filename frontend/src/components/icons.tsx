@@ -62,6 +62,13 @@ export const Telegram = ({ size, className, strokeWidth }: P) => (
     <path d="m21.85 2.15-10.94 10.94" />
   </svg>
 )
+export const Wallet = ({ size, className, strokeWidth }: P) => (
+  <svg {...base(size, strokeWidth)} className={className}>
+    <path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4" />
+    <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+    <path d="M18 12a2 2 0 0 0 0 4h3v-4z" />
+  </svg>
+)
 export const QrCode = ({ size, className, strokeWidth }: P) => (
   <svg {...base(size, strokeWidth)} className={className}>
     <rect width="5" height="5" x="3" y="3" rx="1" /><rect width="5" height="5" x="16" y="3" rx="1" />
