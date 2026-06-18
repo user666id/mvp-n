@@ -77,7 +77,8 @@ async function reauth(): Promise<boolean> {
  * raising ApiError on a non-OK envelope.
  *
  * Resilience:
- *  - 20s timeout so a stalled WebView request fails instead of hanging forever.
+ *  - 12s timeout (TIMEOUT_MS) so a stalled WebView request fails instead of
+ *    hanging forever; GETs (and writes on a pure NETWORK error) then retry.
  *  - On 401 (expired/invalid JWT) it re-authenticates once from initData and
  *    retries — so the app self-heals on token expiry instead of needing a restart.
  */
@@ -95,8 +96,13 @@ export async function request<T>(
     res = await rawFetch(method, path, body, true)
   } catch (e: any) {
     const code = e?.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK'
-    // Retry idempotent reads through a flaky connection before surfacing an error.
-    if (method.toUpperCase() === 'GET' && netTries < GET_RETRIES) {
+    const isGet = method.toUpperCase() === 'GET'
+    // Retry transient failures before surfacing an error. GETs retry on any
+    // transient blip; a non-idempotent write (e.g. POST /orders) retries ONLY on
+    // a NETWORK error — the connection never established, so the server didn't
+    // receive it and a replay can't double-apply. A write TIMEOUT is NOT retried
+    // (the server may have already processed it).
+    if (isGet ? netTries < GET_RETRIES : code === 'NETWORK' && netTries < 1) {
       await sleep(400 * (netTries + 1))
       return request<T>(method, path, body, retried, netTries + 1)
     }

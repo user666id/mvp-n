@@ -1,83 +1,83 @@
 # scripts — VPS Setup
 
-> Bash-скрипты для полной настройки VPN-сервера с нуля.
-> Целевая ОС: **Ubuntu 22.04 LTS**
+> Bash scripts for full setup of a VPN server from scratch.
+> Target OS: **Ubuntu 22.04 LTS**
 
 ---
 
-## Быстрый старт
+## Quick start
 
 ```bash
-# На чистом VPS (root)
+# On a clean VPS (root)
 git clone https://github.com/user666id/vpn-project
 cd vpn-project
 chmod +x scripts/setup.sh
 sudo ./scripts/setup.sh
 ```
 
-После выполнения в `/etc/mvpn/credentials.json` будут все сгенерированные данные.
+After it runs, `/etc/mvpn/credentials.json` will contain all generated data.
 
 ---
 
-## Структура
+## Structure
 
 ```
 scripts/
-├── deploy.sh             # пересборка изменившихся сервисов (вызывается pull-deploy.sh)
-├── pull-deploy.sh        # на VPS: git fetch; при новом коммите в main → deploy.sh
-├── setup.sh              # мастер-скрипт (apt, firewall, запуск install/*)
-├── setup-deploy.sh       # bootstrap pull-автодеплоя (root): clone, web-root, deploy-key, таймер
-├── systemd/              # mvpn-deploy.service + .timer (опрос GitHub каждые 2 мин)
+├── deploy.sh             # rebuild changed services (called by pull-deploy.sh)
+├── pull-deploy.sh        # on the VPS: git fetch; on a new commit to main → deploy.sh
+├── setup.sh              # master script (apt, firewall, runs install/*)
+├── setup-deploy.sh       # bootstrap pull auto-deploy (root): clone, web-root, deploy-key, timer
+├── systemd/              # mvpn-deploy.service + .timer (polls GitHub every 2 min)
 └── install/
     ├── xanmod.sh         # XanMod kernel + BBRv3
-    ├── xray.sh           # Xray-core: 2 inbound'а REALITY + config.json + logrotate
-    ├── amneziawg.sh      # ядро AmneziaWG (DKMS) + awg0 с обфускацией + NAT
-    ├── awg.sh            # сборка/запуск awg-server
-    ├── ssl.sh            # Cloudflare Origin Cert для web-доменов
-    ├── mtproxy.sh        # MTProxy (telemt в Docker) — опционально
-    ├── speedtest.sh      # тест скорости через Yandex CDN
-    └── backup.sh         # ручной дамп БД
+    ├── xray.sh           # Xray-core: 2 REALITY inbounds + config.json + logrotate
+    ├── amneziawg.sh      # AmneziaWG kernel (DKMS) + awg0 with obfuscation + NAT
+    ├── awg.sh            # build/run awg-server
+    ├── ssl.sh            # Cloudflare Origin Cert for web domains
+    ├── mtproxy.sh        # MTProxy (telemt in Docker) — optional
+    ├── speedtest.sh      # speed test via Yandex CDN
+    └── backup.sh         # manual DB dump
 ```
 
 ---
 
-## Что делает каждый скрипт
+## What each script does
 
 ### `setup.sh`
-Обновляет систему, настраивает firewall и запускает `install/*` по порядку.
+Updates the system, configures the firewall, and runs `install/*` in order.
 
 ### `install/xanmod.sh`
-Определяет уровень CPU (v1–v4), ставит XanMod kernel, включает BBRv3 в `sysctl`.
+Detects the CPU level (v1–v4), installs the XanMod kernel, enables BBRv3 in `sysctl`.
 
 ### `install/xray.sh`
-Ставит Xray-core; генерирует UUID, x25519-keypair и short_id; пишет
-`/usr/local/etc/xray/config.json` с двумя REALITY-инбаундами (`:43000` Vision/TCP,
-`:43001` XHTTP, dest `www.microsoft.com`); ставит logrotate; сохраняет ключи в
-`/etc/mvpn/credentials.json` (их читает Go-api для сборки VLESS-ссылки).
+Installs Xray-core; generates a UUID, x25519 keypair, and short_id; writes
+`/usr/local/etc/xray/config.json` with two REALITY inbounds (`:43000` Vision/TCP,
+`:43001` XHTTP, dest `www.microsoft.com`); installs logrotate; saves the keys to
+`/etc/mvpn/credentials.json` (read by the Go api to build the VLESS link).
 
 ### `install/amneziawg.sh`
-Ставит ядро AmneziaWG (DKMS) и тулзы, поднимает `awg0` с обфускацией
-(Jc/Jmin/Jmax/S1/S2/H1-H4) и NAT; пишет `/etc/mvpn/awg-params.json`.
+Installs the AmneziaWG kernel (DKMS) and tools, brings up `awg0` with obfuscation
+(Jc/Jmin/Jmax/S1/S2/H1-H4) and NAT; writes `/etc/mvpn/awg-params.json`.
 
 ### `install/awg.sh`
-Собирает и запускает `awg-server` (управление пирами на `awg0`).
+Builds and runs `awg-server` (peer management on `awg0`).
 
 ### `install/ssl.sh`
-Раскладывает Cloudflare Origin Cert для web-доменов (см. [`docs/ssl-setup.md`](../docs/ssl-setup.md)).
+Lays out the Cloudflare Origin Cert for web domains (see [`docs/ssl-setup.md`](../docs/ssl-setup.md)).
 
-### `install/mtproxy.sh` (опционально)
-Поднимает `telemt` (MTProxy) в Docker.
+### `install/mtproxy.sh` (optional)
+Brings up `telemt` (MTProxy) in Docker.
 
 ### `install/speedtest.sh`
-Тест скорости через Yandex CDN, результат в МБ/с.
+Speed test via Yandex CDN, result in MB/s.
 
 ---
 
-## Требования
+## Requirements
 
 | | |
 |-|-|
-| ОС | Ubuntu 22.04 LTS |
-| RAM | минимум 1 ГБ |
-| Диск | минимум 10 ГБ |
-| Порты | `443/tcp`, `43000-43001/tcp`, `51820/udp` |
+| OS | Ubuntu 22.04 LTS |
+| RAM | at least 1 GB |
+| Disk | at least 10 GB |
+| Ports | `443/tcp`, `43000-43001/tcp`, `51820/udp` |

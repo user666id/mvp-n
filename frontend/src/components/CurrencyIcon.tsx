@@ -1,18 +1,33 @@
+import gramUrl from '../assets/coins/gram.svg'
+import starsUrl from '../assets/coins/stars.svg'
 import tonUrl from '../assets/coins/ton.svg'
 import usdtUrl from '../assets/coins/usdt.svg'
 import tronUrl from '../assets/coins/tron.svg'
 
 /**
- * Brand coin icons for the payment currency picker — the official logos shipped
- * as SVG files (bundled same-origin, so they pass the Mini App CSP `img-src`).
- *  - GRAM (Toncoin): the official TON disc + diamond.
- *  - USDT: the Tether disc, with a small network badge in the corner — the TON
- *    diamond for USDT-TON, the TRON mark for USDT-TRC20 — so the two USDT assets
- *    are told apart at a glance (one Tether icon, two badges).
+ * Brand coin icons for the payment currency picker — bundled SVG files (pass the
+ * Mini App CSP `img-src`).
+ *  - GRAM: the official post-rebrand mark (ton.org brand assets — blue shield +
+ *    white sparkle/gem).
+ *  - USDT: the Tether disc + a small network badge — TON diamond for USDT-TON,
+ *    TRON mark for USDT-TRC20.
+ *  - Stars: the gold Telegram Stars star (official telegram-tt star geometry in
+ *    the Stars gold palette).
  */
 export function CurrencyIcon({ asset, size = 30 }: { asset: string; size?: number }) {
   if (asset === 'TON') {
-    return <img src={tonUrl} width={size} height={size} alt="GRAM" className="block" />
+    return <img src={gramUrl} width={size} height={size} alt="GRAM" className="block" />
+  }
+  if (asset === 'STARS') {
+    return (
+      <img
+        src={starsUrl}
+        width={size}
+        height={size}
+        alt="Telegram Stars"
+        className="block object-contain"
+      />
+    )
   }
   const badge = asset === 'USDT_TRC20' ? tronUrl : tonUrl
   const b = Math.round(size * 0.46)

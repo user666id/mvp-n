@@ -4,8 +4,9 @@ import { Drawer, type Tab } from './components/Drawer'
 import { AuthScreen } from './screens/AuthScreen'
 import { ConfigsScreen } from './screens/ConfigsScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
+import { AdminSheet } from './screens/AdminSheet'
 import { Spinner } from './components/ui/Spinner'
-import { ApiError, authTelegram, clearToken, getToken, setLanguage } from './api'
+import { ApiError, authTelegram, clearToken, getProfile, getToken, setLanguage } from './api'
 import { notify } from './lib/telegram'
 import { useT } from './lib/i18n'
 
@@ -18,6 +19,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('configs')
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(false)
 
   const handleLogin = async () => {
     setBusy(true)
@@ -54,11 +57,18 @@ export default function App() {
     if (phase !== 'main') return
     const saved = localStorage.getItem('mvpn_lang')
     if (saved === 'en' || saved === 'ru') setLanguage(saved).catch(() => {})
+    // Surface the admin entry in the menu for admins (best-effort; a failed
+    // profile fetch just hides it).
+    getProfile()
+      .then((p) => setIsAdmin(!!p.is_admin))
+      .catch(() => {})
   }, [phase])
 
   const handleLogout = () => {
     clearToken()
     setTab('configs')
+    setIsAdmin(false)
+    setAdminOpen(false)
     setError(null)
     setPhase('auth')
   }
@@ -91,7 +101,10 @@ export default function App() {
             onClose={() => setDrawerOpen(false)}
             active={tab}
             onSelect={setTab}
+            isAdmin={isAdmin}
+            onOpenAdmin={() => setAdminOpen(true)}
           />
+          {isAdmin && <AdminSheet open={adminOpen} onClose={() => setAdminOpen(false)} />}
         </>
       )}
     </ToastProvider>

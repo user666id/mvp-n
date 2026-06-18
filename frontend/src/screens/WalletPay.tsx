@@ -25,7 +25,17 @@ interface Props {
 /** Resolve the owner's USD₮ jetton-wallet address (where a jetton transfer must
  *  be sent from). The owner must hold USD₮ to pay, so this is present. */
 async function resolveJettonWallet(owner: string): Promise<string> {
-  const r = await fetch(`https://tonapi.io/v2/accounts/${owner}/jettons/${USDT_MASTER}`)
+  // Timeout the lookup so a stalled tonapi on a flaky mobile/WebView connection
+  // rejects (→ the caller's catch fires) instead of leaving the pay button
+  // spinning forever.
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 10_000)
+  let r: Response
+  try {
+    r = await fetch(`https://tonapi.io/v2/accounts/${owner}/jettons/${USDT_MASTER}`, { signal: ctrl.signal })
+  } finally {
+    clearTimeout(timer)
+  }
   if (!r.ok) throw new Error('no-jetton-wallet')
   const j = (await r.json()) as { wallet_address?: { address?: string } }
   const addr = j.wallet_address?.address
@@ -40,9 +50,10 @@ function PayInner({ asset, makeOrder, onConfirmed, onCancel }: Props) {
   const [busy, setBusy] = useState(false)
 
   const isNative = asset === 'TON'
-  // For a jetton we must know the owner address up-front (to build the transfer),
-  // so connect first. Native GRAM lets sendTransaction connect+send in one tap.
-  const needConnect = !isNative && !address
+  // Connect first whenever no wallet is linked: sendTransaction throws (no modal)
+  // when disconnected, and a jetton also needs the owner address up-front. Once
+  // connected, it's one tap to pay.
+  const needConnect = !address
 
   const pay = async () => {
     setBusy(true)
@@ -96,7 +107,7 @@ function PayInner({ asset, makeOrder, onConfirmed, onCancel }: Props) {
   }
 
   return (
-    <Button onClick={onClick} loading={busy} stretched className="mt-6">
+    <Button onClick={onClick} loading={busy} stretched>
       <Wallet size={19} /> {needConnect ? t('pay.connectWallet') : t('pay.payWallet')}
     </Button>
   )

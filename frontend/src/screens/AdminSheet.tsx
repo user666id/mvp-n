@@ -160,27 +160,19 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
     )
   }
 
-  const totalTraffic = profiles
-    ? formatBytes(profiles.reduce((s, p) => s + p.traffic_used, 0), lang)
-    : '—'
-  const todayTraffic = trafficToday != null ? formatBytes(trafficToday, lang) : '—'
-
   return (
     <>
       {/* Single-window navigation: a child sheet hides the parent (gated `open`),
           and each child shows a ‹ back button — so only one window is ever shown. */}
       <Sheet open={open} onClose={onClose} title={t('admin.title')}>
-        {/* traffic — total / today; tap opens the by-day chart */}
-        <Section header={t('admin.traffic')}>
-          <button
-            className="flex w-full items-center text-left active:bg-surface-sunken"
+        {/* traffic — a plain row; totals + the by-day chart live inside */}
+        <Section>
+          <Cell
+            title={t('admin.traffic')}
+            after={<ChevronRight size={18} className="text-faint" />}
             onClick={() => setTrafficOpen(true)}
-          >
-            <TrafficStat label={t('admin.trafficTotalShort')} value={totalTraffic} />
-            <div className="w-px self-stretch bg-border" />
-            <TrafficStat label={t('admin.trafficTodayShort')} value={todayTraffic} />
-            <ChevronRight size={18} className="mr-3 shrink-0 text-faint" />
-          </button>
+            last
+          />
         </Section>
 
         <Section>
@@ -354,16 +346,6 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
         today={trafficToday ?? 0}
       />
     </>
-  )
-}
-
-/** One half of the two-column traffic card: small label over a big value. */
-function TrafficStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex-1 px-4 py-3.5">
-      <div className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-faint">{label}</div>
-      <div className="mt-1 font-display text-[19px] font-semibold leading-tight text-ink">{value}</div>
-    </div>
   )
 }
 

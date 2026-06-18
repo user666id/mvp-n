@@ -1,30 +1,30 @@
 # Roadmap
 
-Что сделано и что в планах. Текущее состояние — [STATUS.md](./STATUS.md).
+What's done and what's planned. Current state — [STATUS.md](./STATUS.md).
 
-## Сделано
+## Done
 
-- VLESS + REALITY: Vision/TCP `:43000` (Обычный), XHTTP `:43001` (Усиленный), без Vision-flow (Игровой). Подписка пересобирает URI на лету из флагов.
-- AmneziaWG end-to-end: `awg-server`, провижининг и отзыв пиров, `.conf` + QR, импорт в AmneziaVPN, статистика (handshake / online).
-- Mini App на React 18 + TS + Tailwind (Claude-style), i18n EN/RU с синхронизацией языка с ботом.
-- Вкладка устройств (VLESS + AmneziaWG): переименование, блок/разблок, удаление.
-- Распознавание устройств по HWID: каждое физическое устройство — отдельная запись на одной общей ссылке, показ реальной модели, стабильная нумерация по дате.
-- Графики сервера (CPU / RAM / сеть); использованный трафик в подписке.
-- Сброс подписки — полная очистка всех конфигов и устройств.
-- Админ-панель: ключи (выпуск/отзыв), профили (поиск, сброс подписки, список конфигов, блок устройства), трафик (всего / за сегодня), домены.
-- Дизайн под Claude: pill-кнопки, «значение справа», единые пустые состояния, segmented-переключатель языка, тема по системе, тактильный отклик.
-- Бот: только личные чаты, синхронизация языка с приложением.
-- Инфраструктура: db-backup с ротацией, ротация логов xray, реконсиляция стека на деплое, лимиты CPU/RAM на контейнеры, автодеплой по SSH-deploy-key.
-- Безопасность (v1.2): constant-time токены, раздельные внутренние токены, rate limiting auth, отзыв JWT + ротация секрета, xray API на docker-бридже, security-заголовки nginx.
-- Тесты: парсер User-Agent, `initData`, учёт трафика, ротация JWT — в CI.
+- VLESS + REALITY: Vision/TCP `:43000` (Standard), XHTTP `:43001` (Enhanced), without Vision-flow (Gaming). The subscription rebuilds the URI on the fly from the flags.
+- AmneziaWG end-to-end: `awg-server`, peer provisioning and revocation, `.conf` + QR, import into AmneziaVPN, statistics (handshake / online).
+- Mini App on React 18 + TS + Tailwind (Claude-style), i18n EN/RU with language sync with the bot.
+- Devices tab (VLESS + AmneziaWG): rename, block/unblock, delete.
+- Device recognition by HWID: every physical device is a separate entry on one shared link, showing the real model, with stable numbering by date.
+- Server charts (CPU / RAM / network); used traffic in the subscription.
+- Subscription reset — full cleanup of all configs and devices.
+- Admin panel: keys (issue/revoke), profiles (search, subscription reset, list of configs, device blocking), traffic (total / today), domains.
+- Claude-style design: pill buttons, "value on the right", unified empty states, segmented language switcher, theme by system, haptic feedback.
+- Bot: private chats only, language sync with the app.
+- Infrastructure: db-backup with rotation, xray log rotation, stack reconciliation on deploy, CPU/RAM limits on containers, auto-deploy via SSH-deploy-key.
+- Security (v1.2): constant-time tokens, separate internal tokens, auth rate limiting, JWT revocation + secret rotation, xray API on the docker bridge, nginx security headers.
+- Tests: User-Agent parser, `initData`, traffic accounting, JWT rotation — in CI.
 
-## Планы — продукт
+## Plans — product
 
-| Фича | Суть |
+| Feature | Summary |
 |------|------|
-| Несколько устройств на один AmneziaWG-конфиг | «добавить устройство» → отдельный пир / `.conf` под тем же конфигом |
-| Дополнительные протоколы | Trojan, Hysteria 2, Shadowsocks 2022 |
+| Multiple devices on a single AmneziaWG config | "add device" → separate peer / `.conf` under the same config |
+| Additional protocols | Trojan, Hysteria 2, Shadowsocks 2022 |
 
-## Планы — инфраструктура и качество
+## Plans — infrastructure and quality
 
-- Уведомления через бота (истечение, новости).
+- Notifications via the bot (expiration, news).

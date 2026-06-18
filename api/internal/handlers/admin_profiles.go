@@ -296,7 +296,7 @@ func (h *Handler) AdminProfileDevices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT id, COALESCE(name, ''), COALESCE(os, ''), COALESCE(client, ''), COALESCE(ip, ''),
+		SELECT id, COALESCE(name, ''), COALESCE(os, ''), COALESCE(client, ''),
 		       last_seen, is_blocked,
 		       (last_active IS NOT NULL AND last_active > NOW() - INTERVAL '3 minutes') AS online
 		FROM devices WHERE user_id = $1 ORDER BY created_at ASC, id ASC
@@ -311,7 +311,7 @@ func (h *Handler) AdminProfileDevices(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var d deviceEntry
 		d.Kind = "device"
-		if err := rows.Scan(&d.ID, &d.Name, &d.OS, &d.Client, &d.IP, &d.LastSeen, &d.IsBlocked, &d.Online); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.OS, &d.Client, &d.LastSeen, &d.IsBlocked, &d.Online); err != nil {
 			continue
 		}
 		out = append(out, d)

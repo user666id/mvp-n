@@ -1,271 +1,449 @@
 # Changelog
 
-Все заметные изменения проекта. Формат — [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
-версии — [SemVer](https://semver.org/lang/ru/).
+All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+versions — [SemVer](https://semver.org/).
+
+## [1.8.0] — 2026-06-18
+
+The 1.8 update is in progress (accumulating). So far:
+
+### Added
+- **Payment via Telegram Stars (#7).** The API mints an invoice link (`createInvoiceLink`,
+  `XTR`, `provider_token` omitted, payload `uid:days:nonce` from the user's JWT) →
+  `POST /stars/invoice`; the frontend opens it via `WebApp.openInvoice` and **polls the
+  profile** for confirmation (we don't trust the callback). Bot (top-level
+  `pre_checkout_query`, answered in memory within <10s) + `message:successful_payment` →
+  `POST /internal/credit-subscription` (auth via `BotInternalToken`). Idempotency —
+  the `star_payments` table keyed by `telegram_payment_charge_id`, insert+extend in one tx.
+  The price is an integer number of stars (`StarsByDays`, **without ×100** — the main XTR money risk),
+  with a test. `allowed_updates += pre_checkout_query`, `drop_pending_updates=false`.
+  **Requires a live test** (the mock doesn't reproduce TON/openInvoice).
+- Entering an access key is now possible at renewal too: "I have a key" in the
+  "Subscription" panel (`SubscriptionSheet`), not only in the activating Configs block.
+
+### Fixed
+- **GRAM via wallet didn't open TON Connect.** `WalletPay`: for native
+  GRAM without a connected wallet, `sendTransaction` threw an error (the modal didn't
+  open). Now connect-first for all TON assets (`needConnect = !address`).
+
+### Changed
+- The bot's menu button (left of the input field) now shows the command menu with /start,
+  rather than launching the Mini App directly (`setChatMenuButton` → `type: 'commands'`).
+- The country flag (🇳🇱) was removed from server statistics.
+- **The admin panel was moved into the main menu** (Drawer, at the bottom, admins only);
+  removed from Settings. App fetches `is_admin` and renders `AdminSheet` at the top level.
+- **Loading reliability.** A new `LoadError` (error + "Retry") instead of
+  an endless skeleton/false "empty" on failure: `DevicesSheet` (showed
+  a false "no devices"), `ServerStatsSheet`, `ConfigsScreen` (first failure).
+  The API client already had a 12s timeout + GET retries + re-auth on 401.
+- **Smoothness.** A soft fade-in of content (`@keyframes fade-in`, respects
+  reduced-motion) on sheet bodies (`Sheet`) and screen roots.
+- **Payment-method selection — one compact selector** instead of a row of 4 chips:
+  a collapsed card (icon + asset + network + chevron) expands into a list of
+  GRAM/TON · USDT/TON · USDT/TRC20 · Stars with a checkmark on the selected one (`pickerOpen`
+  in `SubscribeSheet`). The Stars price is shown in stars (`starsByDays`).
+- **Asset icons.** GRAM — the updated "gem" after the rebrand (`assets/coins/
+  gram.svg`, interim recreation — replace with the official file when available); Stars —
+  a gold star with a gradient on a blue disc (`CurrencyIcon`). Fixed
+  kebab-case SVG attributes in JSX (`stopColor`/`strokeWidth`/`strokeLinejoin`) —
+  otherwise the star's gradient/stroke wouldn't apply.
+
+### Legal / GDPR
+- **The Privacy Policy** (RU+EN, `public/legal.js`) was expanded with sections:
+  no analytics/trackers, legal basis (art. 6(1)(b) — contract,
+  6(1)(f) — legitimate interest), retention periods (account lifetime; payments up to
+  3 years), where data is processed (servers in the EU; tonapi/trongrid — only
+  public on-chain data), data subject rights (access/rectification/erasure/
+  portability/objection; account deletion in the app; other requests →
+  @mvp_n_net_bot; right to lodge a complaint with a supervisory authority). **Without the controller's
+  name/email** — for now (requires a legal entity/decision, not code).
+- **Terms of Use** (RU+EN): payment — crypto or Telegram Stars; a digital
+  service — a waiver of the 14-day right of withdrawal (Directive
+  2011/83/EU): by paying, the user expressly requests the service to start immediately and
+  acknowledges the loss of the right of withdrawal; non-refundable after activation.
+- **Consent lives in the Terms, not a per-payment checkbox.** The immediate-start +
+  14-day withdrawal waiver is stated in the Usage Policy (accepted at sign-in); the
+  short-lived per-payment `pay.withdrawalConsent` checkbox was removed from the
+  confirm step.
+
+### UI & assets
+- **Payment-method picker is now an anchored dropdown** — the list unfolds from
+  the selector row itself (absolute overlay + tap-outside backdrop) instead of a
+  separate block that pushed the plans down (`SubscribeSheet`).
+- **No method is preselected.** The selector starts on a "Choose payment"
+  placeholder (`pay.choose`); the plan durations show immediately but each plan's
+  **price is hidden until a method is chosen** (prices are currency-dependent).
+- **Merged select + confirm into one screen.** The separate `confirm` step is
+  gone: once a method is picked the Pay button(s) render inline under the plans
+  (the highlighted plan shows the amount). Fewer taps; back from the QR/`pay`
+  step returns straight to the picker.
+- **Official payment icons.** GRAM now uses the official post-rebrand mark from
+  ton.org brand assets (`assets/coins/gram.svg`); Telegram Stars uses the
+  official telegram-tt star geometry recoloured to the Stars gold
+  (`assets/coins/stars.svg`), rendered via `<img>` (replaces the hand-drawn SVG).
+- **Sign-in consent is now implicit** — the `AuthScreen` checkbox is gone; the
+  policy notice + links remain and "by signing in you agree" is the consent
+  (`auth.agreePre/agreeAnd/agreePost`).
+
+### Reliability (loading) — update delivery
+- **Auto-update on open (the big one).** Telegram's WebView caches index.html and
+  kept serving an OLD build across re-opens — why "my edits / theme don't update"
+  and why the app felt stuck on a stale version. On boot `main.tsx` now compares
+  the running bundle hash to the server's current one (fetched `no-store` +
+  cache-busted) and, if stale, navigates once to a `?v=<hash>` URL to pull the
+  latest. (The 7-day asset grace window stopped the 404-hang but also let stale
+  indexes keep working silently — this closes that gap.)
+
+### Misc (this batch)
+- `frontend/package.json` version 1.7.0 → **1.8.0** (was out of sync with the tag).
+- Admin panel: traffic is now a plain "Traffic" row (opens the by-day chart)
+  instead of a totals card. Removed the chevron from the config card and the
+  Settings "Reset configs" row.
+- **TEST:** all `Button`s are now clay OUTLINE (transparent bg, clay border) like
+  the "Install in app" button — `primary` is no longer a filled fill.
+
+### Reliability (loading)
+- **Global React error boundary** (`components/ErrorBoundary.tsx`, wraps `App` in
+  `main.tsx`) — a render-phase throw now shows a recoverable "Reload" card instead
+  of unmounting the whole tree to a blank white screen.
+- **Stale-deploy self-heal.** A `vite:preloadError` listener + the error boundary
+  detect a failed dynamic import (old index referencing a chunk a newer deploy
+  replaced) and do ONE guarded `location.reload()` to fetch the fresh, no-store
+  index. `initTelegram()` is now wrapped in try/catch so an init regression can't
+  block the render.
+- **Deploy grace window.** `scripts/deploy.sh` no longer `--delete`s hashed assets
+  immediately; new chunks are added and old ones pruned after 7 days, so a client
+  still holding an old `index.html` can fetch its chunk instead of 404-ing and
+  hanging. (Root cause of "the app keeps getting stuck loading" after frequent
+  deploys: zero-grace `rsync --delete` + any cached HTML.)
+- **WalletPay tonapi lookup** now has a 10s AbortController timeout so a stalled
+  jetton-wallet resolution rejects (cancel toast) instead of spinning the Pay
+  button forever (`WalletPay.tsx`).
+- _Not changed (advisory):_ origin nginx already serves `/v2/index.html` as
+  `no-store` (correct); the residual risk is Cloudflare HTML edge-caching — add a
+  Cache Rule to bypass cache for `app.mvp-n.net/v2/index.html` and the grace
+  window covers any stale HTML regardless.
+
+### Reliability & UI (cont.)
+- **Skeletons now shimmer** — a soft light band sweeps across the sunken base
+  (`.skeleton` in `index.css`, used by `Skeleton`) instead of an opacity pulse;
+  respects reduced-motion.
+- **Writes retry on a pure NETWORK error.** `client.ts` now retries a non-GET
+  once when the connection never established (server didn't receive it, so no
+  double-apply) — fixes "Couldn't start payment" (POST /orders) on a transient
+  mobile drop. A write TIMEOUT is still not retried. (Doc fixed: timeout is 12s,
+  not 20s.)
+- _Note:_ the dominant cause of "everything loads slowly / payment won't start"
+  on the owner's device is the client path — the host's anti-DDoS throttles the
+  v2raytun VPN exit IP — not the app (origin TTFB ≈ 0.2s, bundle < 0.7s measured).
+
+### UI
+- **Subscription pane shows days left** ("N days left" + a faint "until <date>")
+  instead of just the date (`SubscriptionSheet`, `sub.daysLeft`/`sub.untilShort`).
+- **Unified, smaller buttons.** `Button` height 50→44px, text 15.5→15px; the
+  `secondary` variant is now a clay outline (so a primary+secondary pair reads as
+  one colour family). "I have a key" is a proper secondary button everywhere
+  (`SubscriptionSheet`, `ConfigsScreen`); the unfinished-payment "Cancel" is red
+  (danger), matching "Delete account".
+
+### Legal
+- Removed the "Legal basis (GDPR)" and "Your rights" sections from the Privacy
+  policy; kept a short "Deletion & support" line (delete in-app + @mvp_n_net_bot).
+  (RU + EN, `public/legal.js`.)
+
+### Theme
+- **Dropped the "Neutral" dark shade** — the dark background is now just Warm
+  (default) and Black. `DarkShade` is `'warm' | 'black'`; a legacy saved
+  `neutral` migrates to `warm` (`telegram.ts`, `index.css`, `SettingsScreen`).
+- **Static pages follow the app theme.** The legal pages (`legal.js`) take a
+  `?theme=light|warm|black` param (passed by the app via new `effectivePalette()`,
+  added to `legalUrl` in `AboutSheet`/`AuthScreen`) and the open-app launch page
+  (`import.js`) reads the saved theme from same-origin `localStorage`; both fall
+  back to the OS colour scheme and re-theme themselves to match (light / warm /
+  black), replacing the previously hard-coded dark.
+
+### Pricing
+- **Smoothed the tariff ladder (Option A).** 90 days $15 → **$12** ($0.167 → $0.133
+  /day) and 1 year $45 → **$40** ($0.123 → $0.110/day) — the 90-day plan used to
+  have the same per-day rate as 30 days (no incentive). 7d/30d unchanged. Stars
+  re-pegged to match: 90d 990 → **800**, 365d 2900 → **2600** (7d=150, 30d=350
+  unchanged). Updated in `api/.../plans.go`, the bot's `STARS_BY_DAYS`
+  (`bot/src/index.ts`, must mirror the API for `pre_checkout`), and the mock.
+- Added `brand/` with the bot avatar (`bot-avatar.jpg`, 1280×1280) + a README on
+  where each brand asset is applied.
+
+### Docs, licenses & language
+- **Full third-party license list** under About → Licenses, grouped by area
+  (Mini App, Telegram bot, Backend (Go), VPN core & proxy, Infrastructure,
+  Fonts) — covers Xray-core (MPL-2.0), uTLS/REALITY, quic-go, AmneziaWG/
+  WireGuard, nginx, OpenSSL, PostgreSQL, Docker, TON Connect, etc. (was 8 items,
+  mostly frontend). Sourced via a license audit across `package.json`/`go.mod`.
+- **English by default.** App UI already defaults to English; legal docs now
+  open English-first (RU via the on-page switch) and the bot's open-app console
+  message is always English. Repository docs translated to English.
 
 ## [1.7.0] — 2026-06-16
 
-Оплата через **TON Connect** (Telegram Wallet, Tonkeeper) для GRAM — оплата в один
-тап из кошелька вместо ручного перевода.
+Payment via **TON Connect** (Telegram Wallet, Tonkeeper) for GRAM — one-tap payment
+from the wallet instead of a manual transfer.
 
-### Добавлено
-- **TON Connect.** `@tonconnect/ui-react` + манифест `frontend/public/tonconnect-manifest.json`
-  (`/v2/`), провайдер в `main.tsx`. На шаге подтверждения для GRAM — кнопка
-  «Оплатить в кошельке»: `createOrder` → `tonConnectUI.sendTransaction(address,
-  amount_nanotons)` → существующий поллинг. Сопоставление платежа — по **уникальной
-  сумме** (как раньше), без изменений в бэкенде. Ручной адрес/QR оставлены вторичной
-  кнопкой.
-- **USDT-TON через TON Connect (jetton, фаза 2).** Сборка TEP-74 jetton-transfer
-  (`@ton/core`): резолв jetton-кошелька владельца через tonapi, перевод USD₮ на наш
-  TON-кошелёк с ~0.05 TON газа; сопоставление по сумме (как и раньше). Jetton требует
-  подключения кошелька первым шагом («Подключить кошелёк» → «Оплатить»). Кнопка
-  «Оплатить в кошельке» теперь и для USDT-TON. Buffer полифилится глобально в `main.tsx`.
-- USDT-TRC20 (TRON) остаётся ручной оплатой (TON Connect — только сеть TON).
-- TON Connect вынесен в ленивый чанк (первый экран 243→112 КБ gzip).
+### Added
+- **TON Connect.** `@tonconnect/ui-react` + the manifest `frontend/public/tonconnect-manifest.json`
+  (`/v2/`), the provider in `main.tsx`. At the confirmation step for GRAM — a button
+  "Pay in wallet": `createOrder` → `tonConnectUI.sendTransaction(address,
+  amount_nanotons)` → the existing polling. Payment matching — by the **unique
+  amount** (as before), with no backend changes. The manual address/QR is left as a secondary
+  button.
+- **USDT-TON via TON Connect (jetton, phase 2).** Building a TEP-74 jetton-transfer
+  (`@ton/core`): resolving the owner's jetton wallet via tonapi, transferring USD₮ to our
+  TON wallet with ~0.05 TON of gas; matching by amount (as before). A jetton requires
+  connecting the wallet as the first step ("Connect wallet" → "Pay"). The "Pay
+  in wallet" button is now available for USDT-TON too. Buffer is polyfilled globally in `main.tsx`.
+- USDT-TRC20 (TRON) remains a manual payment (TON Connect — TON network only).
+- TON Connect was moved into a lazy chunk (first screen 243→112 KB gzip).
 
-### Изменено
-- **CSP (nginx, вручную):** в `connect-src` добавлены `raw.githubusercontent.com`
-  (список кошельков), `bridge.tonapi.io` (Tonkeeper), `walletbot.me` (Telegram Wallet),
-  `tonapi.io` (резолв jetton-кошелька для USDT-TON).
+### Changed
+- **CSP (nginx, by hand):** in `connect-src` added `raw.githubusercontent.com`
+  (wallet list), `bridge.tonapi.io` (Tonkeeper), `walletbot.me` (Telegram Wallet),
+  `tonapi.io` (resolving the jetton wallet for USDT-TON).
 
 ## [1.6.0] — 2026-06-16
 
-Доводка оплаты и интерфейса по обратной связи: шаг подтверждения перед оплатой,
-подтверждения на опасные действия, единый стиль ссылок и значков, перестройка
-разделов настроек.
+Polishing of payments and the interface based on feedback: a confirmation step before payment,
+confirmations for dangerous actions, a unified style for links and icons, restructuring
+of the settings sections.
 
-### Добавлено
-- **Шаг подтверждения перед оплатой.** После выбора тарифа и валюты — экран
-  предпросмотра (тариф, валюта, сеть, сумма; для GRAM сумма помечена как
-  приблизительная и фиксируется на следующем шаге), и только затем создаётся заказ
-  и QR.
+### Added
+- **A confirmation step before payment.** After choosing a plan and currency — a preview
+  screen (plan, currency, network, amount; for GRAM the amount is marked as
+  approximate and is fixed at the next step), and only then is the order and
+  QR created.
 
-### Добавлено
-- **Ключи на срок (промокоды).** При генерации ключа в админ-панели можно выбрать
-  срок доступа: бессрочно (как раньше) или 7/30/90/365 дней. Колонка `plan_days`
-  в `access_keys` (NULL = бессрочно). При активации срочного ключа `paid_until`
-  ставится `max(текущий, now) + N дней` — стэкается с активной подпиской и никогда
-  не понижает уже бессрочный доступ.
+### Added
+- **Time-limited keys (promo codes).** When generating a key in the admin panel you can choose
+  an access period: unlimited (as before) or 7/30/90/365 days. The `plan_days` column
+  in `access_keys` (NULL = unlimited). When a time-limited key is activated, `paid_until`
+  is set to `max(current, now) + N days` — it stacks with an active subscription and never
+  downgrades already-unlimited access.
 
-### Изменено
-- **Тёмная тема — три оттенка фона.** Настройки → Приложение: Тёплый (#20201E,
-  как было), Нейтральный (#0A0A0A) и Чёрный (#000). Выбор хранится в
-  `mvpn_dark_shade`, применяется через `.dark[data-shade]` + header/bg Telegram.
-- **Публичное зеркало исходников.** Создан репозиторий `user666id/mvp-n` (public,
-  очищенный: без `.env`, ключей, origin-IP и кошельков). В «О сервисе →
-  Полезные ссылки» добавлены ссылка на GitHub (значок git) и значок Telegram у бота.
-- **Лицензия → AGPL-3.0** (оба репо). В «О сервисе» добавлен раздел «Лицензии» со
-  сторонними компонентами (шрифты Hanken Grotesk/Inter — OFL, React/Vite/Tailwind/
-  grammY — MIT, Go — BSD). На зеркале CI/Dependabot убраны, добавлены теги/релизы
-  v1.0.0–v1.6.0.
-- **Переписан FAQ/«Помощь».** Актуализирован под платные подписки и ключи; добавлены
-  пошаговая инструкция подключения, оплата, лимиты, мультиустройства, что после
-  окончания подписки и какие данные собираются.
-- **Подтверждения на опасные действия.** Отмена платежа теперь требует подтверждения
-  (с предупреждением, что уже отправленные средства могут не зачислиться), как и
-  блокировка профиля в админ-панели. Остальные деструктивные действия (удаление
-  конфига/аккаунта/профиля, сброс, отзыв ключа) подтверждения уже имели.
-- **Экран успешной оплаты** различает первую покупку («Подписка оформлена») и
-  продление («Подписка продлена»).
-- **Разделы настроек перестроены:** уведомления перенесены в раздел «Приложение»
-  (бывш. «Оформление»), а строка «Подписка» объединена с подключением в раздел
-  «Подписка и подключение».
-- **Единый стиль ссылок и значков:** внешние ссылки — нейтральный текст со значком
-  «квадратик со стрелкой» (включая @username), без оранжевого; обновлены иконки
-  подписки и админ-панели.
+### Changed
+- **Dark theme — three background shades.** Settings → App: Warm (#20201E,
+  as it was), Neutral (#0A0A0A) and Black (#000). The choice is stored in
+  `mvpn_dark_shade`, applied via `.dark[data-shade]` + Telegram header/bg.
+- **Public source mirror.** The repository `user666id/mvp-n` was created (public,
+  scrubbed: no `.env`, keys, origin-IP or wallets). In "About → Useful
+  links" a GitHub link (git icon) and a Telegram icon for the bot were added.
+- **License → AGPL-3.0** (both repos). In "About" a "Licenses" section was added with
+  third-party components (Hanken Grotesk/Inter fonts — OFL, React/Vite/Tailwind/
+  grammY — MIT, Go — BSD). On the mirror, CI/Dependabot were removed, tags/releases
+  v1.0.0–v1.6.0 were added.
+- **Rewrote the FAQ/"Help".** Updated for paid subscriptions and keys; added
+  a step-by-step connection guide, payment, limits, multi-device, what happens after
+  a subscription ends and what data is collected.
+- **Confirmations for dangerous actions.** Cancelling a payment now requires confirmation
+  (with a warning that already-sent funds may not be credited), as does
+  blocking a profile in the admin panel. The other destructive actions (deleting a
+  config/account/profile, reset, key revocation) already had confirmations.
+- **The payment success screen** distinguishes the first purchase ("Subscription created") from
+  a renewal ("Subscription renewed").
+- **Settings sections restructured:** notifications were moved into the "App" section
+  (formerly "Appearance"), and the "Subscription" row was merged with connection into the
+  "Subscription and connection" section.
+- **Unified style for links and icons:** external links — neutral text with an
+  "arrow-out-of-box" icon (including @username), without orange; updated the
+  subscription and admin panel icons.
 
-### Исправлено
-- Список незавершённых платежей обновляется при каждом возврате на экран выбора
-  (через эффект на смену шага — покрывает и возврат по «‹», и истечение заказа),
-  а не только по кнопке «назад» — перезаходить в приложение больше не нужно.
-- **Учёт трафика AmneziaWG.** `collectTraffic` считал только VLESS (по `vpn_email`);
-  AWG-пиры не учитывались. Теперь крон тянет rx/tx пира из awg-server (поле
-  `vpn_configs.traffic_seen` как база дельты) и так же копит в `users.traffic_used`
-  и `traffic_daily`. AWG-клиент внедрён в планировщик (`SetAwg`).
+### Fixed
+- The list of incomplete payments refreshes on every return to the selection screen
+  (via an effect on step change — covers both returning via "‹" and order expiry),
+  not only via the "back" button — no need to re-enter the app anymore.
+- **AmneziaWG traffic accounting.** `collectTraffic` counted only VLESS (by `vpn_email`);
+  AWG peers weren't accounted for. Now the cron pulls a peer's rx/tx from awg-server (the
+  `vpn_configs.traffic_seen` field as the delta base) and likewise accumulates into `users.traffic_used`
+  and `traffic_daily`. The AWG client was injected into the scheduler (`SetAwg`).
 
 ## [1.5.0] — 2026-06-15
 
-Платные подписки и крупный проход по интерфейсу. Плюс обновление зависимостей,
-надёжность Mini App и вынос юридических документов в веб.
+Paid subscriptions and a major pass over the interface. Plus a dependency update,
+Mini App reliability and moving legal documents to the web.
 
-### Добавлено
-- **Платные подписки.** Доступ к VPN — по ключу (бессрочно) или по платной подписке
-  на 7/30/90/365 дней. Оплата криптой на свой кошелёк: **GRAM** и **USDT** в сети TON,
-  **USDT** в сети TRC20. USDT — 1:1, сумма в GRAM пересчитывается по живому курсу
-  (tonapi) и фиксируется на время заказа. Платёж опознаётся по
-  уникальной сумме (подходит и для перевода с биржи), проверка в сети — раз в минуту.
-  При истечении доступ приостанавливается и конфиги удаляются, но **аккаунт
-  сохраняется** — продление восстанавливает.
-- **Вход и активация в приложении.** Профиль создаётся при входе через Telegram,
-  приложение открывается сразу. Пока доступ не активирован, на главном экране вместо
-  «Создать конфиг» — «Купить подписку / У меня есть ключ». Незавершённая оплата
-  переживает перезагрузку (тот же адрес и сумма), а пока платёж подтверждается —
-  «Платёж обрабатывается» с авто-обновлением.
-- **Раздел «Подписка»** в настройках: статус, срок, кнопка «Купить/Продлить» и
-  **история платежей** со статусом и ссылкой на транзакцию (tonviewer / tronscan).
-  Статус подписки виден и в админ-панели.
-- **Юридические документы** на отдельном поддомене **legal.mvp-n.net** («Политика
-  использования» и «Политика конфиденциальности», EN/RU с переключателем, в стиле
-  приложения).
+### Added
+- **Paid subscriptions.** VPN access — by key (unlimited) or by a paid subscription
+  for 7/30/90/365 days. Payment in crypto to your own wallet: **GRAM** and **USDT** on the TON network,
+  **USDT** on the TRC20 network. USDT — 1:1, the GRAM amount is recalculated by the live rate
+  (tonapi) and fixed for the duration of the order. A payment is recognized by a
+  unique amount (also works for a transfer from an exchange), on-chain verification — once a minute.
+  On expiry, access is suspended and configs are deleted, but **the account
+  is preserved** — renewal restores it.
+- **Sign-in and activation in the app.** A profile is created at sign-in via Telegram,
+  the app opens right away. Until access is activated, on the home screen instead of
+  "Create config" — "Buy subscription / I have a key". An incomplete payment
+  survives a reload (same address and amount), and while a payment is being confirmed —
+  "Payment is being processed" with auto-refresh.
+- **The "Subscription" section** in settings: status, term, a "Buy/Renew" button and
+  **payment history** with status and a link to the transaction (tonviewer / tronscan).
+  Subscription status is also visible in the admin panel.
+- **Legal documents** on a separate subdomain **legal.mvp-n.net** ("Terms
+  of Use" and "Privacy Policy", EN/RU with a switch, in the app's style).
 
-### Изменено
-- **Крупный проход по интерфейсу:** убраны пустой раздел и мёртвый код навигации,
-  секции настроек переупорядочены и переименованы, иконки разнесены, тёмная тема
-  выверена по референсу. Бот — лаконичное сообщение с кнопкой «Открыть».
-- **Зависимости и сборка:** обновлены ядро VPN (xray-core) и ключевые библиотеки;
-  Mini App переведён на React 19 и Tailwind 4; тулчейн Go поднят до 1.26; обновлены
-  GitHub Actions; сервисы собираются на пропатченной stdlib (закрывает stdlib-CVE).
-- Внутренний номер профиля (`internal_id`) занимает наименьший свободный — без
-  «дыр» после удалений.
+### Changed
+- **A major pass over the interface:** removed an empty section and dead navigation code,
+  settings sections reordered and renamed, icons spaced out, the dark theme
+  tuned against a reference. The bot — a concise message with an "Open" button.
+- **Dependencies and build:** updated the VPN core (xray-core) and key libraries;
+  the Mini App was migrated to React 19 and Tailwind 4; the Go toolchain was raised to 1.26; updated
+  GitHub Actions; services are built on a patched stdlib (closes a stdlib CVE).
+- The internal profile number (`internal_id`) takes the smallest free one — without
+  "holes" after deletions.
 
-### Исправлено
-- Устройства, профиль и конфиги больше не «зависают» при плохой связи: GET-запросы
-  повторяются, таймаут снижен, данные обновляются при возврате в приложение; окно
-  `initData` расширено до 24 ч (тихий ре-логин в долгих сессиях).
-- Статичные страницы (юр-документы, импорт конфига) не открывались под строгим CSP —
-  их скрипты вынесены в отдельные файлы (same-origin).
+### Fixed
+- Devices, profile and configs no longer "hang" on a poor connection: GET requests
+  retry, the timeout was reduced, data refreshes on return to the app; the
+  `initData` window was extended to 24h (silent re-login in long sessions).
+- Static pages (legal documents, config import) didn't open under a strict CSP —
+  their scripts were moved into separate files (same-origin).
 
-### Удалено
-- Неиспользуемая зависимость `@twa-dev/sdk`.
+### Removed
+- The unused dependency `@twa-dev/sdk`.
 
-### Не вошло (план)
-- TON Connect (нужны PNG-иконка, правка CSP, live-тест), напоминания об истечении
-  подписки в боте, пополнение баланса. Тексты юр-документов — черновик, требуют
-  финальной вычитки.
+### Not included (plan)
+- TON Connect (needs a PNG icon, a CSP edit, a live test), subscription-expiry
+  reminders in the bot, balance top-up. Legal document texts — a draft, require
+  a final proofread.
 
 ## [1.4.0] — 2026-06-12
 
-Проход по безопасности и качеству.
+A pass over security and quality.
 
-### Добавлено
-- Статус сервера: публичный IPv4 (поле `server_ip` из `SERVER_IP`) как сверка
-  «к какому серверу подключаемся»; индикатор «онлайн» теперь отражает реальную
-  проверку доступности xray (`Xray.Healthy`) — раньше был захардкожен в `true`.
-  При недоступности — красный «Сервер недоступен».
-- Цвета графиков: в статусе сервера CPU/RAM — зелёные, сеть — жёлтая; график
-  трафика в админ-панели — жёлтый.
-- В детали конфига «Дополнительные настройки» подняты над карточкой статуса
-  сервера.
-- Трафик-график: столбики выровнены по левому краю (таймлайн «заполняется
-  слева») — одиночный/несколько дней больше не висят по центру; при накоплении
-  дней график заполняет всю ширину как раньше.
+### Added
+- Server status: the public IPv4 (the `server_ip` field from `SERVER_IP`) as a check of
+  "which server we're connecting to"; the "online" indicator now reflects the real
+  availability check of xray (`Xray.Healthy`) — previously it was hardcoded to `true`.
+  When unavailable — a red "Server unavailable".
+- Chart colors: in server status CPU/RAM — green, network — yellow; the traffic
+  chart in the admin panel — yellow.
+- In config details "Additional settings" were raised above the server status
+  card.
+- Traffic chart: bars are left-aligned (the timeline "fills from
+  the left") — a single/few days no longer hang in the center; as days accumulate
+  the chart fills the full width as before.
 
-### Безопасность
-- CSP для Mini App: строгая политика (`script-src 'self' + telegram.org`,
-  `connect-src` только api/connect, шрифты Google) — страховка от XSS-кражи JWT
-  из localStorage. Применена на nginx веб-вхосте `app`.
-- Валидация `JWT_SECRET` на старте api: длина < 32 → отказ запуска (config.Load).
-- `scripts/install/xray.sh`: публичный IP теперь берётся с фолбэком по нескольким
-  сервисам и `exit 1` при неудаче — раньше пустой IP молча ломал REALITY-URI.
-- `SECURITY.md` — политика ответственного раскрытия.
+### Security
+- CSP for the Mini App: a strict policy (`script-src 'self' + telegram.org`,
+  `connect-src` only api/connect, Google fonts) — insurance against XSS theft of the JWT
+  from localStorage. Applied on the nginx web vhost `app`.
+- Validation of `JWT_SECRET` at api startup: length < 32 → startup refused (config.Load).
+- `scripts/install/xray.sh`: the public IP is now obtained with a fallback across several
+  services and `exit 1` on failure — previously an empty IP silently broke the REALITY URI.
+- `SECURITY.md` — a responsible disclosure policy.
 
 ### CI
-- Сканеры безопасности: `govulncheck` (Go, блокирующий), `gosec` (advisory),
-  `npm audit` (prod-зависимости, high+), CodeQL (Go + JS/TS), Dependabot
-  (gomod/npm/actions). Раньше CI делал только lint/build/test.
+- Security scanners: `govulncheck` (Go, blocking), `gosec` (advisory),
+  `npm audit` (prod dependencies, high+), CodeQL (Go + JS/TS), Dependabot
+  (gomod/npm/actions). Previously CI did only lint/build/test.
 
-### Тесты
-- `buildURI` (все три режима VLESS), `genShortID`, `xray.EmailFor`,
-  `config.Load`-валидация.
+### Tests
+- `buildURI` (all three VLESS modes), `genShortID`, `xray.EmailFor`,
+  `config.Load` validation.
 
-### Инфраструктура
-- Убран нерабочий push-workflow `.github/workflows/deploy.yml`: после переезда на
-  hostoff GitHub Actions не может зайти на VPS (DDoS-защита режет CI-runner'ы),
-  поэтому он падал на каждый пуш и слал письма о падении. Pull-деплой теперь
-  закоммичен в репозиторий — `scripts/pull-deploy.sh` + systemd-юниты
-  `scripts/systemd/mvpn-deploy.{service,timer}` (опрос GitHub раз в 2 мин),
-  `setup-deploy.sh` ставит таймер. Доки (deploy.md, README, ARCHITECTURE,
-  CONTRIBUTING, STATUS) приведены к pull-модели.
+### Infrastructure
+- Removed the non-working push workflow `.github/workflows/deploy.yml`: after the move to
+  hostoff, GitHub Actions can't reach the VPS (DDoS protection cuts off CI runners),
+  so it failed on every push and sent failure emails. Pull-deploy is now
+  committed into the repository — `scripts/pull-deploy.sh` + the systemd units
+  `scripts/systemd/mvpn-deploy.{service,timer}` (polling GitHub once every 2 min),
+  `setup-deploy.sh` installs the timer. The docs (deploy.md, README, ARCHITECTURE,
+  CONTRIBUTING, STATUS) were brought in line with the pull model.
 
 ## [1.3.0] — 2026-06-11
 
-### Добавлено
-- Админ-панель: график трафика по дням. Тап по карточке «Трафик» открывает лист
-  с карточкой «всего / сегодня» (как в админке) и столбчатым графиком — широкие
-  столбики с начала учёта (тап по столбику → дата и точное значение). Бэкенд —
-  `GET /admin/traffic`, данные из уже собираемой `traffic_daily` (без миграций).
-- Графики приведены к единому стилю: общий модуль `chartkit` (оси, тултип,
-  направляющая-крестик) для линейных серверных и столбчатого трафик-графика.
-  Тип графика по природе данных: сервер — живая линия, трафик — столбики.
-- Тактильный отклик на графиках: лёгкий тик при перетаскивании (смена точки/дня),
-  через тот же гейт, что и кнопки — слушается переключатель «Тактильный отклик».
-- Столбик «сегодня» — мягкий тинт `accent-soft` (theme-aware) вместо
-  полупрозрачности; крупные цифры всего/сегодня — серифным шрифтом (Fraunces).
+### Added
+- Admin panel: a daily traffic chart. Tapping the "Traffic" card opens a sheet
+  with a "total / today" card (as in the admin area) and a bar chart — wide
+  bars from the start of accounting (tap a bar → date and exact value). Backend —
+  `GET /admin/traffic`, data from the already-collected `traffic_daily` (no migrations).
+- Charts brought to a unified style: a shared `chartkit` module (axes, tooltip,
+  crosshair guide) for the linear server charts and the bar traffic chart.
+  The chart type follows the nature of the data: server — a live line, traffic — bars.
+- Haptic feedback on charts: a light tick on drag (changing point/day),
+  through the same gate as buttons — listens to the "Haptic feedback" toggle.
+- The "today" bar — a soft `accent-soft` tint (theme-aware) instead of
+  semi-transparency; the large total/today figures — in a serif font (Fraunces).
 
-### Изменено
-- Подписи серверных графиков укорочены до «Процессор / Память / Сеть»
-  (в стиле «Трафик»), без многословных «Нагрузка на… (%)».
+### Changed
+- The server chart labels were shortened to "Processor / Memory / Network"
+  (in the "Traffic" style), without the verbose "Load on… (%)".
 
-### Инфраструктура
-- Миграция на новый VPS (hostoff, Нидерланды, <origin-ip>): перенесены
-  REALITY-ключи (VLESS-подписки сохранены), AmneziaWG, БД, nginx + Cloudflare
-  origin-cert; трафик начат с нуля. Доступ к серверу — только с резидентных IP
-  (DDoS-защита хостера режет датацентровые/VPN-выходы, Cloudflare проходит).
-- Автодеплой на новом сервере — pull-модель (systemd-таймер опрашивает GitHub
-  раз в 2 мин и деплоит при новом коммите), т.к. вход для раннеров GitHub режется.
+### Infrastructure
+- Migration to a new VPS (hostoff, Netherlands, <origin-ip>): migrated the
+  REALITY keys (VLESS subscriptions preserved), AmneziaWG, the DB, nginx + the Cloudflare
+  origin cert; traffic started from scratch. Server access — only from residential IPs
+  (the host's DDoS protection cuts off datacenter/VPN exits, Cloudflare gets through).
+- Auto-deploy on the new server — a pull model (a systemd timer polls GitHub
+  once every 2 min and deploys on a new commit), since access for GitHub runners is cut off.
 
 ## [1.2.0] — 2026-06-10
 
-Харденинг безопасности и надёжности; чистка репозитория.
+Security and reliability hardening; repository cleanup.
 
-### Исправлено
-- Mini App: переключение вкладок больше не пересоздаёт экран и не сбрасывает
-  загруженные данные в пустой «скелет». Вкладки остаются в памяти, переключение
-  мгновенное, обновление данных идёт в фоне без мигания.
-- Админ-панель: список профилей не очищается при обновлении (после
-  блокировки/разблокировки) — старые строки остаются до прихода новых.
+### Fixed
+- Mini App: switching tabs no longer recreates the screen and doesn't reset
+  loaded data to an empty "skeleton". Tabs stay in memory, switching is
+  instant, data refresh runs in the background without flicker.
+- Admin panel: the profile list isn't cleared on refresh (after
+  blocking/unblocking) — old rows stay until new ones arrive.
 
-### Безопасность
-- Constant-time сравнение всех внутренних токенов (`crypto/subtle`).
-- Раздельные внутренние токены на каждый сервис: `INTERNAL_TOKEN_CONNECT`,
+### Security
+- Constant-time comparison of all internal tokens (`crypto/subtle`).
+- Separate internal tokens per service: `INTERNAL_TOKEN_CONNECT`,
   `INTERNAL_TOKEN_BOT` (legacy `ADMIN_TOKEN` — fallback).
-- Rate limiting по IP: `/auth/token` (60/мин), `/auth/key` (20/мин) — защита от
-  перебора ключей.
-- Отзыв JWT: на каждом запросе проверяется владелец — заблокированные/удалённые
-  пользователи отсекаются, несмотря на 30-дневный срок токена.
-- Ротация JWT-секрета без разлогина: `JWT_SECRET_PREVIOUS` принимается verify-only.
-- xray gRPC API (`:10085`) привязан к docker-бриджу вместо `0.0.0.0`; установщик
-  сам применяет правила UFW.
+- Rate limiting by IP: `/auth/token` (60/min), `/auth/key` (20/min) — protection against
+  key brute-forcing.
+- JWT revocation: on every request the owner is checked — blocked/deleted
+  users are cut off despite the 30-day token term.
+- JWT secret rotation without logout: `JWT_SECRET_PREVIOUS` is accepted verify-only.
+- The xray gRPC API (`:10085`) is bound to the docker bridge instead of `0.0.0.0`; the installer
+  applies UFW rules itself.
 - nginx: HSTS, `X-Content-Type-Options`, CSP `frame-ancestors`, `client_max_body_size`.
-- `absolute_redirect off` — редирект `/` → `/v2/` больше не светит внутренний `:8443`.
-- nginx: access-логи отключены на веб-вхостах и SNI-stream — сервис не хранит
-  пер-запросные записи IP/SNI/вызовов API (приватность VPN).
-- Убран захардкоженный IP сервера из дефолтов (`SERVER_IP` обязателен).
-- `setup-deploy.sh` больше не печатает приватный ключ в stdout.
+- `absolute_redirect off` — the `/` → `/v2/` redirect no longer exposes the internal `:8443`.
+- nginx: access logs disabled on the web vhosts and the SNI stream — the service stores no
+  per-request records of IP/SNI/API calls (VPN privacy).
+- Removed the hardcoded server IP from the defaults (`SERVER_IP` is mandatory).
+- `setup-deploy.sh` no longer prints the private key to stdout.
 
-### Надёжность
-- Фикс TOCTOU в проверке лимита устройств (блокировка строки пользователя в транзакции).
-- Уникальный индекс устройств + `ON CONFLICT DO NOTHING` — гонка не плодит дубликаты.
-- Graceful shutdown в `connect` и `awg-server`.
-- Лимиты CPU/RAM на все контейнеры.
-- Обработка ранее проглатываемых ошибок JSON-декодирования.
+### Reliability
+- A TOCTOU fix in the device limit check (locking the user row in the transaction).
+- A unique device index + `ON CONFLICT DO NOTHING` — a race doesn't spawn duplicates.
+- Graceful shutdown in `connect` and `awg-server`.
+- CPU/RAM limits on all containers.
+- Handling of previously-swallowed JSON decoding errors.
 
-### Тесты и CI
-- Юнит-тесты: парсер User-Agent, проверка `initData` (HMAC), учёт трафика, ротация JWT.
-- `go test ./...` для всех Go-модулей в CI.
+### Tests and CI
+- Unit tests: the User-Agent parser, `initData` verification (HMAC), traffic accounting, JWT rotation.
+- `go test ./...` for all Go modules in CI.
 
-### Инфраструктура
-- Автодеплой переведён на read-only GitHub deploy key (SSH через порт 443) —
-  больше не зависит от протухающих токенов в git-remote.
+### Infrastructure
+- Auto-deploy switched to a read-only GitHub deploy key (SSH over port 443) —
+  no longer dependent on expiring tokens in the git remote.
 
-### Удалено
-- Незавершённые заглушки sub-config (эндпоинты `/configs/{id}/subconfig` и таблица
-  `subconfigs`) — функция не использовалась.
+### Removed
+- The unfinished sub-config stubs (the `/configs/{id}/subconfig` endpoints and the
+  `subconfigs` table) — the feature was unused.
 
 ## [1.1.0] — 2026-05-29
 
-- Вкладка «Настройки»: профиль, устройства (переименование/блок/удаление), лимит
-  устройств, язык, сброс подписки, удаление аккаунта, «О сервисе».
-- Админ-панель в Mini App: ключи, профили, трафик (всего/за сегодня), домены.
-- Автологин, учёт устройств по HWID, enforcement лимита устройств в `connect`.
+- The "Settings" tab: profile, devices (rename/block/delete), device
+  limit, language, subscription reset, account deletion, "About".
+- Admin panel in the Mini App: keys, profiles, traffic (total/today), domains.
+- Auto-login, device accounting by HWID, device-limit enforcement in `connect`.
 
 ## [1.0.0] — 2026-05
 
-- VLESS + REALITY (Vision/TCP `:43000`, XHTTP `:43001`) и AmneziaWG (`:51820`).
-- Mini App (React + TS + Tailwind, Claude-style), бот на grammY.
-- API на Go: auth по Telegram `initData` → JWT, ключи доступа, конфиги, подписки,
-  per-device провижининг, cron-учёт трафика и метрик сервера.
-- Docker Compose, nginx SNI-роутер, ежедневные бэкапы БД.
+- VLESS + REALITY (Vision/TCP `:43000`, XHTTP `:43001`) and AmneziaWG (`:51820`).
+- Mini App (React + TS + Tailwind, Claude-style), a bot on grammY.
+- API in Go: auth via Telegram `initData` → JWT, access keys, configs, subscriptions,
+  per-device provisioning, cron accounting of traffic and server metrics.
+- Docker Compose, an nginx SNI router, daily DB backups.
 
 [1.3.0]: https://github.com/user666id/vpn-project/releases/tag/v1.3.0
 [1.2.0]: https://github.com/user666id/vpn-project/releases/tag/v1.2.0

@@ -63,12 +63,12 @@ func loadConfig() config {
 //
 //	200 → use uri; 403 → device blocked / over limit (refuse);
 //	0   → API unavailable/disabled → caller should fall back to the stored URI.
-func (s *server) provision(shortID, name, client, ip, deviceUID, osName string) (int, string) {
+func (s *server) provision(shortID, name, client, deviceUID, osName string) (int, string) {
 	if s.cfg.APIInternalURL == "" || s.cfg.AdminToken == "" {
 		return 0, ""
 	}
 	body, _ := json.Marshal(map[string]string{
-		"short_id": shortID, "name": name, "client": client, "ip": ip,
+		"short_id": shortID, "name": name, "client": client,
 		"device_uid": deviceUID, "os": osName,
 	})
 	req, err := http.NewRequest("POST", s.cfg.APIInternalURL+"/internal/provision", bytes.NewReader(body))
@@ -156,7 +156,7 @@ func (s *server) handleSubscription(w http.ResponseWriter, r *http.Request) {
 	// unavailable, so the VPN never breaks.
 	info, uid := deviceIdentity(r)
 	name := deviceDisplayName(info)
-	status, provURI := s.provision(id, name, info.Client, clientIP(r), uid, info.OS)
+	status, provURI := s.provision(id, name, info.Client, uid, info.OS)
 	if status == http.StatusForbidden {
 		http.Error(w, "device limit reached or device blocked", http.StatusForbidden)
 		return
@@ -188,29 +188,29 @@ func (s *server) recordDeviceVisit(userID int64, r *http.Request) {
 	info, uid := deviceIdentity(r)
 	name := deviceDisplayName(info)
 	client := info.Client // launcher: Happ / v2RayTun / V2Box / ...
-	ip := clientIP(r)
 	os := info.OS // stored separately from name so the UI can show OS + model
 	// uid: unique per-install id from any launcher (X-Hwid header or Happ UA id)
+	// NOTE: we deliberately do NOT capture the user's IP — it's the most sensitive
+	// PII and isn't needed; identity is keyed off the launcher install id only.
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	// Identity: prefer the launcher's unique install id (Happ → distinct row per
 	// physical device on the same shared link); else fall back to (name, launcher)
-	// for launchers that send nothing unique (v2RayTun). Keying off this (not IP)
-	// avoids duplicate rows when the mobile IP changes.
+	// for launchers that send nothing unique (v2RayTun).
 	var res sql.Result
 	var err error
 	if uid != "" {
 		res, err = s.db.ExecContext(ctx, `
-			UPDATE devices SET last_seen = NOW(), ip = $1, os = COALESCE(NULLIF($5,''), os)
-			WHERE user_id = $2 AND COALESCE(client, '') = $3 AND device_uid = $4
-		`, ip, userID, client, uid, os)
+			UPDATE devices SET last_seen = NOW(), os = COALESCE(NULLIF($4,''), os)
+			WHERE user_id = $1 AND COALESCE(client, '') = $2 AND device_uid = $3
+		`, userID, client, uid, os)
 	} else {
 		res, err = s.db.ExecContext(ctx, `
-			UPDATE devices SET last_seen = NOW(), ip = $4, os = COALESCE(NULLIF($5,''), os)
+			UPDATE devices SET last_seen = NOW(), os = COALESCE(NULLIF($4,''), os)
 			WHERE user_id = $1 AND COALESCE(name, '') = $2 AND COALESCE(client, '') = $3
-		`, userID, name, client, ip, os)
+		`, userID, name, client, os)
 	}
 	if err != nil {
 		log.Printf("[device] update: %v", err)
@@ -223,10 +223,10 @@ func (s *server) recordDeviceVisit(userID int64, r *http.Request) {
 		// a duplicate row; losing the one redundant insert is fine — the next
 		// refresh lands in the UPDATE branch.
 		_, err = s.db.ExecContext(ctx, `
-			INSERT INTO devices (user_id, name, client, ip, device_uid, os, last_seen)
-			VALUES ($1, $2, $3, $4, $5, $6, NOW())
+			INSERT INTO devices (user_id, name, client, device_uid, os, last_seen)
+			VALUES ($1, $2, $3, $4, $5, NOW())
 			ON CONFLICT DO NOTHING
-		`, userID, name, client, ip, sql.NullString{String: uid, Valid: uid != ""},
+		`, userID, name, client, sql.NullString{String: uid, Valid: uid != ""},
 			sql.NullString{String: os, Valid: os != ""})
 		if err != nil {
 			log.Printf("[device] insert: %v", err)
@@ -378,23 +378,6 @@ func deviceDisplayName(u uaInfo) string {
 		return u.Device // "iPhone 14 Pro Max", "SM-A366B", "iPad Pro"
 	}
 	return u.OS
-}
-
-func clientIP(r *http.Request) string {
-	if ff := r.Header.Get("CF-Connecting-IP"); ff != "" {
-		return ff
-	}
-	if ff := r.Header.Get("X-Real-IP"); ff != "" {
-		return ff
-	}
-	if ff := r.Header.Get("X-Forwarded-For"); ff != "" {
-		return strings.TrimSpace(strings.Split(ff, ",")[0])
-	}
-	host := r.RemoteAddr
-	if i := strings.LastIndex(host, ":"); i > 0 {
-		host = host[:i]
-	}
-	return host
 }
 
 // deviceIdentity builds the device identity for a subscription request the SAME

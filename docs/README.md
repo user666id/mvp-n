@@ -1,25 +1,25 @@
-# Документация mvp-n
+# mvp-n Documentation
 
-Карта всех документов проекта. Назад — в [корневой README](../README.md).
+Map of all project documents. Back to the [root README](../README.md).
 
-## Разработка и устройство
+## Development and design
 
-| Документ | Содержание |
+| Document | Contents |
 |----------|-----------|
-| [api.md](./api.md) | Полный список REST-эндпоинтов API |
-| [auth-flow.md](./auth-flow.md) | Поток авторизации: `initData` → JWT → активация ключа |
-| [bot-miniapp.md](./bot-miniapp.md) | Все экраны бота и Mini App, UX-поведение |
+| [api.md](./api.md) | Full list of REST API endpoints |
+| [auth-flow.md](./auth-flow.md) | Authorization flow: `initData` → JWT → key activation |
+| [bot-miniapp.md](./bot-miniapp.md) | All bot and Mini App screens, UX behavior |
 
-## Эксплуатация
+## Operations
 
-| Документ | Содержание |
+| Document | Contents |
 |----------|-----------|
-| [deploy.md](./deploy.md) | Pull-автодеплой (VPS опрашивает GitHub), раскладка на VPS |
-| [ssl-setup.md](./ssl-setup.md) | Cloudflare Origin Cert для web-доменов |
+| [deploy.md](./deploy.md) | Pull-based auto-deploy (VPS polls GitHub), layout on the VPS |
+| [ssl-setup.md](./ssl-setup.md) | Cloudflare Origin Cert for web domains |
 
-## По модулям
+## By module
 
-Каждый сервис документирован отдельно:
+Each service is documented separately:
 [`api`](../api/README.md) ·
 [`connect`](../connect/README.md) ·
 [`awg-server`](../awg-server/README.md) ·
@@ -28,13 +28,13 @@
 [`nginx`](../nginx/README.md) ·
 [`scripts`](../scripts/README.md)
 
-## Проект
+## Project
 
-| Документ | Содержание |
+| Document | Contents |
 |----------|-----------|
-| [ARCHITECTURE.md](../ARCHITECTURE.md) | Глубокое устройство: потоки, авторизация, провижининг, трафик |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | Локальный запуск, стиль кода, CI, деплой |
-| [STATUS.md](../STATUS.md) | Текущий статус компонентов |
-| [ROADMAP.md](../ROADMAP.md) | План развития |
-| [CHANGELOG.md](../CHANGELOG.md) | История версий (SemVer) |
-| [.env.example](../.env.example) | Все переменные окружения |
+| [ARCHITECTURE.md](../ARCHITECTURE.md) | Deep design: flows, authorization, provisioning, traffic |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | Local run, code style, CI, deploy |
+| [STATUS.md](../STATUS.md) | Current status of components |
+| [ROADMAP.md](../ROADMAP.md) | Development plan |
+| [CHANGELOG.md](../CHANGELOG.md) | Version history (SemVer) |
+| [.env.example](../.env.example) | All environment variables |

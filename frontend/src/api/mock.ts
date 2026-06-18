@@ -73,10 +73,10 @@ function stats(): ServerStats {
 // ── profile + devices ────────────────────────────────────────────────────────
 const ago = (mins: number) => new Date(Date.now() - mins * 60_000).toISOString()
 let devices: Device[] = [
-  { id: uuid(), name: 'iPhone 14 Pro Max', os: 'iOS', client: 'Happ', ip: '1.1.1.1', last_seen: ago(6), is_blocked: false },
-  { id: uuid(), name: 'iPhone 14 Pro Max', os: 'iOS', client: 'v2RayTun', ip: '1.1.1.1', last_seen: ago(40), is_blocked: false },
-  { id: uuid(), name: 'SM-A366B', os: 'Android', client: 'v2rayNG', ip: '1.1.1.2', last_seen: ago(1500), is_blocked: false },
-  { id: uuid(), name: 'Windows', os: 'Windows', client: 'v2RayTun', ip: '1.1.1.3', last_seen: ago(4320), is_blocked: false },
+  { id: uuid(), name: 'iPhone 14 Pro Max', os: 'iOS', client: 'Happ', last_seen: ago(6), is_blocked: false },
+  { id: uuid(), name: 'iPhone 14 Pro Max', os: 'iOS', client: 'v2RayTun', last_seen: ago(40), is_blocked: false },
+  { id: uuid(), name: 'SM-A366B', os: 'Android', client: 'v2rayNG', last_seen: ago(1500), is_blocked: false },
+  { id: uuid(), name: 'Windows', os: 'Windows', client: 'v2RayTun', last_seen: ago(4320), is_blocked: false },
 ]
 
 let deviceLimit = 15
@@ -116,7 +116,7 @@ let adminKeys: any[] = [
 const mockOrders: Record<string, { created: number; plan_days: number; asset: string; amount: string; address: string }> = {}
 const cancelledOrders = new Set<string>()
 const paidOrders = new Set<string>()
-const USD_PRICE: Record<number, number> = { 7: 2, 30: 5, 90: 15, 365: 45 }
+const USD_PRICE: Record<number, number> = { 7: 2, 30: 5, 90: 12, 365: 40 }
 const GRAM_USD = 1.79 // demo live rate
 const mockNet = (a: string) => (a === 'USDT_TRC20' ? 'TRC20' : 'TON')
 const mockAddr = (a: string) =>
@@ -148,16 +148,24 @@ export async function mockRequest(
       plans: [
         { days: 7, usd: 2 },
         { days: 30, usd: 5 },
-        { days: 90, usd: 15 },
-        { days: 365, usd: 45 },
+        { days: 90, usd: 12 },
+        { days: 365, usd: 40 },
       ],
       assets: [
         { id: 'TON', label: 'GRAM', network: 'TON' },
         { id: 'USDT_TON', label: 'USDT', network: 'TON' },
         { id: 'USDT_TRC20', label: 'USDT', network: 'TRC20' },
+        { id: 'STARS', label: 'Stars', network: 'Telegram' },
       ],
       gram_usd: GRAM_USD,
+      stars_by_days: { 7: 150, 30: 350, 90: 800, 365: 2600 },
     }
+
+  if (path === '/stars/invoice' && m === 'POST') {
+    const days = body?.plan_days || 30
+    const stars = ({ 7: 150, 30: 350, 90: 800, 365: 2600 } as Record<number, number>)[days] ?? 350
+    return { url: 'https://t.me/invoice/mock', stars, plan_days: days }
+  }
 
   if (path === '/orders' && m === 'POST') {
     const id = uuid()

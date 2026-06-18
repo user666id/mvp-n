@@ -17,7 +17,6 @@ type ProvisionRequest struct {
 	ShortID   string `json:"short_id"`
 	Name      string `json:"name"`
 	Client    string `json:"client"`
-	IP        string `json:"ip"`
 	DeviceUID string `json:"device_uid"` // launcher install id (Happ); "" otherwise
 	OS        string `json:"os"`         // OS only, used to adopt legacy OS-named rows
 }
@@ -138,8 +137,8 @@ func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
 		// Reuse this device's UUID.
 		uuidStr, emailStr = devUUID.String, devEmail.String
 		_, _ = h.DB.ExecContext(r.Context(),
-			`UPDATE devices SET ip=$1, last_seen=NOW(), os=COALESCE(NULLIF($2,''), os) WHERE id=$3`,
-			req.IP, os, devID)
+			`UPDATE devices SET last_seen=NOW(), os=COALESCE(NULLIF($1,''), os) WHERE id=$2`,
+			os, devID)
 	default:
 		// New device → enforce the device limit, then mint a UUID + register in xray.
 		//
@@ -185,13 +184,13 @@ func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
 		}
 		if found {
 			_, _ = tx.ExecContext(r.Context(),
-				`UPDATE devices SET vpn_uuid=$1, vpn_email=$2, ip=$3, last_seen=NOW(), os=COALESCE(NULLIF($4,''), os) WHERE id=$5`,
-				uuidStr, emailStr, req.IP, os, devID)
+				`UPDATE devices SET vpn_uuid=$1, vpn_email=$2, last_seen=NOW(), os=COALESCE(NULLIF($3,''), os) WHERE id=$4`,
+				uuidStr, emailStr, os, devID)
 		} else {
 			_, _ = tx.ExecContext(r.Context(),
-				`INSERT INTO devices (user_id, name, client, ip, vpn_uuid, vpn_email, device_uid, os, last_seen)
-				 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())`,
-				userID, name, req.Client, req.IP, uuidStr, emailStr,
+				`INSERT INTO devices (user_id, name, client, vpn_uuid, vpn_email, device_uid, os, last_seen)
+				 VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())`,
+				userID, name, req.Client, uuidStr, emailStr,
 				sql.NullString{String: uid, Valid: uid != ""},
 				sql.NullString{String: os, Valid: os != ""})
 		}

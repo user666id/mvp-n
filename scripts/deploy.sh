@@ -47,8 +47,16 @@ if echo "$CHANGED" | grep -q '^frontend/'; then
   echo "==> Building frontend"
   docker run --rm -v "$PWD/frontend:/app" -w /app node:20-alpine \
     sh -c "npm install --no-audit --no-fund && npm run build"
-  rsync -a --delete frontend/dist/ /var/www/mini-app-f7/
-  echo "    frontend synced to /var/www/mini-app-f7/"
+  # Sync everything EXCEPT hashed assets with --delete (refreshes index.html,
+  # legal.js, etc. and prunes stale top-level files). Then add new hashed assets
+  # WITHOUT --delete so old chunks survive a grace window: a client/edge/webview
+  # still holding an old index.html can still fetch its (now-superseded) chunk
+  # instead of 404-ing and hanging on the loading screen. Prune assets older than
+  # 7 days so the dir doesn't grow unbounded.
+  rsync -a --delete --exclude='assets/***' frontend/dist/ /var/www/mini-app-f7/
+  rsync -a frontend/dist/assets/ /var/www/mini-app-f7/assets/
+  find /var/www/mini-app-f7/assets -type f -mtime +7 -delete
+  echo "    frontend synced to /var/www/mini-app-f7/ (assets kept 7d for stale clients)"
 fi
 
 # NOTE: nginx is managed manually on the VPS, so we never copy it from here.

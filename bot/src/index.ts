@@ -20,13 +20,23 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || ''
 const bot = new Bot(BOT_TOKEN)
 
 // ── Texts ────────────────────────────────────────────────────────────────────
-// Default language is English; Russian-speaking users get the Russian copy.
-// Minimal: one line + the button. No greeting, no brand line, no value prop.
-const WELCOME = {
-  ru: 'Нажмите кнопку ниже, чтобы открыть.',
-  en: 'Tap the button below to open.',
+// The open-app console is ALWAYS English (product decision). One line + button —
+// no greeting, no brand line, no value prop.
+const WELCOME = 'Tap the button below to open.'
+const BUTTON = 'Open'
+
+// ── Telegram Stars ───────────────────────────────────────────────────────────
+// Stars price per plan — MUST mirror api StarsByDays (plans.go). Used to validate
+// the pre_checkout_query (raw Star count; XTR has no *100) in-memory so we answer
+// within Telegram's hard 10s deadline without any network call.
+const STARS_BY_DAYS: Record<number, number> = { 7: 150, 30: 350, 90: 800, 365: 2600 }
+
+// invoice_payload is "uid:days:nonce", built server-side from the authed user.
+function parsePayload(p: string): { uid: number; days: number } | null {
+  const m = /^(\d+):(\d+):\d+$/.exec(p || '')
+  if (!m) return null
+  return { uid: Number(m[1]), days: Number(m[2]) }
 }
-const BUTTON = { en: 'Open', ru: 'Открыть' }
 
 // Insert into a Map capped at `cap` entries. Map keeps insertion order, so the
 // first key is the oldest — drop it when over capacity. Re-inserting an existing
@@ -38,56 +48,10 @@ function boundedSet<K, V>(m: Map<K, V>, key: K, val: V, cap: number) {
   if (m.size > cap) m.delete(m.keys().next().value as K)
 }
 
-// Telegram client language — the fallback when the user hasn't chosen one in
-// the Mini App yet.
-const tgLang = (ctx: Context): 'en' | 'ru' =>
-  (ctx.from?.language_code || '').toLowerCase().startsWith('ru') ? 'ru' : 'en'
-
-// Short-lived per-user cache so we don't hit the API on every /start. A language
-// change in the app propagates within TTL — fine for a greeting.
-const LANG_TTL_MS = 5 * 60_000
-const langCache = new Map<number, { lang: 'en' | 'ru'; exp: number }>()
-
-// Resolve the language to greet in: the in-app choice (persisted via the API)
-// wins; otherwise fall back to the Telegram language_code. Cached, never throws,
-// and kept out of the reply's critical path on a cache hit.
-async function langOf(ctx: Context): Promise<'en' | 'ru'> {
-  const tgId = ctx.from?.id
-  if (tgId == null) return tgLang(ctx)
-
-  const hit = langCache.get(tgId)
-  if (hit && hit.exp > Date.now()) return hit.lang
-
-  let lang = tgLang(ctx)
-  let authoritative = false
-  if (API_INTERNAL_URL && ADMIN_TOKEN) {
-    try {
-      const res = await fetch(`${API_INTERNAL_URL}/internal/user-lang?tg_id=${tgId}`, {
-        headers: { 'X-Internal-Token': ADMIN_TOKEN },
-        signal: AbortSignal.timeout(2500),
-      })
-      if (res.ok) {
-        const saved = (await res.json())?.data?.lang
-        if (saved === 'en' || saved === 'ru') {
-          lang = saved
-          authoritative = true
-        }
-      }
-    } catch {
-      /* network/timeout — keep the Telegram language_code fallback */
-    }
-  }
-  // Cache an authoritative answer for the full TTL; a fallback (timeout/error)
-  // only briefly, so a single slow lookup can't pin the wrong language for 5 min.
-  const ttl = authoritative ? LANG_TTL_MS : 30_000
-  boundedSet(langCache, tgId, { lang, exp: Date.now() + ttl }, 10_000)
-  return lang
-}
-
 // Inline button (inside the message) that launches the Mini App. No emoji.
-const keyboardFor = (lang: 'en' | 'ru') => ({
-  inline_keyboard: [[{ text: BUTTON[lang], web_app: { url: MINI_APP_URL } }]],
-})
+const consoleKeyboard = {
+  inline_keyboard: [[{ text: BUTTON, web_app: { url: MINI_APP_URL } }]],
+}
 
 // Track the last console message per chat so /start can tidy up before sending
 // a fresh one (a full history wipe isn't possible via the Bot API).
@@ -103,8 +67,7 @@ async function sendConsole(ctx: Context) {
     (id): id is number => typeof id === 'number',
   )
 
-  const lang = await langOf(ctx)
-  const sent = await ctx.reply(WELCOME[lang], { reply_markup: keyboardFor(lang) })
+  const sent = await ctx.reply(WELCOME, { reply_markup: consoleKeyboard })
   boundedSet(lastConsoleMsg, chatId, sent.message_id, 10_000)
 
   // Tidy up the old /start message + previous console in the background, in
@@ -118,6 +81,59 @@ async function sendConsole(ctx: Context) {
 // /start, and any plain text treated as a restart, show a fresh console.
 const pm = bot.chatType('private')
 pm.command('start', sendConsole)
+
+// ── Telegram Stars payments ──────────────────────────────────────────────────
+// pre_checkout_query has NO chat, so it must be on the TOP-LEVEL bot (not `pm`,
+// which filters by chat type). Answer within 10s using only in-memory checks —
+// never a network call here, or the deadline lapses and the charge auto-cancels.
+bot.on('pre_checkout_query', async (ctx) => {
+  const q = ctx.preCheckoutQuery
+  const p = parsePayload(q.invoice_payload)
+  const expected = p ? STARS_BY_DAYS[p.days] : undefined
+  const ok = q.currency === 'XTR' && p != null && expected != null && q.total_amount === expected
+  try {
+    await ctx.answerPreCheckoutQuery(ok, ok ? undefined : { error_message: 'Payment could not be validated.' })
+  } catch (e) {
+    console.error('[bot] answerPreCheckoutQuery failed', e)
+  }
+})
+
+// successful_payment is a service Message (no .text, so the text handler below
+// won't swallow it). Fulfillment source of truth — credit via the internal API.
+pm.on('message:successful_payment', async (ctx) => {
+  const sp = ctx.message.successful_payment
+  const p = parsePayload(sp.invoice_payload)
+  // Cross-check the charged amount against the plan before crediting.
+  if (!p || sp.total_amount !== STARS_BY_DAYS[p.days]) {
+    console.error('[bot] successful_payment payload/amount mismatch', sp)
+    return
+  }
+  if (!API_INTERNAL_URL || !ADMIN_TOKEN) {
+    console.error('[bot] CREDIT IMPOSSIBLE — API_INTERNAL_URL/ADMIN_TOKEN unset; buyer charged', sp.telegram_payment_charge_id)
+    return
+  }
+  try {
+    const res = await fetch(`${API_INTERNAL_URL}/internal/credit-subscription`, {
+      method: 'POST',
+      headers: { 'X-Internal-Token': ADMIN_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tg_id: p.uid,
+        plan_days: p.days,
+        stars_amount: sp.total_amount,
+        charge_id: sp.telegram_payment_charge_id, // dedup key + refund handle
+      }),
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!res.ok) {
+      console.error('[bot] CREDIT FAILED — buyer charged, not credited', sp.telegram_payment_charge_id, res.status)
+    }
+  } catch (e) {
+    console.error('[bot] CREDIT ERROR — buyer charged, not credited', sp.telegram_payment_charge_id, e)
+  }
+})
+
+// Any plain text in a private chat → fresh console (kept LAST so the specific
+// payment handler above takes precedence).
 pm.on('message:text', sendConsole)
 
 bot.catch((err) => {
@@ -126,12 +142,11 @@ bot.catch((err) => {
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 async function main() {
-  // The bottom-left menu button launches the Mini App directly (one tap to open),
-  // Claude-style. Localized command label: English by default, Russian for ru.
+  // The bottom-left menu button shows the commands menu (with /start) rather than
+  // launching the Mini App directly — so tapping it lets the user restart the
+  // console (/start) instead of opening a possibly-stale web view.
   await Promise.all([
-    bot.api.setChatMenuButton({
-      menu_button: { type: 'web_app', text: 'mvp-n', web_app: { url: MINI_APP_URL } },
-    }),
+    bot.api.setChatMenuButton({ menu_button: { type: 'commands' } }),
     bot.api.setMyCommands([{ command: 'start', description: 'Open mvp-n' }]),
     bot.api.setMyCommands([{ command: 'start', description: 'Открыть mvp-n' }], {
       language_code: 'ru',
@@ -140,11 +155,15 @@ async function main() {
 
   console.log(`[bot] starting; mini app = ${MINI_APP_URL}`)
   await bot.start({
-    // Skip the backlog queued while the bot was down, and only fetch the update
-    // type we actually handle — lower startup lag and less wasted work.
-    drop_pending_updates: true,
-    allowed_updates: ['message'],
-    onStart: (me) => console.log(`[bot] online as @${me.username}`),
+    // Keep pending updates: a successful_payment queued during a deploy restart
+    // must survive (Stars has no on-chain-style re-poll fallback). Crediting is
+    // idempotent on telegram_payment_charge_id, so reprocessing is safe.
+    drop_pending_updates: false,
+    // Must include pre_checkout_query (else every Stars charge auto-cancels at
+    // 10s) and message (carries successful_payment + /start text).
+    allowed_updates: ['message', 'pre_checkout_query'],
+    onStart: (me) =>
+      console.log(`[bot] online as @${me.username} (allowed_updates: message, pre_checkout_query)`),
   })
 }
 

@@ -118,7 +118,6 @@ type deviceEntry struct {
 	Name      string    `json:"name"`
 	OS        string    `json:"os"` // OS only (iOS/Android/Windows…), separate from Name
 	Client    string    `json:"client"`
-	IP        string    `json:"ip"`
 	LastSeen  time.Time `json:"last_seen"`
 	IsBlocked bool      `json:"is_blocked"`
 	Online    bool      `json:"online"`
@@ -188,7 +187,7 @@ func (h *Handler) awgClientForConfig(ctx context.Context, id string, uid int64) 
 func (h *Handler) ListDevices(w http.ResponseWriter, r *http.Request) {
 	uid, _ := middleware.UserID(r.Context())
 	rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT id, COALESCE(name, ''), COALESCE(os, ''), COALESCE(client, ''), COALESCE(ip, ''),
+		SELECT id, COALESCE(name, ''), COALESCE(os, ''), COALESCE(client, ''),
 		       last_seen, is_blocked,
 		       (last_active IS NOT NULL AND last_active > NOW() - INTERVAL '3 minutes') AS online
 		FROM devices
@@ -205,7 +204,7 @@ func (h *Handler) ListDevices(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var d deviceEntry
 		d.Kind = "device"
-		if err := rows.Scan(&d.ID, &d.Name, &d.OS, &d.Client, &d.IP, &d.LastSeen, &d.IsBlocked, &d.Online); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.OS, &d.Client, &d.LastSeen, &d.IsBlocked, &d.Online); err != nil {
 			continue
 		}
 		out = append(out, d)

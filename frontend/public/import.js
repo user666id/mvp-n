@@ -1,6 +1,34 @@
 // External script (the Mini App CSP is script-src 'self' — inline scripts are
 // blocked, so this must be a same-origin file, not an inline <script>).
 ;(function () {
+  // Theme follows the saved in-app choice (same origin as the Mini App), else
+  // the OS colour scheme: light / warm dark / true black. Mirrors index.css.
+  ;(function theme() {
+    var PAL = {
+      light: { bg: '#faf9f5', ink: '#1f1e1d', muted: '#6b6a65', accent: '#d97757', scheme: 'light' },
+      warm: { bg: '#20201e', ink: '#f7f7f5', muted: '#9f9f9d', accent: '#d97757', scheme: 'dark' },
+      black: { bg: '#000000', ink: '#f7f7f5', muted: '#9f9f9d', accent: '#d97757', scheme: 'dark' },
+    }
+    var key
+    try {
+      var t = localStorage.getItem('mvpn_theme')
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      var dark = t === 'dark' || (t !== 'light' && prefersDark)
+      key = !dark ? 'light' : localStorage.getItem('mvpn_dark_shade') === 'black' ? 'black' : 'warm'
+    } catch (e) {
+      key = 'warm'
+    }
+    var c = PAL[key]
+    document.documentElement.style.colorScheme = c.scheme
+    var st = document.createElement('style')
+    st.textContent =
+      'body{background:' + c.bg + ';color:' + c.ink + '}' +
+      '.m{color:' + c.muted + '}' +
+      '.t{color:' + c.ink + '}' +
+      'a.btn{background:' + c.accent + ';color:#fff}'
+    document.head.appendChild(st)
+  })()
+
   var p = new URLSearchParams(location.search)
   var app = p.get('app') || ''
   var u = p.get('u') || '' // subscription URL (already decoded by URLSearchParams)

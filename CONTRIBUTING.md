@@ -1,99 +1,99 @@
-# Разработка
+# Development
 
-Как собрать, запустить и поменять mvp-n локально. Устройство системы —
+How to build, run, and modify mvp-n locally. System design —
 [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
-## Требования
+## Requirements
 
 - Go **1.22**
 - Node.js **20**
-- Docker + Docker Compose v2 (для полного стека)
-- PostgreSQL 16 (или через compose)
+- Docker + Docker Compose v2 (for the full stack)
+- PostgreSQL 16 (or via compose)
 
 ---
 
-## Локальный запуск
+## Running locally
 
-Удобнее всего — через [`Makefile`](./Makefile):
+The most convenient way is via the [`Makefile`](./Makefile):
 
 ```bash
-make frontend       # Mini App на моках (VITE_MOCK=1), бэкенд не нужен
-make api            # собрать и запустить api
+make frontend       # Mini App on mocks (VITE_MOCK=1), no backend needed
+make api            # build and run api
 make connect        # connect
 make awg-server     # awg-server
-make bot            # бот в watch-режиме
-make docker-up      # весь стек в Docker
-make tidy           # go mod tidy во всех Go-модулях
+make bot            # bot in watch mode
+make docker-up      # the whole stack in Docker
+make tidy           # go mod tidy across all Go modules
 ```
 
-**Mini App без бэкенда.** Самый быстрый цикл для UI:
+**Mini App without a backend.** The fastest loop for UI:
 
 ```bash
 cd frontend && npm install && npm run dev
 ```
 
-`VITE_MOCK=1` (в `.env.development`) подменяет все API-вызовы на
-[`src/api/mock.ts`](./frontend/src/api/mock.ts) — реальный сервер не требуется.
+`VITE_MOCK=1` (in `.env.development`) substitutes all API calls with
+[`src/api/mock.ts`](./frontend/src/api/mock.ts) — no real server required.
 
-**Полный стек.** Скопируй [`.env.example`](./.env.example) → `.env`, заполни и:
+**Full stack.** Copy [`.env.example`](./.env.example) → `.env`, fill it in, and:
 
 ```bash
 docker compose up -d --build
 ```
 
-Каждый сервис также имеет свой `.env.example` и README с инструкцией запуска.
+Each service also has its own `.env.example` and a README with run instructions.
 
 ---
 
-## Стиль кода
+## Code style
 
-- **Go:** обязателен `gofmt` (CI падает на неформатированных файлах) + `go vet`.
-  Перед коммитом: `gofmt -w api connect awg-server`.
-- **Тесты:** `go test ./...` в каждом Go-модуле (гоняется в CI). Локально под
-  Go 1.26 линковка `api` падает на зависимости xray/sing — используй
-  `GOTOOLCHAIN=go1.22.12 go test ./...` (Go сам скачает тулчейн 1.22).
-- **Frontend/bot (TS):** должен проходить `tsc --noEmit`. Сборка фронта —
-  `npm run build` (включает type-check).
-- Тексты в Mini App — только через i18n (`t('key')`), без захардкоженных строк.
+- **Go:** `gofmt` is mandatory (CI fails on unformatted files) + `go vet`.
+  Before committing: `gofmt -w api connect awg-server`.
+- **Tests:** `go test ./...` in each Go module (runs in CI). Locally under
+  Go 1.26 linking `api` fails on the xray/sing dependency — use
+  `GOTOOLCHAIN=go1.22.12 go test ./...` (Go will download the 1.22 toolchain itself).
+- **Frontend/bot (TS):** must pass `tsc --noEmit`. Frontend build —
+  `npm run build` (includes type-check).
+- Texts in the Mini App — only via i18n (`t('key')`), no hardcoded strings.
 
 ---
 
 ## CI
 
-GitHub Actions на каждый push в `main` и PR:
+GitHub Actions on every push to `main` and PR:
 
-| Workflow | Что проверяет |
+| Workflow | What it checks |
 |----------|---------------|
 | **Lint** | `gofmt`, `go vet` + `go test` (api/connect/awg-server), `tsc --noEmit` (frontend) |
-| **Build** | `go build` каждого сервиса, `npm run build` фронта |
-| **Security** | `govulncheck` (блокирующий), `gosec`, `npm audit`, CodeQL (Go + JS/TS) |
+| **Build** | `go build` of each service, `npm run build` of the frontend |
+| **Security** | `govulncheck` (blocking), `gosec`, `npm audit`, CodeQL (Go + JS/TS) |
 
-> Деплой — **не** через Actions, а pull-моделью: systemd-таймер на VPS опрашивает
-> GitHub каждые 2 мин (DDoS-защита хостера режет CI-runner'ы). VPS тянет код по
-> read-only **deploy key** (SSH через порт 443: `ssh://git@ssh.github.com:443/...`).
-> См. [`docs/deploy.md`](./docs/deploy.md).
+> Deploy is **not** via Actions, but a pull model: a systemd timer on the VPS polls
+> GitHub every 2 min (the hoster's DDoS protection throttles CI runners). The VPS pulls code via a
+> read-only **deploy key** (SSH over port 443: `ssh://git@ssh.github.com:443/...`).
+> See [`docs/deploy.md`](./docs/deploy.md).
 
-> Go-модули обязаны иметь актуальный `go.sum` (`go mod tidy`) — иначе
-> `go build` в CI падает с «missing go.sum entry».
-
----
-
-## Коммиты и деплой
-
-- Ветка по умолчанию — `main`. Push в неё подхватывается автодеплоем в течение
-  ~2 мин (период опроса таймера на VPS).
-- Деплой пересобирает только изменившиеся сервисы; правки в `docs/`/README
-  деплой не трогают.
-- Секреты — только в `.env` на VPS (gitignore). В репозиторий не коммитим
-  токены, ключи, сертификаты.
+> Go modules must have an up-to-date `go.sum` (`go mod tidy`) — otherwise
+> `go build` in CI fails with "missing go.sum entry".
 
 ---
 
-## Изменения схемы БД
+## Commits and deploy
 
-Отдельной системы миграций нет — схема описана idempotent-DDL в
-[`api/internal/config/config.go`](./api/internal/config/config.go) и применяется при
-старте api. Новые таблицы/колонки добавляй туда через `CREATE TABLE IF NOT EXISTS`
+- The default branch is `main`. A push to it is picked up by autodeploy within
+  ~2 min (the VPS timer's polling interval).
+- The deploy rebuilds only the changed services; edits in `docs/`/README
+  are not touched by the deploy.
+- Secrets — only in `.env` on the VPS (gitignore). Do not commit tokens,
+  keys, or certificates to the repository.
+
+---
+
+## DB schema changes
+
+There is no separate migration system — the schema is described as idempotent DDL in
+[`api/internal/config/config.go`](./api/internal/config/config.go) and applied at
+api startup. Add new tables/columns there via `CREATE TABLE IF NOT EXISTS`
 / `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.

@@ -11,6 +11,7 @@ interface TgWebApp {
   expand: () => void
   setHeaderColor?: (color: string) => void
   setBackgroundColor?: (color: string) => void
+  openInvoice?: (url: string, cb?: (status: string) => void) => void
   enableClosingConfirmation?: () => void
   onEvent?: (event: string, cb: () => void) => void
   showConfirm?: (message: string, cb: (ok: boolean) => void) => void
@@ -31,13 +32,12 @@ const CANVAS_LIGHT = '#faf9f5'
 // Telegram header/background match the in-app canvas exactly).
 const DARK_CANVAS: Record<DarkShade, string> = {
   warm: '#20201e',
-  neutral: '#0a0a0a',
   black: '#000000',
 }
 
 export type ThemePref = 'system' | 'light' | 'dark'
-/** Sub-choice for the dark theme: warm (default), neutral near-black, or true black. */
-export type DarkShade = 'warm' | 'neutral' | 'black'
+/** Sub-choice for the dark theme: warm (default) or true black. */
+export type DarkShade = 'warm' | 'black'
 
 /** User's theme choice; 'system' (default) follows the Telegram theme. */
 export function getTheme(): ThemePref {
@@ -50,10 +50,11 @@ export function setTheme(p: ThemePref) {
   applyScheme()
 }
 
-/** Dark-theme shade; defaults to 'warm' (the original Claude-matched palette). */
+/** Dark-theme shade; defaults to 'warm' (the original Claude-matched palette).
+ *  A legacy 'neutral' value (removed) falls back to 'warm'. */
 export function getDarkShade(): DarkShade {
   const v = localStorage.getItem('mvpn_dark_shade')
-  return v === 'neutral' || v === 'black' ? v : 'warm'
+  return v === 'black' ? 'black' : 'warm'
 }
 
 export function setDarkShade(s: DarkShade) {
@@ -66,6 +67,13 @@ export function setDarkShade(s: DarkShade) {
 export function isDarkActive(): boolean {
   const pref = getTheme()
   return pref === 'system' ? tg?.colorScheme === 'dark' : pref === 'dark'
+}
+
+/** The effective page palette: 'light', or the dark shade ('warm' | 'black').
+ *  Passed as ?theme= to the cross-origin legal pages so they match the in-app
+ *  theme (the same-origin import page reads localStorage directly instead). */
+export function effectivePalette(): 'light' | DarkShade {
+  return isDarkActive() ? getDarkShade() : 'light'
 }
 
 /** Resolve to dark/light: honour the manual override, else follow Telegram. */
@@ -143,6 +151,14 @@ export function confirmDialog(message: string): Promise<boolean> {
 
 export function getInitData(): string {
   return tg?.initData ?? ''
+}
+
+/** Open a Telegram Stars invoice (WebApp.openInvoice). The callback gets the
+ *  status: 'paid' | 'cancelled' | 'failed' | 'pending'. Outside Telegram (browser
+ *  preview) there's no invoice UI, so we report 'failed'. */
+export function openInvoice(url: string, cb: (status: string) => void) {
+  if (tg?.openInvoice) tg.openInvoice(url, cb)
+  else cb('failed')
 }
 
 /** Open an external link — via the Telegram client when available. */

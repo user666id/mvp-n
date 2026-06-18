@@ -239,7 +239,6 @@ CREATE TABLE IF NOT EXISTS devices (
     user_id     BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name        VARCHAR(255),
     client      VARCHAR(64),
-    ip          VARCHAR(64),
     vpn_uuid    VARCHAR(64),
     vpn_email   VARCHAR(128),
     last_seen   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -287,6 +286,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS devices_uid_uniq
 ALTER TABLE devices DROP COLUMN IF EXISTS city;
 ALTER TABLE devices DROP COLUMN IF EXISTS country;
 ALTER TABLE devices DROP COLUMN IF EXISTS isp;
+-- Privacy: we no longer capture the user's real public IP at all (it was the most
+-- sensitive PII and isn't needed). Drop the column — this also purges any IPs
+-- collected before this change.
+ALTER TABLE devices DROP COLUMN IF EXISTS ip;
 
 -- traffic_usage was replaced by the monotonic users.traffic_used counter
 -- (accumulated from xray deltas by the collectTraffic cron). Drop the old table.
@@ -327,4 +330,16 @@ CREATE TABLE IF NOT EXISTS orders (
     expires_at TIMESTAMPTZ   NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_orders_pending ON orders(asset, status) WHERE status = 'pending';
+
+-- Telegram Stars payments. Keyed by Telegram's telegram_payment_charge_id for
+-- idempotency (Telegram may redeliver successful_payment) and to hold the refund
+-- handle (refundStarPayment needs tg_user_id + charge_id). Crediting is a single
+-- tx: INSERT ... ON CONFLICT DO NOTHING, then extend only when a new row landed.
+CREATE TABLE IF NOT EXISTS star_payments (
+    charge_id    VARCHAR(128) PRIMARY KEY,   -- telegram_payment_charge_id
+    tg_user_id   BIGINT       NOT NULL,
+    plan_days    INT          NOT NULL,
+    stars_amount INT          NOT NULL,
+    created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
 `

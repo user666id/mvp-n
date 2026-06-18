@@ -1,13 +1,13 @@
 # awg-server — AmneziaWG API
 
-> REST API для управления AmneziaWG-пирами. Работает рядом с интерфейсом `awg0`
-> на хосте, добавляет/удаляет пиров через `awg` CLI и отдаёт готовый `.conf`.
+> REST API for managing AmneziaWG peers. Runs alongside the `awg0` interface
+> on the host, adds/removes peers via the `awg` CLI, and serves a ready-to-use `.conf`.
 
-**Порт:** `8080` · **Язык:** Go 1.22 · **Сеть:** host (читает `awg0` напрямую)
+**Port:** `8080` · **Language:** Go 1.22 · **Network:** host (reads `awg0` directly)
 
 ---
 
-## Запуск
+## Running
 
 ```bash
 cd awg-server
@@ -19,11 +19,11 @@ go build -o awg-server .
 
 ---
 
-## Структура
+## Structure
 
 ```
 awg-server/
-├── main.go        # HTTP сервер, хендлеры, хранилище клиентов
+├── main.go        # HTTP server, handlers, client store
 ├── go.mod
 ├── go.sum
 ├── Dockerfile
@@ -33,23 +33,23 @@ awg-server/
 
 ---
 
-## Эндпоинты
+## Endpoints
 
-Все пути под префиксом `/api`; кроме `/api/health` требуют
+All paths are under the `/api` prefix; every path except `/api/health` requires
 `Authorization: Bearer <AWG_API_TOKEN>`.
 
 ```
-GET    /api/health                      — healthcheck (без токена)
-GET    /api/clients                     — список всех пиров
-POST   /api/clients                     — добавить пир (генерирует keypair, выдаёт IP)
-DELETE /api/clients/{id}                — удалить пир
-GET    /api/clients/{id}/configuration  — .conf пира (для импорта)
-GET    /api/clients/{id}/stats          — статистика (rx/tx, handshake)
-POST   /api/clients/{id}/enable         — включить пир
-POST   /api/clients/{id}/disable        — выключить (заблокировать)
+GET    /api/health                      — healthcheck (no token)
+GET    /api/clients                     — list all peers
+POST   /api/clients                     — add a peer (generates a keypair, assigns an IP)
+DELETE /api/clients/{id}                — delete a peer
+GET    /api/clients/{id}/configuration  — peer .conf (for import)
+GET    /api/clients/{id}/stats          — statistics (rx/tx, handshake)
+POST   /api/clients/{id}/enable         — enable a peer
+POST   /api/clients/{id}/disable        — disable (block) a peer
 ```
 
-### POST /clients — пример ответа
+### POST /clients — example response
 
 ```json
 {
@@ -67,18 +67,18 @@ POST   /api/clients/{id}/disable        — выключить (заблокир
 }
 ```
 
-> `private_key` показывается только при создании.
+> `private_key` is shown only at creation time.
 
 ---
 
-## Хранилище
+## Storage
 
-Клиенты хранятся в `/var/lib/awg-server/clients.json`.
-При старте загружаются автоматически.
+Clients are stored in `/var/lib/awg-server/clients.json`.
+They are loaded automatically on startup.
 
 ---
 
-## Переменные окружения
+## Environment variables
 
 ```env
 AWG_LISTEN=:8080

@@ -1,87 +1,87 @@
-# Auth Flow — авторизация и активация
+# Auth Flow — authorization and activation
 
-> Профиль создаётся **только** после успешной активации ключа.
-> До этого юзер — анонимный с JWT, но без записи в `users`.
+> A profile is created **only** after a key is successfully activated.
+> Before that the user is anonymous with a JWT, but has no record in `users`.
 
 ---
 
-## Шаги входа
+## Login steps
 
 ```
-1. Юзер открывает Mini App в Telegram
+1. User opens the Mini App in Telegram
    │
    ▼
-2. Telegram WebApp передаёт initData (HMAC-подпись)
+2. Telegram WebApp passes initData (HMAC signature)
    │
    ▼
 3. Frontend → POST /auth/token { init_data }
    │
    ▼
-4. API: проверяет HMAC-подпись initData
-   API: смотрит существует ли user в БД  (НЕ создаёт)
-   API: выдаёт JWT (валидный 30 дней)
+4. API: verifies the initData HMAC signature
+   API: checks whether the user exists in the DB  (does NOT create)
+   API: issues a JWT (valid for 30 days)
    │
    ▼
-5. Ответ:
+5. Response:
    {
      token: "...",
-     user_exists:      false,     ← НЕТ в БД
+     user_exists:      false,     ← NOT in the DB
      needs_activation: true,
      is_admin:         false
    }
    │
    ▼
-6. Frontend по флагу needs_activation:
-   • true  → показывает ActivationScreen (ввод ключа)
-   • false → показывает обычный UI с вкладками
+6. Frontend, based on the needs_activation flag:
+   • true  → shows the ActivationScreen (key entry)
+   • false → shows the normal UI with tabs
 ```
 
-## Активация ключа
+## Key activation
 
 ```
-7. Юзер вводит ключ формата XXXX-XXXX → жмёт «Активировать»
+7. User enters a key in the format XXXX-XXXX → presses «Activate»
    │
    ▼
-8. Frontend → POST /auth/key { key } (с JWT)
+8. Frontend → POST /auth/key { key } (with JWT)
    │
    ▼
-9. API в одной транзакции:
-   ├─ Блокирует строку access_keys (FOR UPDATE)
-   ├─ Проверяет: used_at IS NULL AND expires_at > NOW()
+9. API, in a single transaction:
+   ├─ Locks the access_keys row (FOR UPDATE)
+   ├─ Checks: used_at IS NULL AND expires_at > NOW()
    ├─ INSERT INTO users (id=TG_ID, internal_id=SERIAL, is_active=true)
    ├─ UPDATE access_keys SET used_by, used_at = NOW()
    └─ COMMIT
    │
    ▼
-10. Ответ: { activated: true, internal_id: 0002 }
-   Frontend перезагружает auth → needs_activation=false → главный UI
+10. Response: { activated: true, internal_id: 0002 }
+   Frontend reloads auth → needs_activation=false → main UI
 ```
 
-## Особые случаи
+## Special cases
 
-### Админ (TG ID в `ADMIN_TG_IDS`)
-- Пред-создан через `SeedAdmin()` при первом старте API
-- `user_exists=true, is_active=true` с самого начала
-- Ключ вводить не нужно — сразу попадает в основной UI
+### Admin (TG ID in `ADMIN_TG_IDS`)
+- Pre-created via `SeedAdmin()` on the API's first start
+- `user_exists=true, is_active=true` from the very beginning
+- No key needed — goes straight to the main UI
 
-### Существующий юзер
-- При повторном открытии Mini App → JWT уже в localStorage
-- `/auth/token` снова вызывается → видит запись → `needs_activation=false`
-- Главный UI без задержки
+### Existing user
+- On reopening the Mini App → JWT is already in localStorage
+- `/auth/token` is called again → sees the record → `needs_activation=false`
+- Main UI with no delay
 
-### Удалил аккаунт
-- `DELETE /profile` → строка из `users` удалена (CASCADE)
-- При следующем входе → нет записи → нужен новый ключ
-- Старый ключ уже использован — не подойдёт
+### Deleted account
+- `DELETE /profile` → the row is removed from `users` (CASCADE)
+- On the next login → no record → a new key is needed
+- The old key is already used — it won't work
 
-### Ключ просрочен (12ч)
-- Cron `cleanupKeys` каждый час удаляет неиспользованные просроченные
-- API возвращает `KEY_NOT_FOUND` или `KEY_EXPIRED`
-- Юзер просит у админа новый
+### Expired key (12h)
+- The `cleanupKeys` cron removes unused expired keys every hour
+- API returns `KEY_NOT_FOUND` or `KEY_EXPIRED`
+- The user asks the admin for a new one
 
 ---
 
-## Что в JWT
+## What's in the JWT
 
 ```json
 {
@@ -94,15 +94,15 @@
 }
 ```
 
-`username`, `first_name`, `last_name` нужны чтобы `/auth/key` мог создать
-запись юзера без повторной проверки initData.
+`username`, `first_name`, `last_name` are needed so that `/auth/key` can create
+the user record without re-checking initData.
 
 ---
 
-## Защита от race condition
+## Protection against race conditions
 
-При параллельных запросах двух Mini App инстансов с одним TG ID:
+When two Mini App instances with the same TG ID send parallel requests:
 - `BEGIN TX`
-- `SELECT ... FOR UPDATE` блокирует строку ключа
-- Второй вызов ждёт коммита, потом видит `used_at IS NOT NULL` → ошибка
-- Только один ключ-юзер биндинг происходит атомарно
+- `SELECT ... FOR UPDATE` locks the key row
+- The second call waits for the commit, then sees `used_at IS NOT NULL` → error
+- Only one key-user binding happens atomically

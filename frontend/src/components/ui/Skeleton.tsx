@@ -1,6 +1,8 @@
-/** Grey shimmer placeholder for loading states (Claude-style skeleton). */
+/** Grey shimmer placeholder for loading states (Claude-style skeleton). The
+ *  `skeleton` class (index.css) sweeps a soft light band across the base for a
+ *  smoother feel than an opacity pulse. */
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={'animate-pulse rounded-md bg-surface-sunken ' + className} />
+  return <div className={'skeleton rounded-md ' + className} />
 }
 
 /**

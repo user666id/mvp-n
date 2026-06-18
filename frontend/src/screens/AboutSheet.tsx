@@ -5,7 +5,7 @@ import { Cell } from '../components/ui/Cell'
 import { Collapse } from '../components/ui/Collapse'
 import { Logo } from '../components/Logo'
 import { ChevronRight, ExternalLink, Github, Telegram } from '../components/icons'
-import { openLink } from '../lib/telegram'
+import { openLink, effectivePalette } from '../lib/telegram'
 import { BRAND, BOT, GITHUB_URL } from '../lib/config'
 import { RELEASES, APP_VERSION, type ChangeKind } from '../lib/changelog'
 import { useT, type TKey } from '../lib/i18n'
@@ -21,22 +21,86 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const [updatesOpen, setUpdatesOpen] = useState(false)
   const [licensesOpen, setLicensesOpen] = useState(false)
 
-  // Third-party attributions shown under About → Licenses.
-  const licenses = [
-    { name: 'mvp-n', license: 'AGPL-3.0', url: `${GITHUB_URL}/blob/main/LICENSE` },
-    { name: 'Hanken Grotesk', license: 'OFL-1.1', url: 'https://openfontlicense.org/open-font-license-official-text/' },
-    { name: 'Inter', license: 'OFL-1.1', url: 'https://github.com/rsms/inter/blob/master/LICENSE.txt' },
-    { name: 'React', license: 'MIT', url: 'https://github.com/facebook/react/blob/main/LICENSE' },
-    { name: 'Vite', license: 'MIT', url: 'https://github.com/vitejs/vite/blob/main/LICENSE' },
-    { name: 'Tailwind CSS', license: 'MIT', url: 'https://github.com/tailwindlabs/tailwindcss/blob/main/LICENSE' },
-    { name: 'grammY', license: 'MIT', url: 'https://github.com/grammyjs/grammY/blob/main/LICENSE' },
-    { name: 'Go', license: 'BSD-3-Clause', url: 'https://go.dev/LICENSE' },
+  // Third-party attributions shown under About → Licenses, grouped by area.
+  // Covers the components shipped or run as part of the service; the complete
+  // (incl. transitive) list lives in the source repos' go.mod / package.json.
+  const licenseGroups: {
+    header: TKey
+    items: { name: string; license: string; url: string }[]
+  }[] = [
+    {
+      header: 'lic.app',
+      items: [{ name: 'mvp-n', license: 'AGPL-3.0', url: `${GITHUB_URL}/blob/main/LICENSE` }],
+    },
+    {
+      header: 'lic.miniApp',
+      items: [
+        { name: 'React', license: 'MIT', url: 'https://github.com/facebook/react/blob/main/LICENSE' },
+        { name: 'TON Connect UI', license: 'Apache-2.0', url: 'https://github.com/ton-connect/sdk/blob/main/LICENSE' },
+        { name: '@ton/core', license: 'MIT', url: 'https://github.com/ton-org/ton-core/blob/main/LICENSE' },
+        { name: 'buffer', license: 'MIT', url: 'https://github.com/feross/buffer/blob/master/LICENSE' },
+        { name: 'qrcode', license: 'MIT', url: 'https://github.com/soldair/node-qrcode/blob/master/license' },
+        { name: 'Tailwind CSS', license: 'MIT', url: 'https://github.com/tailwindlabs/tailwindcss/blob/main/LICENSE' },
+        { name: 'Vite', license: 'MIT', url: 'https://github.com/vitejs/vite/blob/main/LICENSE' },
+        { name: 'TypeScript', license: 'Apache-2.0', url: 'https://github.com/microsoft/TypeScript/blob/main/LICENSE.txt' },
+      ],
+    },
+    {
+      header: 'lic.bot',
+      items: [
+        { name: 'grammY', license: 'MIT', url: 'https://github.com/grammyjs/grammY/blob/main/LICENSE' },
+        { name: 'Node.js', license: 'MIT', url: 'https://github.com/nodejs/node/blob/main/LICENSE' },
+      ],
+    },
+    {
+      header: 'lic.backend',
+      items: [
+        { name: 'Go', license: 'BSD-3-Clause', url: 'https://go.dev/LICENSE' },
+        { name: 'golang-jwt', license: 'MIT', url: 'https://github.com/golang-jwt/jwt/blob/main/LICENSE' },
+        { name: 'google/uuid', license: 'BSD-3-Clause', url: 'https://github.com/google/uuid/blob/master/LICENSE' },
+        { name: 'lib/pq', license: 'MIT', url: 'https://github.com/lib/pq/blob/master/LICENSE.md' },
+        { name: 'robfig/cron', license: 'MIT', url: 'https://github.com/robfig/cron/blob/master/LICENSE' },
+        { name: 'gRPC-Go', license: 'Apache-2.0', url: 'https://github.com/grpc/grpc-go/blob/master/LICENSE' },
+        { name: 'Protocol Buffers', license: 'BSD-3-Clause', url: 'https://github.com/protocolbuffers/protobuf-go/blob/master/LICENSE' },
+        { name: 'golang.org/x/*', license: 'BSD-3-Clause', url: 'https://cs.opensource.google/go/x/crypto/+/master:LICENSE' },
+      ],
+    },
+    {
+      header: 'lic.vpn',
+      items: [
+        { name: 'Xray-core', license: 'MPL-2.0', url: 'https://github.com/XTLS/Xray-core/blob/main/LICENSE' },
+        { name: 'uTLS', license: 'BSD-3-Clause', url: 'https://github.com/refraction-networking/utls/blob/master/LICENSE' },
+        { name: 'REALITY', license: 'BSD-3-Clause', url: 'https://github.com/XTLS/REALITY/blob/main/LICENSE' },
+        { name: 'quic-go', license: 'MIT', url: 'https://github.com/apernet/quic-go/blob/master/LICENSE' },
+        { name: 'AmneziaWG', license: 'MIT', url: 'https://github.com/amnezia-vpn/amneziawg-go/blob/master/LICENSE' },
+        { name: 'WireGuard', license: 'GPL-2.0', url: 'https://www.wireguard.com/' },
+        { name: 'SagerNet/sing', license: 'GPL-3.0', url: 'https://github.com/SagerNet/sing/blob/main/LICENSE' },
+        { name: 'juju/ratelimit', license: 'LGPL-3.0', url: 'https://github.com/juju/ratelimit/blob/master/LICENSE' },
+      ],
+    },
+    {
+      header: 'lic.infra',
+      items: [
+        { name: 'nginx', license: 'BSD-2-Clause', url: 'https://nginx.org/LICENSE' },
+        { name: 'OpenSSL (TLS/SSL)', license: 'Apache-2.0', url: 'https://www.openssl.org/source/license.html' },
+        { name: 'PostgreSQL', license: 'PostgreSQL', url: 'https://www.postgresql.org/about/licence/' },
+        { name: 'Docker', license: 'Apache-2.0', url: 'https://github.com/moby/moby/blob/master/LICENSE' },
+        { name: 'Telegram platform', license: 'Telegram ToS', url: 'https://core.telegram.org/api/terms' },
+      ],
+    },
+    {
+      header: 'lic.fonts',
+      items: [
+        { name: 'Hanken Grotesk', license: 'OFL-1.1', url: 'https://openfontlicense.org/open-font-license-official-text/' },
+        { name: 'Inter', license: 'OFL-1.1', url: 'https://github.com/rsms/inter/blob/master/LICENSE.txt' },
+      ],
+    },
   ]
 
   // Hosted legal pages on their own subdomain (clean URLs), opened in the
   // external browser. Follows the current UI language.
   const legalUrl = (doc: 'terms' | 'privacy') =>
-    `https://legal.mvp-n.net/${doc}?lang=${lang}`
+    `https://legal.mvp-n.net/${doc}?lang=${lang}&theme=${effectivePalette()}`
 
   const faq: { q: TKey; a: TKey }[] = [
     { q: 'about.q1', a: 'about.a1' },
@@ -185,18 +249,20 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
         title={t('about.licenses')}
       >
         <p className="mb-4 px-1 text-[13px] leading-relaxed text-muted">{t('about.licensesHint')}</p>
-        <Section>
-          {licenses.map((l, i) => (
-            <Cell
-              key={l.name}
-              title={l.name}
-              subtitle={l.license}
-              after={<ExternalLink size={18} className="text-faint" />}
-              onClick={() => openLink(l.url)}
-              last={i === licenses.length - 1}
-            />
-          ))}
-        </Section>
+        {licenseGroups.map((grp) => (
+          <Section key={grp.header} header={t(grp.header)}>
+            {grp.items.map((l, i) => (
+              <Cell
+                key={l.name}
+                title={l.name}
+                subtitle={l.license}
+                after={<ExternalLink size={18} className="text-faint" />}
+                onClick={() => openLink(l.url)}
+                last={i === grp.items.length - 1}
+              />
+            ))}
+          </Section>
+        ))}
       </Sheet>
     </>
   )

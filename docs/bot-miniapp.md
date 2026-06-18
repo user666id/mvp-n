@@ -1,59 +1,59 @@
-# Бот и Mini App
+# Bot and Mini App
 
-Описание пользовательской части: Telegram-бот и экраны мини-приложения (консоли).
-Технические детали бота — [`bot/README.md`](../bot/README.md), фронтенда —
+Description of the user-facing part: the Telegram bot and the Mini App screens (the console).
+Technical details of the bot — [`bot/README.md`](../bot/README.md), of the frontend —
 [`frontend/README.md`](../frontend/README.md).
 
-## Бот
+## Bot
 
-`@mvp_n_net_bot` намеренно минимален: `/start` (или любой текст) → короткое
-приветствие с одной inline-кнопкой **web_app**, открывающей Mini App. Работает
-только в личных чатах, на long polling. Язык приветствия синхронизирован с выбором
-в приложении (EN по умолчанию). Подробности — [`bot/README.md`](../bot/README.md).
+`@mvp_n_net_bot` is intentionally minimal: `/start` (or any text) → a short
+greeting with a single inline **web_app** button that opens the Mini App. It works
+only in private chats, over long polling. The greeting language is synced with the choice
+in the app (EN by default). Details — [`bot/README.md`](../bot/README.md).
 
-## Навигация Mini App
+## Mini App navigation
 
-- Боковое меню (drawer) слева сверху: **Конфиги**, **Опции** (заглушка) и **Настройки**.
-- Экраны открываются как push-панели (выезжают справа) с кнопкой «‹ Назад».
-- Большие заголовки, дизайн в стиле Claude, EN/RU, тема по системе.
+- Side menu (drawer) at the top left: **Configs**, **Options** (placeholder) and **Settings**.
+- Screens open as push panels (sliding in from the right) with a "‹ Back" button.
+- Large headings, Claude-style design, EN/RU, theme follows the system.
 
-## Конфиги
+## Configs
 
-**Список.** Карточки конфигов (страна, спецификация, статус сервера), счётчик,
-плавающая кнопка «+». Первый вход требует активации одноразового ключа.
+**List.** Config cards (country, spec, server status), a counter,
+a floating "+" button. The first entry requires activating a one-time key.
 
-**Создание.** Локация (Нидерланды), протокол — VLESS или AmneziaWG, для VLESS
-режимы: Обычный / Усиленный / Игровой.
+**Creation.** Location (Netherlands), protocol — VLESS or AmneziaWG, for VLESS
+the modes: Normal / Enhanced / Gaming.
 
-**Карточка конфига.** Ссылка-подписка (или `.conf` для AmneziaWG), QR, кнопка
-«установить в приложение» (выбор клиента — Happ / v2RayTun / v2rayNG — через
-web-redirect), переключение режимов, переименование, статус сервера → графики,
-удаление.
+**Config card.** Subscription link (or `.conf` for AmneziaWG), QR, an
+"install into app" button (client choice — Happ / v2RayTun / v2rayNG — via
+web-redirect), mode switching, renaming, server status → charts,
+deletion.
 
-**Графики сервера.** CPU и RAM в шкале 0–100%, сеть в авто-единицах (Б/с → КБ/с →
-МБ/с), читается с host-NIC.
+**Server charts.** CPU and RAM on a 0–100% scale, network in auto units (B/s → KB/s →
+MB/s), read from the host NIC.
 
-**Устройства.** Список (VLESS + AmneziaWG) с реальной моделью устройства;
-переименование, блок/разблок, удаление; стабильная нумерация по дате добавления.
+**Devices.** List (VLESS + AmneziaWG) with the real device model;
+renaming, block/unblock, deletion; stable numbering by date added.
 
-## Настройки
+## Settings
 
-- **Карточка профиля** (тап → лист «Аккаунт»): Telegram ID, username, внутренний
-  ID, трафик; внизу — удаление аккаунта.
-- **Оформление:** язык (EN / RU), тема (Светлая / Тёмная / Система), тактильный
-  отклик.
-- **Уведомления:** тумблер Telegram-уведомлений.
-- **Подписка:** устройства, настройки подписки (лимит устройств), сброс конфигов.
-- **Выйти** — строкой внизу.
-- **О сервисе** (кнопка «ⓘ» в шапке): краткое описание + FAQ.
+- **Profile card** (tap → the "Account" sheet): Telegram ID, username, internal
+  ID, traffic; at the bottom — account deletion.
+- **Appearance:** language (EN / RU), theme (Light / Dark / System), haptic
+  feedback.
+- **Notifications:** toggle for Telegram notifications.
+- **Subscription:** devices, subscription settings (device limit), config reset.
+- **Log out** — a row at the bottom.
+- **About** (the "ⓘ" button in the header): a short description + FAQ.
 
-## Админ-панель (только для админов)
+## Admin panel (admins only)
 
-Вход из «Настроек». Разделы:
+Accessed from "Settings". Sections:
 
-- **Трафик** — карточка «всего / за сегодня» (граница суток 00:00 МСК).
-- **Профили** — поиск, карточка профиля (Telegram ID, username, трафик), список
-  конфигов и устройств, действия: сброс подписки, блок/разблок, удаление. Для
-  своего админ-профиля сброс работает, блок/удаление выдают «нельзя».
-- **Ключи** — выпуск N ключей, список (не использованные / использованные), отзыв.
-- **Домены** — статусы веб-доменов (доступность, код, задержка).
+- **Traffic** — a "total / today" card (the day boundary is 00:00 MSK).
+- **Profiles** — search, a profile card (Telegram ID, username, traffic), a list
+  of configs and devices, actions: subscription reset, block/unblock, deletion. For
+  your own admin profile reset works, but block/delete return "not allowed".
+- **Keys** — issue N keys, a list (unused / used), revocation.
+- **Domains** — statuses of the web domains (availability, code, latency).

@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { ListSkeleton } from '../components/ui/Skeleton'
+import { LoadError } from '../components/ui/LoadError'
 import { Note } from '../components/ui/Note'
 import { ChevronRight, Ban, Check, Trash, Info, Phone } from '../components/icons'
 import { DeviceRow, isOSName } from '../components/DeviceRow'
@@ -38,18 +39,20 @@ export function DevicesSheet({
   const { t } = useT()
   const toast = useToast()
   const [devices, setDevices] = useState<Device[] | null>(null)
+  const [failed, setFailed] = useState(false)
   const [actions, setActions] = useState<Device | null>(null)
   const [renaming, setRenaming] = useState<Device | null>(null)
   const [renameVal, setRenameVal] = useState('')
   const [busy, setBusy] = useState(false)
 
   const load = async () => {
+    setFailed(false)
     setDevices(null)
     try {
       setDevices(await getDevices())
     } catch {
-      setDevices([])
-      toast(t('devices.loadFailed'))
+      // Don't fake an empty list (misleading) — show a retry instead.
+      setFailed(true)
     }
   }
 
@@ -174,7 +177,9 @@ export function DevicesSheet({
           <Note tone="info" icon={<Info size={20} />}>{t('devices.note')}</Note>
         </div>
 
-        {!devices ? (
+        {failed ? (
+          <LoadError onRetry={load} />
+        ) : !devices ? (
           <ListSkeleton rows={3} />
         ) : devices.length === 0 ? (
           <EmptyState

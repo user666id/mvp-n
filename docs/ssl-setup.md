@@ -1,45 +1,45 @@
 # SSL Setup — Cloudflare Origin Certificate
 
-> Использует **Cloudflare Origin Certificate** для всех `*.mvp-n.net` поддоменов
-> (`app`, `gw`, `connect`). Срок действия до 2041 года. Работает только при
-> включённом CF Proxy.
+> Uses a **Cloudflare Origin Certificate** for all `*.mvp-n.net` subdomains
+> (`app`, `gw`, `connect`). Valid until 2041. Works only when
+> CF Proxy is enabled.
 
 ---
 
-## 1. Получить сертификат в Cloudflare
+## 1. Get the certificate in Cloudflare
 
-1. Войди в Cloudflare Dashboard → выбери домен `mvp-n.net`
-2. Слева: **SSL/TLS → Origin Server**
-3. Жми **Create Certificate**
-4. Параметры:
+1. Log in to the Cloudflare Dashboard → select the domain `mvp-n.net`
+2. On the left: **SSL/TLS → Origin Server**
+3. Click **Create Certificate**
+4. Parameters:
    - **Private key type**: RSA (2048)
-   - **Hostnames**: `*.mvp-n.net` и `mvp-n.net`
-   - **Certificate validity**: 15 лет (максимум)
-5. Нажми Create
+   - **Hostnames**: `*.mvp-n.net` and `mvp-n.net`
+   - **Certificate validity**: 15 years (maximum)
+5. Click Create
 
-Cloudflare покажет **2 текстовых блока**:
+Cloudflare will show **2 text blocks**:
 
-- **Origin Certificate** (вставить в `cert.pem`)
-- **Private Key** (вставить в `key.pem`) — **показывается только один раз!**
+- **Origin Certificate** (paste into `cert.pem`)
+- **Private Key** (paste into `key.pem`) — **shown only once!**
 
-Скопируй оба сразу.
+Copy both right away.
 
 ---
 
-## 2. Положить сертификат на VPS
+## 2. Place the certificate on the VPS
 
 ```bash
 sudo mkdir -p /etc/ssl/cloudflare
 sudo chown root:root /etc/ssl/cloudflare
 sudo chmod 700 /etc/ssl/cloudflare
 
-# Создать файлы
+# Create the files
 sudo nano /etc/ssl/cloudflare/mvp-n.net.pem
-# вставить блок "Origin Certificate" из CF дашборда
+# paste the "Origin Certificate" block from the CF dashboard
 # (-----BEGIN CERTIFICATE----- ... -----END CERTIFICATE-----)
 
 sudo nano /etc/ssl/cloudflare/mvp-n.net.key
-# вставить блок "Private Key" из CF дашборда
+# paste the "Private Key" block from the CF dashboard
 # (-----BEGIN PRIVATE KEY----- ... -----END PRIVATE KEY-----)
 
 sudo chmod 644 /etc/ssl/cloudflare/mvp-n.net.pem
@@ -48,56 +48,56 @@ sudo chmod 600 /etc/ssl/cloudflare/mvp-n.net.key
 
 ---
 
-## 3. Настроить Cloudflare SSL mode
+## 3. Configure the Cloudflare SSL mode
 
-В Cloudflare Dashboard → **SSL/TLS → Overview**:
-- Режим: **Full (strict)**
+In the Cloudflare Dashboard → **SSL/TLS → Overview**:
+- Mode: **Full (strict)**
 
-Это значит:
-- Клиент → CF: шифрование на CF-сертификате (автоматически)
-- CF → наш сервер: шифрование на нашем Origin Certificate
+This means:
+- Client → CF: encryption using the CF certificate (automatic)
+- CF → our server: encryption using our Origin Certificate
 
 ---
 
-## 4. Проверить nginx
+## 4. Check nginx
 
 ```bash
-sudo nginx -t        # должно сказать "syntax is ok"
+sudo nginx -t        # should say "syntax is ok"
 sudo systemctl reload nginx
 ```
 
-Тестировать:
+Testing:
 ```bash
 curl -I https://gw.mvp-n.net/health
-# должно вернуть HTTP/2 200
+# should return HTTP/2 200
 ```
 
 ---
 
-## 5. Что НЕ нужно
+## 5. What you do NOT need
 
-- ❌ Let's Encrypt — мы используем CF Origin Cert вместо
-- ❌ Certbot — авто-обновление не нужно (срок 15 лет)
-- ❌ Сертификат на `nl.mvp-n.net` — это VPN-домен, серое облако, без CF
+- ❌ Let's Encrypt — we use the CF Origin Cert instead
+- ❌ Certbot — auto-renewal is not needed (15-year validity)
+- ❌ A certificate for `nl.mvp-n.net` — this is a VPN domain, grey cloud, without CF
 
 ---
 
-## Если что-то сломалось
+## If something broke
 
-| Ошибка | Причина | Решение |
+| Error | Cause | Fix |
 |--------|---------|---------|
-| `526 Invalid SSL Certificate` | CF не доверяет нашему серверу | Включи SSL mode = **Full (strict)** в CF |
-| `525 SSL Handshake Failed` | nginx не подхватил сертификат | `nginx -t` и `systemctl reload nginx` |
-| `ERR_SSL_PROTOCOL_ERROR` в браузере | домен DNS-only, без CF | Включи 🟠 оранжевое облако для домена |
-| `ERR_TOO_MANY_REDIRECTS` | CF redirect loop | В CF выключи "Always Use HTTPS" если у нас уже редирект в nginx |
+| `526 Invalid SSL Certificate` | CF does not trust our server | Enable SSL mode = **Full (strict)** in CF |
+| `525 SSL Handshake Failed` | nginx did not pick up the certificate | `nginx -t` and `systemctl reload nginx` |
+| `ERR_SSL_PROTOCOL_ERROR` in the browser | domain is DNS-only, without CF | Enable the 🟠 orange cloud for the domain |
+| `ERR_TOO_MANY_REDIRECTS` | CF redirect loop | In CF disable "Always Use HTTPS" if we already redirect in nginx |
 
 ---
 
-## Бэкап сертификата
+## Certificate backup
 
-Файлы небольшие — можно держать копию в зашифрованном виде в Telegram у админа:
+The files are small — you can keep an encrypted copy in Telegram with the admin:
 
 ```bash
 sudo tar czf - /etc/ssl/cloudflare | gpg -c > mvpn-ssl-backup.tar.gz.gpg
-# отправь файл в Telegram себе как saved message
+# send the file to yourself in Telegram as a saved message
 ```

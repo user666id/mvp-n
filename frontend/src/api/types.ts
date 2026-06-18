@@ -63,6 +63,14 @@ export interface PlansResponse {
   plans: Plan[]
   assets: { id: string; label: string; network: string }[]
   gram_usd: number // live USD price of 1 GRAM (0 if unavailable) — for display only
+  stars_by_days?: Record<number, number> // Telegram Stars price per plan
+}
+
+/** Telegram Stars invoice link (POST /stars/invoice). */
+export interface StarsInvoice {
+  url: string
+  stars: number
+  plan_days: number
 }
 
 /** A crypto payment order (POST /orders, GET /orders/{id}). */
@@ -152,7 +160,6 @@ export interface Device {
   name: string
   os?: string // OS only (iOS/Android/Windows…), separate from name (which may be a model)
   client: string // launcher: Happ / v2RayTun / v2rayNG / AmneziaVPN / ...
-  ip: string
   last_seen: string
   is_blocked: boolean
   /** True when the device passed traffic through the VPN in the last few minutes. */

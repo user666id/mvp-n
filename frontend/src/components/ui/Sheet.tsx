@@ -112,7 +112,7 @@ export function Sheet({
         </button>
         <h2 className="font-display text-[22px] font-semibold text-ink">{title}</h2>
       </div>
-      <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-[max(20px,env(safe-area-inset-bottom))]">
+      <div className="no-scrollbar animate-fade flex-1 overflow-y-auto px-4 pb-[max(20px,env(safe-area-inset-bottom))]">
         {children}
       </div>
     </div>

@@ -7,6 +7,7 @@ import { ListSkeleton } from '../components/ui/Skeleton'
 import { Badge } from '../components/ui/Badge'
 import { Star, Lock, Clock, ChevronRight, ExternalLink } from '../components/icons'
 import { SubscribeSheet } from './SubscribeSheet'
+import { KeyEntrySheet } from './KeyEntrySheet'
 import { openLink } from '../lib/telegram'
 import { useT } from '../lib/i18n'
 import { subState, fmtSubDate, txExplorerUrl } from '../lib/subscription'
@@ -34,8 +35,13 @@ export function SubscriptionSheet({
 }) {
   const { t, lang } = useT()
   const [buyOpen, setBuyOpen] = useState(false)
+  const [keyOpen, setKeyOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const state = profile ? subState(profile) : 'none'
+  const daysLeft =
+    state === 'active' && profile?.paid_until
+      ? Math.max(0, Math.ceil((new Date(profile.paid_until).getTime() - Date.now()) / 86_400_000))
+      : 0
 
   const title =
     state === 'lifetime'
@@ -50,7 +56,7 @@ export function SubscriptionSheet({
     state === 'lifetime'
       ? t('sub.lifetimeHint')
       : state === 'active'
-        ? t('sub.until', { d: fmtSubDate(profile!.paid_until!, lang) })
+        ? t('sub.daysLeft', { n: daysLeft })
         : state === 'expired'
           ? t('sub.expiredHint')
           : t('sub.noneHint')
@@ -77,13 +83,24 @@ export function SubscriptionSheet({
           {title}
         </h3>
         <p className="mt-1.5 max-w-[300px] text-[14px] leading-relaxed text-muted">{hint}</p>
+        {state === 'active' && (
+          <p className="mt-0.5 text-[12.5px] text-faint">
+            {t('sub.untilShort', { d: fmtSubDate(profile!.paid_until!, lang) })}
+          </p>
+        )}
       </div>
 
-      {/* primary action — full width, lifetime/key has none */}
+      {/* primary action + "I have a key" — full width, lifetime/key has none.
+          Key entry is available on renew too, not just first activation. */}
       {state !== 'lifetime' && (
-        <Button stretched className="mt-6" onClick={() => setBuyOpen(true)}>
-          {state === 'none' ? t('sub.buy') : t('sub.renew')}
-        </Button>
+        <>
+          <Button stretched className="mt-6" onClick={() => setBuyOpen(true)}>
+            {state === 'none' ? t('sub.buy') : t('sub.renew')}
+          </Button>
+          <Button variant="secondary" stretched className="mt-3" onClick={() => setKeyOpen(true)}>
+            {t('sub.haveKey')}
+          </Button>
+        </>
       )}
 
       {/* payment history — key/lifetime users have no payments */}
@@ -106,6 +123,14 @@ export function SubscriptionSheet({
         onClose={() => setBuyOpen(false)}
         onPaid={onChanged}
         renewing={state === 'active' || state === 'expired'}
+      />
+      <KeyEntrySheet
+        open={keyOpen}
+        onClose={() => setKeyOpen(false)}
+        onActivated={() => {
+          setKeyOpen(false)
+          onChanged()
+        }}
       />
       <PaymentHistorySheet open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </Sheet>

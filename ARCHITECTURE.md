@@ -1,142 +1,145 @@
-# Архитектура
+# Architecture
 
-Глубокое описание устройства mvp-n: как разнесены веб и VPN, какие потоки данных,
-как устроены авторизация, провижининг устройств и учёт трафика. Обзор и схемы —
-в [README](./README.md).
-
----
-
-## Два независимых плана
-
-Главный принцип системы — **control plane (веб) и data plane (VPN) физически
-разделены**.
-
-- **Control plane** — бот, Mini App, API, подписки. Идёт за Cloudflare и
-  SNI-роутером nginx на `:443`. Здесь живёт вся логика: ключи, конфиги, профили.
-- **Data plane** — собственно VPN-трафик. Клиенты подключаются **напрямую** к
-  xray (`:43000` / `:43001`) и AmneziaWG (`:51820/udp`) по IP, минуя Cloudflare и
-  nginx. Порт зашит в подписку/`.conf`.
-
-Почему так: Cloudflare не пропускает произвольный TCP/UDP, а REALITY/WireGuard
-должны идти на сервер напрямую. Разделение также прячет origin-IP веба за CF, при
-этом VPN остаётся быстрым (нет лишнего хопа) и независимым от веб-инфраструктуры.
+An in-depth description of how mvp-n is built: how web and VPN are separated, what
+the data flows are, and how authorization, device provisioning, and traffic
+accounting work. For an overview and diagrams, see the [README](./README.md).
 
 ---
 
-## Маршрутизация на :443 (SNI)
+## Two independent planes
 
-nginx в режиме `stream` читает SNI из ClientHello **без расшифровки**
-(`ssl_preread`) и форвардит по имени хоста:
+The core principle of the system is that the **control plane (web) and the data
+plane (VPN) are physically separated**.
 
-| SNI | Назначение |
+- **Control plane** — the bot, Mini App, API, subscriptions. It sits behind
+  Cloudflare and the nginx SNI router on `:443`. All the logic lives here: keys,
+  configs, profiles.
+- **Data plane** — the actual VPN traffic. Clients connect **directly** to xray
+  (`:43000` / `:43001`) and AmneziaWG (`:51820/udp`) by IP, bypassing Cloudflare and
+  nginx. The port is baked into the subscription / `.conf`.
+
+Why this way: Cloudflare does not pass arbitrary TCP/UDP, and REALITY/WireGuard
+must go to the server directly. The separation also hides the web's origin IP
+behind CF, while the VPN stays fast (no extra hop) and independent of the web
+infrastructure.
+
+---
+
+## Routing on :443 (SNI)
+
+nginx in `stream` mode reads the SNI from the ClientHello **without decrypting it**
+(`ssl_preread`) and forwards by host name:
+
+| SNI | Destination |
 |-----|-----------|
-| `gw` / `app` / `connect.mvp-n.net` | внутренний nginx http `:8443` → api / static / connect |
-| прочее (`www.microsoft.com` и т.п.) | `127.0.0.1:2443` — заглушка без слушателя (probe в никуда) |
+| `gw` / `app` / `connect.mvp-n.net` | internal nginx http `:8443` → api / static / connect |
+| anything else (`www.microsoft.com` etc.) | `127.0.0.1:2443` — a stub with no listener (probe into the void) |
 
-Веб-домены за Cloudflare (proxied); их TLS терминирует внутренний http-сервер на
-`:8443` по Cloudflare Origin Cert. **VPN-трафик через `:443`/nginx не идёт** —
-клиенты коннектятся напрямую на xray `:43000`/`:43001`; `default → :2443` в
-stream-конфиге сегодня без слушателя (нежелательные SNI упираются в закрытый порт).
-Подробности — [`nginx/README.md`](./nginx/README.md).
+The web domains are behind Cloudflare (proxied); their TLS is terminated by the
+internal http server on `:8443` using the Cloudflare Origin Cert. **VPN traffic does
+not go through `:443`/nginx** — clients connect directly to xray
+`:43000`/`:43001`; `default → :2443` in the stream config currently has no listener
+(unwanted SNI hits a closed port). For details, see
+[`nginx/README.md`](./nginx/README.md).
 
 ---
 
-## Поток авторизации
+## Authorization flow
 
 ```
 Mini App  ──initData──►  POST /auth/token
-                          │  проверка подписи initData ключом BOT_TOKEN
+                          │  verify the initData signature with the BOT_TOKEN key
                           ▼
-                         JWT  ──►  хранится в localStorage, шлётся как Bearer
+                         JWT  ──►  stored in localStorage, sent as Bearer
 ```
 
-1. Telegram отдаёт Mini App подписанный `initData`.
-2. API проверяет HMAC-подпись `initData` секретом из `BOT_TOKEN` → достаёт
-   Telegram-ID, заводит/находит пользователя, выдаёт JWT.
-3. Первый вход требует активации **одноразового ключа** (`POST /auth/key`, TTL 12 ч),
-   который выпускает владелец.
+1. Telegram gives the Mini App a signed `initData`.
+2. The API verifies the HMAC signature of `initData` with the secret derived from
+   `BOT_TOKEN` → extracts the Telegram ID, creates/finds the user, issues a JWT.
+3. The first login requires activating a **one-time key** (`POST /auth/key`, TTL 12 h),
+   which is issued by the owner.
 
-Подробнее — [`docs/auth-flow.md`](./docs/auth-flow.md).
+For more, see [`docs/auth-flow.md`](./docs/auth-flow.md).
 
 ---
 
-## Провижининг устройств (по HWID)
+## Device provisioning (by HWID)
 
-Одна ссылка-подписка обслуживает все устройства пользователя, но **каждое
-физическое устройство получает свой xray-UUID** — это даёт пер-девайс блок,
-статистику и реальную модель в списке.
+A single subscription link serves all of a user's devices, but **each physical
+device gets its own xray UUID** — this enables per-device blocking, statistics, and
+the real model name in the list.
 
 ```
-Клиент (v2RayTun/Happ) ──GET /to/{id}──► connect
-   заголовки X-Hwid / X-Device-Model / X-Device-Os (Remnawave HWID)
+Client (v2RayTun/Happ) ──GET /to/{id}──► connect
+   headers X-Hwid / X-Device-Model / X-Device-Os (Remnawave HWID)
         │
         ▼
    connect ──POST /internal/provision──► api
-        api: находит/создаёт devices-запись по HWID,
-             выдаёт device-UUID, регистрирует его в xray (gRPC AddUser)
+        api: finds/creates a devices record by HWID,
+             issues a device UUID, registers it in xray (gRPC AddUser)
         │
         ▼
-   connect отдаёт VLESS-URI с этим UUID
+   connect returns a VLESS URI with this UUID
 ```
 
-Если HWID-заголовков нет — фолбэк на install-id из User-Agent (Happ). Для
-AmneziaWG модель проще: 1 конфиг = 1 пир.
+If the HWID headers are absent, it falls back to the install-id from the
+User-Agent (Happ). For AmneziaWG the model is simpler: 1 config = 1 peer.
 
 ---
 
-## Учёт трафика
+## Traffic accounting
 
-xray считает байты per-user. Cron в api (`internal/cron`) раз в минуту опрашивает
-xray (`GetTraffic`) и:
+xray counts bytes per user. A cron in api (`internal/cron`) polls xray once a minute
+(`GetTraffic`) and:
 
-- кладёт **положительную дельту** в `users.traffic_used` (монотонный счётчик,
-  переживает удаление устройств и рестарт xray);
-- по дельте определяет **online** устройства (счётчик вырос → активно);
-- аккумулирует ту же дельту в `traffic_daily` по **московским** суткам (00:00 МСК) —
-  отсюда «Трафик, за сегодня» в админке.
+- adds the **positive delta** to `users.traffic_used` (a monotonic counter that
+  survives device deletion and xray restarts);
+- uses the delta to determine which devices are **online** (counter grew → active);
+- accumulates the same delta into `traffic_daily` by **Moscow** days (00:00 MSK) —
+  this is where "Traffic, today" in the admin panel comes from.
 
-Метрики сервера (CPU/RAM/сеть) собираются отдельным cron'ом каждые 10 минут из
-host sysfs (api смонтирован `/sys:/host/sys:ro`, node-exporter-style).
+Server metrics (CPU/RAM/network) are collected by a separate cron every 10 minutes
+from the host sysfs (api is mounted `/sys:/host/sys:ro`, node-exporter-style).
 
 ---
 
-## Компоненты
+## Components
 
-| Компонент | Где живёт | Роль |
+| Component | Where it lives | Role |
 |-----------|-----------|------|
-| **bot** | Docker | `/start` → кнопка Mini App, синхронизация языка |
-| **frontend** | nginx static `/v2/` | Mini App (консоль) |
-| **api** | Docker | вся логика, gRPC к xray, HTTP к awg-server, cron |
-| **connect** | Docker | отдаёт подписки, регистрирует устройства |
-| **awg-server** | Docker (host net) | управление пирами AmneziaWG на `awg0` |
-| **postgres** | Docker | состояние |
-| **db-backup** | Docker | ежедневные дампы |
-| **xray** | хост (systemd) | VLESS+REALITY inbounds |
-| **AmneziaWG** | хост (kernel) | WireGuard+обфускация |
-| **nginx** | хост | SNI-роутер + reverse proxy |
+| **bot** | Docker | `/start` → Mini App button, language sync |
+| **frontend** | nginx static `/v2/` | Mini App (console) |
+| **api** | Docker | all the logic, gRPC to xray, HTTP to awg-server, cron |
+| **connect** | Docker | serves subscriptions, registers devices |
+| **awg-server** | Docker (host net) | manages AmneziaWG peers on `awg0` |
+| **postgres** | Docker | state |
+| **db-backup** | Docker | daily dumps |
+| **xray** | host (systemd) | VLESS+REALITY inbounds |
+| **AmneziaWG** | host (kernel) | WireGuard+obfuscation |
+| **nginx** | host | SNI router + reverse proxy |
 
-xray и AmneziaWG сознательно **вне Docker** — им нужен прямой доступ к сети хоста и
-ядру (REALITY на низких портах, kernel-модуль WireGuard). Управляются по gRPC/HTTP
-из Docker-сервисов через `host.docker.internal`.
-
----
-
-## Данные
-
-Схема создаётся idempotent-миграциями при старте api (`internal/config/config.go`),
-отдельной системы миграций нет. Таблицы: `users`, `access_keys`, `vpn_configs`,
-`devices`, `server_metrics`, `traffic_daily`. Описание полей —
-[`api/README.md`](./api/README.md).
+xray and AmneziaWG are deliberately **outside Docker** — they need direct access to
+the host network and the kernel (REALITY on low ports, the WireGuard kernel module).
+They are managed over gRPC/HTTP from the Docker services via `host.docker.internal`.
 
 ---
 
-## Деплой
+## Data
 
-Pull-модель: systemd-таймер на VPS опрашивает GitHub каждые 2 мин и при новом
-коммите в `main` делает `git reset --hard origin/main` +
-[`scripts/deploy.sh`](./scripts/deploy.sh), который пересобирает **только
-изменившиеся** сервисы (диффом путей), реконсилит стек при изменении compose и
-синхронизирует собранный фронт. (Push-деплой невозможен — DDoS-защита хостера
-режет CI-runner'ы GitHub.) xray/AmneziaWG/nginx живут на хосте и ставятся один раз
-скриптами из [`scripts/install`](./scripts/install). Детали —
+The schema is created by idempotent migrations at api startup
+(`internal/config/config.go`); there is no separate migration system. Tables:
+`users`, `access_keys`, `vpn_configs`, `devices`, `server_metrics`, `traffic_daily`.
+For a description of the fields, see [`api/README.md`](./api/README.md).
+
+---
+
+## Deploy
+
+Pull model: a systemd timer on the VPS polls GitHub every 2 min and, on a new commit
+to `main`, does `git reset --hard origin/main` +
+[`scripts/deploy.sh`](./scripts/deploy.sh), which rebuilds **only the changed**
+services (by diffing paths), reconciles the stack when compose changes, and syncs
+the built frontend. (Push deploy is impossible — the host's DDoS protection cuts off
+GitHub's CI runners.) xray/AmneziaWG/nginx live on the host and are installed once by
+the scripts in [`scripts/install`](./scripts/install). For details, see
 [`docs/deploy.md`](./docs/deploy.md).

@@ -1,6 +1,6 @@
 import { request, setToken } from './client'
 import type {
-  AccessKey, AccessKeyRow, AdminConfig, AdminProfile, AuthResult, AwgStats, Config, Device, DomainStatus, Order, PlansResponse, Profile, Protocol, ServerStats, TrafficDay,
+  AccessKey, AccessKeyRow, AdminConfig, AdminProfile, AuthResult, AwgStats, Config, Device, DomainStatus, Order, PlansResponse, Profile, Protocol, ServerStats, StarsInvoice, TrafficDay,
 } from './types'
 import { getInitData } from '../lib/telegram'
 
@@ -77,6 +77,10 @@ export function getPlans() {
 
 export function createOrder(planDays: number, asset: string) {
   return request<Order>('POST', '/orders', { plan_days: planDays, asset })
+}
+
+export function createStarsInvoice(planDays: number) {
+  return request<StarsInvoice>('POST', '/stars/invoice', { plan_days: planDays })
 }
 
 export function getOrder(id: string) {

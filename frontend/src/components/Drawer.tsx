@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Layers, Settings } from './icons'
+import { Layers, Settings, ShieldCheck } from './icons'
 import { BRAND } from '../lib/config'
 import { useT, type TKey } from '../lib/i18n'
 
@@ -19,11 +19,16 @@ export function Drawer({
   onClose,
   active,
   onSelect,
+  isAdmin,
+  onOpenAdmin,
 }: {
   open: boolean
   onClose: () => void
   active: Tab
   onSelect: (t: Tab) => void
+  /** Show the admin entry at the bottom (admins only). */
+  isAdmin?: boolean
+  onOpenAdmin?: () => void
 }) {
   const { t } = useT()
   const [mounted, setMounted] = useState(open)
@@ -79,6 +84,22 @@ export function Drawer({
             )
           })}
         </nav>
+
+        {/* Admin panel — admins only, pinned to the bottom with a divider. */}
+        {isAdmin && onOpenAdmin && (
+          <div className="mt-auto border-t border-border px-3 pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
+            <button
+              onClick={() => {
+                onOpenAdmin()
+                onClose()
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-ink transition-colors active:bg-surface-sunken"
+            >
+              <ShieldCheck size={22} />
+              <span className="text-[16px] font-medium">{t('settings.adminPanel')}</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -11,12 +11,11 @@ import { Spinner } from '../components/ui/Spinner'
 import { Avatar } from '../components/ui/Avatar'
 import { useToast } from '../components/ui/Toast'
 import {
-  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, Star, ShieldCheck, Vibrate,
+  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, Star, Vibrate,
 } from '../components/icons'
 import { ProfileDetails } from '../components/ProfileDetails'
 import { DevicesSheet } from './DevicesSheet'
 import { AboutSheet } from './AboutSheet'
-import { AdminSheet } from './AdminSheet'
 import { SubscriptionSheet } from './SubscriptionSheet'
 import {
   confirmDialog, notify, hapticsEnabled, getTheme, setTheme, getDarkShade, setDarkShade,
@@ -98,7 +97,6 @@ export function SettingsScreen({
   const [subOpen, setSubOpen] = useState(false)
   const [subscriptionOpen, setSubscriptionOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
-  const [adminOpen, setAdminOpen] = useState(false)
   const [haptics, setHaptics] = useState(hapticsEnabled())
   const [theme, setThemeState] = useState<ThemePref>(getTheme())
   const [shade, setShadeState] = useState<DarkShade>(getDarkShade())
@@ -208,7 +206,7 @@ export function SettingsScreen({
   const devCount = profile?.devices_count ?? 0
 
   return (
-    <div className="min-h-screen pb-10">
+    <div className="animate-fade min-h-screen pb-10">
       <PageHeader
         title={t('settings.title')}
         onMenu={onMenu}
@@ -251,18 +249,7 @@ export function SettingsScreen({
           </button>
         </Section>
 
-        {/* admin entry (admins only) — kept at the top; About lives in the header ⓘ button */}
-        {profile?.is_admin && (
-          <Section>
-            <Cell
-              before={<ShieldCheck size={20} />}
-              after={<ChevronRight size={20} />}
-              title={t('settings.adminPanel')}
-              onClick={() => setAdminOpen(true)}
-              last
-            />
-          </Section>
-        )}
+        {/* Admin panel moved to the main menu (drawer) — see App.tsx + Drawer. */}
 
         {/* Subscription + VPN connection — one group */}
         <Section header={t('settings.subscriptions')}>
@@ -290,7 +277,6 @@ export function SettingsScreen({
           />
           <Cell
             before={<Refresh size={20} />}
-            after={<ChevronRight size={20} />}
             title={t('settings.reset')}
             onClick={doReset}
             last
@@ -354,7 +340,7 @@ export function SettingsScreen({
               ))}
             </div>
           </div>
-          {/* Dark-theme shade: warm (default) / neutral / true black.
+          {/* Dark-theme shade: warm (default) / true black.
               Only shown when dark is actually in effect (hidden in light). */}
           {(theme === 'dark' || (theme === 'system' && isDarkActive())) && (
           <div className="border-b border-border px-4 py-3.5">
@@ -363,7 +349,6 @@ export function SettingsScreen({
               {(
                 [
                   ['warm', t('settings.shadeWarm'), '#20201E', '#191917'],
-                  ['neutral', t('settings.shadeNeutral'), '#0A0A0A', '#141414'],
                   ['black', t('settings.shadeBlack'), '#000000', '#0E0E0E'],
                 ] as const
               ).map(([val, label, bg, card]) => (
@@ -464,7 +449,6 @@ export function SettingsScreen({
 
       <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
 
-      <AdminSheet open={adminOpen} onClose={() => setAdminOpen(false)} />
 
       {busy && (
         <div className="fixed inset-0 z-[55] grid place-items-center bg-black/20">

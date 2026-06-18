@@ -80,7 +80,7 @@ the bot just uses `language_code` — so it degrades gracefully with no config.
 
 | Var | Required | Purpose |
 |-----|----------|---------|
-| `BOT_TOKEN` | да | Token from @BotFather — the **same** bot the API verifies `initData` against. |
+| `BOT_TOKEN` | yes | Token from @BotFather — the **same** bot the API verifies `initData` against. |
 | `MINI_APP_URL` | — | Mini App URL; must match what nginx serves (default `https://app.mvp-n.net/v2/`). |
 | `API_INTERNAL_URL` | — | Internal API base for the language lookup (compose: `http://api:8081`). Unset → skip lookup. |
 | `ADMIN_TOKEN` | — | Internal token for `/internal/user-lang` (compose: `${INTERNAL_TOKEN_BOT:-${CONNECT_ADMIN_TOKEN:-}}`). Unset → skip lookup. |

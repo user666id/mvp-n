@@ -17,6 +17,103 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '1.8',
+    date: '2026-06-18',
+    groups: [
+      {
+        kind: 'added',
+        items: [
+          {
+            en: 'Pay with Telegram Stars — buy or renew right inside Telegram, no wallet or crypto needed.',
+            ru: 'Оплата в Telegram Stars — купить или продлить прямо в Telegram, без кошелька и крипты.',
+          },
+          {
+            en: 'You can enter an access key when renewing too — not only on first activation (Subscription pane).',
+            ru: 'Ключ доступа теперь можно ввести и при продлении — не только при первой активации (в разделе «Подписка»).',
+          },
+        ],
+      },
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'The admin panel moved to the main menu (admins only).',
+            ru: 'Панель администратора перенесена в главное меню (только для админов).',
+          },
+          {
+            en: 'Smoother loading — screens that fail to load now show a “Retry” instead of getting stuck, plus gentler transitions.',
+            ru: 'Плавнее загрузка — экраны, которые не загрузились, теперь показывают «Повторить» вместо зависания, и мягче переходы.',
+          },
+          {
+            en: 'Sign-in now asks you to accept the Usage policy and Privacy policy (with links).',
+            ru: 'При входе теперь нужно принять Политику использования и Политику конфиденциальности (со ссылками).',
+          },
+          {
+            en: 'Payment screen redesigned — pick the method from one compact selector; refreshed GRAM and Stars icons.',
+            ru: 'Экран оплаты переоформлен — метод выбирается одним компактным селектором; обновлены иконки GRAM и Stars.',
+          },
+          {
+            en: 'Privacy & Terms updated for the EU/GDPR (legal basis, retention, your rights, no analytics). The immediate-start / withdrawal-waiver consent lives in the Terms, not a payment checkbox.',
+            ru: 'Политики обновлены под ЕС/GDPR (основание, сроки, ваши права, без аналитики). Согласие на немедленное начало / отказ от возврата — в Правилах, без чекбокса при оплате.',
+          },
+          {
+            en: 'The payment method now unfolds right from the selector row, with the official GRAM and Telegram Stars icons. No method is preselected — pick one and the plan prices appear in that currency.',
+            ru: 'Способ оплаты раскрывается прямо из строки выбора; добавлены официальные иконки GRAM и Telegram Stars. Метод не выбран заранее — после выбора цены тарифов показываются в этой валюте.',
+          },
+          {
+            en: 'Fewer taps to pay — method, plan and the Pay button now live on one screen (the separate confirmation step is gone).',
+            ru: 'Меньше шагов до оплаты — способ, тариф и кнопка оплаты теперь на одном экране (отдельный шаг подтверждения убран).',
+          },
+          {
+            en: 'Cheaper long plans — 90 days and 1 year now cost less, with a real per-day discount the longer you go.',
+            ru: 'Длинные тарифы дешевле — 90 дней и 1 год теперь стоят меньше, и чем дольше срок, тем выгоднее день.',
+          },
+          {
+            en: 'Dark background now has two shades — Warm (default) and Black (Neutral removed).',
+            ru: 'У тёмного фона теперь два оттенка — Тёплый (по умолчанию) и Чёрный (Нейтральный убран).',
+          },
+          {
+            en: 'The Policy / Terms pages and the open-app page now follow your app theme (light, warm or black).',
+            ru: 'Страницы Политики / Правил и страница открытия приложения теперь следуют теме приложения (светлая, тёплая или чёрная).',
+          },
+          {
+            en: 'More reliable loading — the app now recovers automatically after an update instead of getting stuck, and a stalled wallet lookup no longer hangs the Pay button.',
+            ru: 'Надёжнее загрузка — приложение само восстанавливается после обновления вместо зависания, а зависший запрос к кошельку больше не «вешает» кнопку оплаты.',
+          },
+          {
+            en: 'Subscription shows how many days are left at a glance; buttons are tidier and consistent across the app.',
+            ru: 'В «Подписке» сразу видно, сколько дней осталось; кнопки аккуратнее и единообразны по всему приложению.',
+          },
+          {
+            en: 'Smoother loading animation, and starting a payment now retries automatically if the connection drops mid-request.',
+            ru: 'Плавнее анимация загрузки, а старт оплаты теперь сам повторяется, если соединение оборвалось на запросе.',
+          },
+          {
+            en: 'The app now auto-updates to the latest version when you open it — no more stale screens after an update.',
+            ru: 'Приложение теперь само обновляется до последней версии при открытии — больше нет старых экранов после апдейта.',
+          },
+          {
+            en: 'Sign-in no longer needs a checkbox — by signing in you accept the policies (the notice and links stay).',
+            ru: 'Для входа больше не нужна галочка — входя, вы принимаете политики (текст и ссылки остались).',
+          },
+          {
+            en: 'About → Licenses now lists every third-party component (app, bot, backend, VPN core, infrastructure, fonts).',
+            ru: 'В «О сервисе → Лицензии» теперь весь список сторонних компонентов (приложение, бот, бэкенд, ядро VPN, инфраструктура, шрифты).',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        items: [
+          {
+            en: 'Paying GRAM from a wallet now opens TON Connect correctly (connect, then pay), same as USDT-TON.',
+            ru: 'Оплата GRAM из кошелька теперь корректно открывает TON Connect (подключение, затем оплата) — как и у USDT-TON.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '1.7',
     date: '2026-06-16',
     groups: [
@@ -24,8 +121,8 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'added',
         items: [
           {
-            en: 'Pay from your TON wallet via TON Connect (Telegram Wallet, Tonkeeper) — for both GRAM and USDT-TON. Copying the address & QR still works as before.',
-            ru: 'Оплата из TON-кошелька через TON Connect (Telegram Wallet, Tonkeeper) — для GRAM и USDT-TON. Ручной адрес и QR по-прежнему доступны.',
+            en: 'Pay from your TON wallet via TON Connect (Telegram Wallet, Tonkeeper) — for both GRAM and USDT-TON.',
+            ru: 'Оплата из TON-кошелька через TON Connect (Telegram Wallet, Tonkeeper) — для GRAM и USDT-TON.',
           },
         ],
       },

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Spinner } from '../components/ui/Spinner'
+import { LoadError } from '../components/ui/LoadError'
 import { AreaChart } from '../components/Chart'
 import { Globe, Clock, Monitor } from '../components/icons'
 import { getServerStats, type ServerStats } from '../api'
@@ -20,19 +21,23 @@ export function ServerStatsSheet({
   const [stats, setStats] = useState<ServerStats | null>(null)
   const [error, setError] = useState(false)
 
-  useEffect(() => {
-    if (!open || !configId) return
+  const load = useCallback(() => {
+    if (!configId) return
     setStats(null)
     setError(false)
     getServerStats(configId)
       .then(setStats)
       .catch(() => setError(true))
-  }, [open, configId])
+  }, [configId])
+
+  useEffect(() => {
+    if (open) load()
+  }, [open, load])
 
   return (
     <Sheet open={open} onClose={onClose} title={t('stats.title')}>
       {error ? (
-        <div className="py-16 text-center text-[15px] text-muted">{t('stats.unavailable')}</div>
+        <LoadError onRetry={load} />
       ) : !stats ? (
         <div className="grid place-items-center py-20 text-accent">
           <Spinner size={28} />
@@ -72,7 +77,7 @@ function StatsBody({ stats }: { stats: ServerStats }) {
       </div>
 
       <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-surface">
-        <InfoRow icon={<Globe size={20} />} text={`🇳🇱 ${t('stats.location')}`} />
+        <InfoRow icon={<Globe size={20} />} text={t('stats.location')} />
         {stats.server_ip && <InfoRow icon={<Monitor size={20} />} text={stats.server_ip} />}
         <InfoRow icon={<Clock size={20} />} text={t('stats.uptime', { n: stats.uptime_days })} last />
       </div>

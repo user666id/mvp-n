@@ -3,8 +3,9 @@ import { useForegroundRefetch } from '../lib/useForeground'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { ListSkeleton } from '../components/ui/Skeleton'
+import { LoadError } from '../components/ui/LoadError'
 import { Spinner } from '../components/ui/Spinner'
-import { ChevronRight, Layers, Lock, Plus } from '../components/icons'
+import { Layers, Lock, Plus } from '../components/icons'
 import { useToast } from '../components/ui/Toast'
 import { CreateConfigSheet } from './CreateConfigSheet'
 import { ConfigDetailSheet } from './ConfigDetailSheet'
@@ -35,6 +36,7 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
   const [configs, setConfigs] = useState<Config[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -44,6 +46,7 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
   const [pending, setPending] = useState<Order[]>([])
 
   const load = useCallback(async () => {
+    setFailed(false)
     try {
       const [cfgs, prof, pend] = await Promise.all([
         getConfigs(),
@@ -54,11 +57,13 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
       if (prof) setProfile(prof)
       setPending(pend)
     } catch {
-      toast(t('configs.loadFailed'))
+      // First load with nothing yet → show a Retry (handled in render). A failed
+      // background refresh keeps the existing list (gated on no data below).
+      setFailed(true)
     } finally {
       setLoading(false)
     }
-  }, [toast, t])
+  }, [])
 
   // Refresh whenever this tab becomes active. The screen stays mounted across
   // tab switches (App toggles visibility), so this is a background refresh that
@@ -131,12 +136,14 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
   }
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="animate-fade min-h-screen pb-24">
       <PageHeader title={t('configs.title')} onMenu={onMenu} />
 
       <div className="px-4">
         {loading ? (
           <ListSkeleton rows={2} />
+        ) : failed && !profile && configs.length === 0 ? (
+          <LoadError onRetry={load} />
         ) : !hasAccess && pending.length > 0 ? (
           /* ── A payment is in flight: don't tempt the user to pay again. Show a
                 "processing" state that resolves automatically (we poll). ── */
@@ -170,12 +177,9 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
             <Button stretched onClick={() => setSubOpen(true)}>
               {expired ? t('sub.renew') : t('sub.buy')}
             </Button>
-            <button
-              onClick={() => setKeyOpen(true)}
-              className="mt-4 text-[14px] font-medium text-accent active:opacity-70"
-            >
+            <Button variant="secondary" stretched className="mt-3" onClick={() => setKeyOpen(true)}>
               {t('sub.haveKey')}
-            </button>
+            </Button>
           </div>
         ) : (
           <>
@@ -227,7 +231,6 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu: () 
                       </span>
                     </div>
                   </div>
-                  <ChevronRight size={20} className="text-faint" />
                 </button>
               ))}
             </div>

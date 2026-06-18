@@ -63,6 +63,7 @@ func main() {
 	mux.Handle("POST /auth/token", tokenLimit(http.HandlerFunc(h.AuthTelegram)))
 	mux.HandleFunc("POST /internal/provision", h.ProvisionDevice)
 	mux.HandleFunc("GET /internal/user-lang", h.UserLang)
+	mux.HandleFunc("POST /internal/credit-subscription", h.CreditStars) // bot → credit a confirmed Stars payment
 
 	auth := middleware.Auth([]string{cfg.JWTSecret, cfg.JWTSecretPrev}, db)
 	mux.Handle("POST /auth/key", keyLimit(auth(http.HandlerFunc(h.ActivateKey))))
@@ -72,6 +73,7 @@ func main() {
 	// Subscriptions / payments
 	mux.Handle("GET /plans", auth(http.HandlerFunc(h.ListPlans)))
 	mux.Handle("POST /orders", auth(http.HandlerFunc(h.CreateOrder)))
+	mux.Handle("POST /stars/invoice", auth(http.HandlerFunc(h.StarsCreateInvoice)))
 	mux.Handle("GET /orders/pending", auth(http.HandlerFunc(h.GetPendingOrders)))
 	mux.Handle("GET /orders/history", auth(http.HandlerFunc(h.GetOrderHistory)))
 	mux.Handle("POST /orders/{id}/cancel", auth(http.HandlerFunc(h.CancelOrder)))
