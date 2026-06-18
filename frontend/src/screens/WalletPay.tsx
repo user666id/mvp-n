@@ -1,0 +1,116 @@
+import { useState } from 'react'
+import { TonConnectUIProvider, useTonConnectUI, useTonAddress } from '@tonconnect/ui-react'
+import { Address, beginCell, toNano } from '@ton/core'
+import { Button } from '../components/ui/Button'
+import { Wallet } from '../components/icons'
+import { useT } from '../lib/i18n'
+import type { Order } from '../api'
+
+// Note: Buffer (needed by @ton/core) is polyfilled globally at app boot in main.tsx,
+// before this lazy chunk loads.
+const MANIFEST = 'https://app.mvp-n.net/v2/tonconnect-manifest.json'
+// Official Tether USD₮ jetton master on TON (symbol USD₮, 6 decimals).
+const USDT_MASTER = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'
+const JETTON_TRANSFER_OP = 0x0f8a7ea5
+
+interface Props {
+  /** 'TON' = native GRAM, 'USDT_TON' = USD₮ jetton. */
+  asset: string
+  /** Disable the button (e.g. until the user accepts the immediate-start consent). */
+  disabled?: boolean
+  /** Create (or reuse) the order and return it — the parent owns order state. */
+  makeOrder: () => Promise<Order>
+  onConfirmed: () => void
+  onCancel: () => void
+}
+
+/** Resolve the owner's USD₮ jetton-wallet address (where a jetton transfer must
+ *  be sent from). The owner must hold USD₮ to pay, so this is present. */
+async function resolveJettonWallet(owner: string): Promise<string> {
+  const r = await fetch(`https://tonapi.io/v2/accounts/${owner}/jettons/${USDT_MASTER}`)
+  if (!r.ok) throw new Error('no-jetton-wallet')
+  const j = (await r.json()) as { wallet_address?: { address?: string } }
+  const addr = j.wallet_address?.address
+  if (!addr) throw new Error('no-jetton-wallet')
+  return addr
+}
+
+function PayInner({ asset, disabled, makeOrder, onConfirmed, onCancel }: Props) {
+  const { t } = useT()
+  const [tonConnectUI] = useTonConnectUI()
+  const address = useTonAddress() // friendly address, '' when not connected
+  const [busy, setBusy] = useState(false)
+
+  const isNative = asset === 'TON'
+  // Connect first whenever no wallet is linked: sendTransaction throws (no modal)
+  // when disconnected, and a jetton also needs the owner address up-front. Once
+  // connected, it's one tap to pay.
+  const needConnect = !address
+
+  const pay = async () => {
+    setBusy(true)
+    try {
+      const o = await makeOrder()
+      const validUntil = Math.floor(Date.now() / 1000) + 600 // 10 min to confirm
+      let message: { address: string; amount: string; payload?: string }
+
+      if (isNative) {
+        const nano = BigInt(Math.round(parseFloat(o.amount) * 1e9)).toString()
+        message = { address: o.address, amount: nano }
+      } else {
+        // USD₮ jetton transfer (TEP-74): send to the owner's jetton wallet, with
+        // ~0.05 TON gas; excess refunds to the owner. Matched by amount as usual.
+        const owner = address
+        const jettonWallet = await resolveJettonWallet(owner)
+        const units = BigInt(Math.round(parseFloat(o.amount) * 1e6)) // USD₮ has 6 decimals
+        const body = beginCell()
+          .storeUint(JETTON_TRANSFER_OP, 32)
+          .storeUint(0, 64) // query_id
+          .storeCoins(units) // jetton amount
+          .storeAddress(Address.parse(o.address)) // destination = our TON wallet
+          .storeAddress(Address.parse(owner)) // response_destination (gas refund)
+          .storeBit(false) // custom_payload: none
+          .storeCoins(1n) // forward_ton_amount (1 nanoton)
+          .storeBit(false) // forward_payload: empty, inline
+          .endCell()
+        message = {
+          address: jettonWallet,
+          amount: toNano('0.05').toString(),
+          payload: body.toBoc().toString('base64'),
+        }
+      }
+
+      await tonConnectUI.sendTransaction({ validUntil, messages: [message] })
+      onConfirmed()
+    } catch {
+      onCancel()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onClick = () => {
+    // Jetton needs an address before building the message → connect first.
+    if (needConnect) {
+      tonConnectUI.openModal()
+      return
+    }
+    pay()
+  }
+
+  return (
+    <Button onClick={onClick} loading={busy} disabled={disabled} stretched className="mt-4">
+      <Wallet size={19} /> {needConnect ? t('pay.connectWallet') : t('pay.payWallet')}
+    </Button>
+  )
+}
+
+/** Default export so it can be React.lazy()-imported — the ONLY module pulling in
+ *  @tonconnect/ui + @ton/core, so they land in a lazy chunk off the initial load. */
+export default function WalletPay(props: Props) {
+  return (
+    <TonConnectUIProvider manifestUrl={MANIFEST}>
+      <PayInner {...props} />
+    </TonConnectUIProvider>
+  )
+}
