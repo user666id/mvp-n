@@ -1,0 +1,11 @@
+[Unit]
+Description=mvp-n pull-based auto-deploy (fetch origin/main, rebuild changed services)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/mvpn
+ExecStart=/bin/bash /opt/mvpn/scripts/pull-deploy.sh
+# A full frontend rebuild can take a few minutes.
+TimeoutStartSec=900

@@ -1,0 +1,23 @@
+# Normalize line endings: store text as LF in the repo and check it out as LF
+# on every platform. Stops the recurring "LF will be replaced by CRLF" warnings
+# and prevents CRLF from sneaking into shell scripts / Go / source files.
+* text=auto eol=lf
+
+# Explicit LF for things that break with CRLF.
+*.sh   text eol=lf
+*.go   text eol=lf
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# Binary assets — never touch.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.ico  binary
+*.webp binary
+*.woff  binary
+*.woff2 binary
