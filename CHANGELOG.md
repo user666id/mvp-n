@@ -3,9 +3,106 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [1.9.0] — 2026-06-20
+
+A full design-system pass, a live GRAM price, admin-as-a-tab, smoother loading,
+and a code / VPS / repo cleanup.
+
+### Changed
+- **Unified design system.** One colour language across the app: **green** for
+  status/indicators (online, paid, recommended) + all charts; **orange** for
+  actions/promo (buttons, the slider toggle, discount badges); **accent-outline**
+  for selectors (language / theme / plan / payment / protocol); **neutral grey**
+  for info capsules; **orange text-links** (no border). Centred titles,
+  sentence-case labels, solid buttons.
+- **Subscription / payment polish.** Plans show their per-day saving up front and
+  prices render immediately in the chosen currency; official coin icons (GRAM,
+  USDT with a TON / TRC20 network badge, Stars); USDT picks its network from a
+  Fragment-style dropdown over the Buy button.
+- **Admin panel is a top-level tab** (like Configs / Settings) instead of an
+  overlay sheet; its drill-downs stay as ‹back› sheets.
+- **One static server-status dot** everywhere (no pulse, no checkmark); all charts
+  share the single green hue (multi-series area charts fill one envelope so the
+  overlap no longer darkens).
+- **Smoother loading** — content fades in after skeletons (configs, devices,
+  payment history, server stats).
+- Cleaner Settings / About — one "Account" group; removed the bottom version
+  badge, the device-limit hint, the About FAQ and the config-rename description.
+
+### Fixed
+- **Live GRAM/USD price.** The rate is warmed at boot and refreshed every 2 min
+  (`StartRateRefresher`) instead of lazily — GRAM prices are real from the first
+  request, not the baked fallback.
+
+### Removed (cleanup)
+- The dropped **beta UI** — all `IS_BETA` branches, the `BottomNav` component, the
+  beta card and sheet footers (`VITE_BETA` no longer exists).
+- **80 unused i18n keys** and the orphaned `Note` / `EmptyState` components.
+- Pruned **3.2 GB** of Docker build cache on the VPS; re-synced the public mirror
+  (scrubbed, leak-scan clean).
+
+### Polish (2026-06-22 → 06-23)
+
+- **Guided install, rebuilt.** "Choose an app" is now an inline guide: an **OS
+  dropdown** (iOS / Android / Windows / macOS / Linux, styled like the USDT-network
+  picker), and picking a launcher **swaps the whole pane** to a 3-step page —
+  Install → Add subscription → Connect — with store links and a one-tap "Add
+  subscription" deeplink (mobile) or copy-link (desktop). v2RayTun is App Store
+  **Global-only** (pulled from the RU store); v2RayTun & Happ gained Windows/macOS/
+  Linux; v2rayNG stays Android-only (`ConfigDetailSheet`).
+- **Subscription banner on the home screen.** With an active paid subscription,
+  Configs shows "Active until <date> · N days left" + a filled-orange **Renew**
+  pill (`ConfigsScreen`, `fmtSubDate`).
+- **TON wallet in the payment pane.** Connect / show (short address) / disconnect
+  at the top of the "Payment" pane (`WalletStatus`, lazy TON Connect). Not-connected
+  is the same capsule with a filled-orange **Connect** pill; **Disconnect** is red.
+  The session persists, so once linked a renewal is one tap.
+- **Fragment-style blue theme.** An optional 4th dark shade (Settings → App):
+  links `#60a6e2`, buttons `#2589db`, background `#1c1f24`, capsules `#2e3a48`
+  (`DarkShade += 'fragment'`; `telegram.ts`, `index.css`, `import.js`/`legal.js`).
+- **Circle coin icons.** One consistent family — GRAM (blue disc + diamond/sparkle),
+  USDT (teal disc + ₮, TON/TRC20 badge), Stars (gold disc + star) — `assets/coins/`.
+- **Payment history, Fragment-style.** Each row shows the amount with its coin
+  icon (`CurrencyIcon`) over the date, with the tx link bottom-left.
+- **Subscription richer for clients.** `connect` now reports the real `expire`
+  (from `paid_until`) in `Subscription-Userinfo`, base64-encodes the body (the
+  de-facto standard), and serves a placeholder to web-browser UAs (no device
+  provisioned for a browser probe).
+- **Static redirect page follows the theme.** `import.html` takes `?theme=` (like
+  the legal pages) so it matches the app even in an external browser.
+- **Bot.** The in-message launch button is a neutral **"Open"** (the green
+  `style:'success'` experiment was reverted). The chat **menu** button is left to
+  **BotFather** (Bot Settings → Menu Button) — the bot no longer sets it via the API
+  on each deploy, which overrode that config and still wouldn't render the web_app
+  label on every client. Commands are cleared so it stays a pure "Open", not a "Меню".
+- Smaller: collapse-gated config note, chart y-axis padding.
+
 ## [1.8.0] — 2026-06-18
 
-The 1.8 update is in progress (accumulating). So far:
+Telegram Stars payments, a one-screen payment flow, GDPR-aligned legal pages, and
+auto-update-on-open. Notable changes:
+
+### Infrastructure & tooling (2026-06-19)
+- **Release-gated deploy.** Auto-deploy is now gated on a dedicated **`release`**
+  branch instead of `main`: `scripts/pull-deploy.sh` does
+  `git fetch origin release` + `git reset --hard origin/release`. Committing/pushing
+  to `main` is safe (nothing deploys); production ships with
+  `git push origin main:release`. (`scripts/deploy.sh` header + docs updated.)
+- **Beta redesign at `/beta/`.** `scripts/deploy.sh` now builds the frontend **twice**:
+  prod → `/var/www/mini-app-f7/` (served at `/v2/`) and a BETA variant
+  (`VITE_BETA=1`, the bottom-tab-bar redesign) → `/var/www/mini-app-beta/` (served
+  at `/beta/`).
+- **Bot "Test" button.** When `TEST_MINI_APP_URL` is set, the bot adds a second
+  inline web_app **Test** button that opens the `/beta/` build; unset (the default)
+  hides it. The var is passed through by docker-compose.
+- **Automated public-mirror sync.** New `make mirror` / `make mirror-dry`
+  (`scripts/sync-mirror.sh`) rebuilds the public sanitized mirror from HEAD:
+  archive → scrub wallets/origin-IP → leak-scan gate → force-push to
+  `github.com/user666id/mvp-n`. Pushes only if the leak-scan is clean.
+- **CI is manual now.** All four GitHub workflows
+  (`.github/workflows/{build,lint,codeql,security}.yml`) are `on: workflow_dispatch`
+  — they no longer auto-run on push/PR (intentional, to stop failure emails). Run
+  them by hand from the Actions tab.
 
 ### Added
 - **Payment via Telegram Stars (#7).** The API mints an invoice link (`createInvoiceLink`,
@@ -445,6 +542,12 @@ Security and reliability hardening; repository cleanup.
   per-device provisioning, cron accounting of traffic and server metrics.
 - Docker Compose, an nginx SNI router, daily DB backups.
 
+[1.9.0]: https://github.com/user666id/vpn-project/releases/tag/v1.9.0
+[1.8.0]: https://github.com/user666id/vpn-project/releases/tag/v1.8.0
+[1.7.0]: https://github.com/user666id/vpn-project/releases/tag/v1.7.0
+[1.6.0]: https://github.com/user666id/vpn-project/releases/tag/v1.6.0
+[1.5.0]: https://github.com/user666id/vpn-project/releases/tag/v1.5.0
+[1.4.0]: https://github.com/user666id/vpn-project/releases/tag/v1.4.0
 [1.3.0]: https://github.com/user666id/vpn-project/releases/tag/v1.3.0
 [1.2.0]: https://github.com/user666id/vpn-project/releases/tag/v1.2.0
 [1.1.0]: https://github.com/user666id/vpn-project/releases/tag/v1.1.0

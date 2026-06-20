@@ -7,9 +7,12 @@ Technical details of the bot — [`bot/README.md`](../bot/README.md), of the fro
 ## Bot
 
 `@mvp_n_net_bot` is intentionally minimal: `/start` (or any text) → a short
-greeting with a single inline **web_app** button that opens the Mini App. It works
-only in private chats, over long polling. The greeting language is synced with the choice
-in the app (EN by default). Details — [`bot/README.md`](../bot/README.md).
+greeting with an inline **web_app** button that opens the Mini App. When the env var
+`TEST_MINI_APP_URL` is set, a second inline **Test** button is added that opens the
+beta build (the bottom-tab-bar redesign, served at `/beta/`); it stays hidden when
+the var is unset (the default). It works only in private chats, over long polling.
+The greeting language is synced with the choice in the app (EN by default).
+Details — [`bot/README.md`](../bot/README.md).
 
 ## Mini App navigation
 
@@ -49,7 +52,8 @@ renaming, block/unblock, deletion; stable numbering by date added.
 
 ## Admin panel (admins only)
 
-Accessed from "Settings". Sections:
+Accessed from the main menu (the left drawer, pinned at the bottom — admins only).
+Sections:
 
 - **Traffic** — a "total / today" card (the day boundary is 00:00 MSK).
 - **Profiles** — search, a profile card (Telegram ID, username, traffic), a list

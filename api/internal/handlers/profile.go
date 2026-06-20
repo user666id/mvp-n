@@ -15,22 +15,22 @@ import (
 
 // ProfileResponse — what /profile returns.
 type ProfileResponse struct {
-	ID           int64     `json:"id"`          // Telegram ID
-	InternalID   int       `json:"internal_id"` // 0001, 0002...
-	Username     string    `json:"username"`
-	FirstName    string    `json:"first_name"`
-	LastName     string    `json:"last_name"`
-	IsActive     bool      `json:"is_active"`
-	IsAdmin      bool      `json:"is_admin"`
-	IsBlocked    bool      `json:"is_blocked"`
-	CreatedAt    time.Time `json:"created_at"`
-	TrafficUsed  int64     `json:"traffic_used"`  // bytes
-	TrafficLimit int64     `json:"traffic_limit"` // 0 = unlimited
-	DevicesCount int       `json:"devices_count"`
-	ConfigsCount int       `json:"configs_count"`
-	DeviceLimit  int       `json:"device_limit"`         // 0 = unlimited
+	ID           int64      `json:"id"`          // Telegram ID
+	InternalID   int        `json:"internal_id"` // 0001, 0002...
+	Username     string     `json:"username"`
+	FirstName    string     `json:"first_name"`
+	LastName     string     `json:"last_name"`
+	IsActive     bool       `json:"is_active"`
+	IsAdmin      bool       `json:"is_admin"`
+	IsBlocked    bool       `json:"is_blocked"`
+	CreatedAt    time.Time  `json:"created_at"`
+	TrafficUsed  int64      `json:"traffic_used"`  // bytes
+	TrafficLimit int64      `json:"traffic_limit"` // 0 = unlimited
+	DevicesCount int        `json:"devices_count"`
+	ConfigsCount int        `json:"configs_count"`
+	DeviceLimit  int        `json:"device_limit"`         // 0 = unlimited
 	PaidUntil    *time.Time `json:"paid_until,omitempty"` // nil = no time limit (key/grandfathered)
-	IsExpired    bool      `json:"is_expired"`           // paid_until set and in the past
+	IsExpired    bool       `json:"is_expired"`           // paid_until set and in the past
 }
 
 // Profile returns the current user's full profile.
@@ -319,7 +319,9 @@ func (h *Handler) DeleteDevice(w http.ResponseWriter, r *http.Request) {
 // ResetSubscription wipes a user's VPN footprint (configs, devices, xray + AWG
 // peers). Exported so the expiry cron can reuse the exact same reset path that
 // the in-app "reset subscription" uses.
-func (h *Handler) ResetSubscription(ctx context.Context, uid int64) { h.resetUserSubscription(ctx, uid) }
+func (h *Handler) ResetSubscription(ctx context.Context, uid int64) {
+	h.resetUserSubscription(ctx, uid)
+}
 
 func (h *Handler) resetUserSubscription(ctx context.Context, uid int64) {
 	var internalID int

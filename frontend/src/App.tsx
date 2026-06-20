@@ -4,7 +4,7 @@ import { Drawer, type Tab } from './components/Drawer'
 import { AuthScreen } from './screens/AuthScreen'
 import { ConfigsScreen } from './screens/ConfigsScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
-import { AdminSheet } from './screens/AdminSheet'
+import { AdminScreen } from './screens/AdminSheet'
 import { Spinner } from './components/ui/Spinner'
 import { ApiError, authTelegram, clearToken, getProfile, getToken, setLanguage } from './api'
 import { notify } from './lib/telegram'
@@ -20,7 +20,6 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('configs')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [adminOpen, setAdminOpen] = useState(false)
 
   const handleLogin = async () => {
     setBusy(true)
@@ -68,7 +67,6 @@ export default function App() {
     clearToken()
     setTab('configs')
     setIsAdmin(false)
-    setAdminOpen(false)
     setError(null)
     setPhase('auth')
   }
@@ -86,25 +84,28 @@ export default function App() {
           {/* Keep all tabs MOUNTED and just toggle visibility, so switching tabs
               doesn't unmount + reload a screen from a blank skeleton every time.
               Each screen refreshes itself in the background when it becomes active. */}
-          <div className={tab === 'configs' ? undefined : 'hidden'}>
+          <div className={tab === 'configs' ? '' : 'hidden'}>
             <ConfigsScreen active={tab === 'configs'} onMenu={() => setDrawerOpen(true)} />
           </div>
-          <div className={tab === 'settings' ? undefined : 'hidden'}>
+          <div className={tab === 'settings' ? '' : 'hidden'}>
             <SettingsScreen
               active={tab === 'settings'}
               onLogout={handleLogout}
               onMenu={() => setDrawerOpen(true)}
             />
           </div>
+          {isAdmin && (
+            <div className={tab === 'admin' ? '' : 'hidden'}>
+              <AdminScreen active={tab === 'admin'} onMenu={() => setDrawerOpen(true)} />
+            </div>
+          )}
           <Drawer
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
             active={tab}
             onSelect={setTab}
             isAdmin={isAdmin}
-            onOpenAdmin={() => setAdminOpen(true)}
           />
-          {isAdmin && <AdminSheet open={adminOpen} onClose={() => setAdminOpen(false)} />}
         </>
       )}
     </ToastProvider>

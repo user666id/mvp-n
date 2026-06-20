@@ -43,13 +43,17 @@ func main() {
 	defer h.Xray.Close()
 
 	scheduler := cron.New(db, cfg.NetInterface, h.Xray)
-	scheduler.SetAwg(h.Awg)                        // account AmneziaWG peer traffic too
+	scheduler.SetAwg(h.Awg)                       // account AmneziaWG peer traffic too
 	scheduler.SetExpiryReset(h.ResetSubscription) // wipe VPN footprint on subscription expiry
 	scheduler.SetPaymentCheck(h.VerifyPayments)   // match on-chain payments → extend subscriptions
 	if err := scheduler.Start(ctx); err != nil {
 		log.Fatalf("cron: %v", err)
 	}
 	defer scheduler.Stop()
+
+	// Keep the live GRAM/USD rate warm (boot fetch + 2-min ticker) so GRAM prices
+	// are real from the very first request, not the cold-start fallback.
+	handlers.StartRateRefresher(ctx)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", h.Health)
@@ -63,7 +67,10 @@ func main() {
 	mux.Handle("POST /auth/token", tokenLimit(http.HandlerFunc(h.AuthTelegram)))
 	mux.HandleFunc("POST /internal/provision", h.ProvisionDevice)
 	mux.HandleFunc("GET /internal/user-lang", h.UserLang)
-	mux.HandleFunc("POST /internal/credit-subscription", h.CreditStars) // bot → credit a confirmed Stars payment
+	// Internal (token-gated) but still capped: a runaway/compromised bot loop
+	// can't hammer crediting. Generous vs. real volume, low enough to bound a flood.
+	creditLimit := middleware.RateLimit(120, 60)
+	mux.Handle("POST /internal/credit-subscription", creditLimit(http.HandlerFunc(h.CreditStars))) // bot → credit a confirmed Stars payment
 
 	auth := middleware.Auth([]string{cfg.JWTSecret, cfg.JWTSecretPrev}, db)
 	mux.Handle("POST /auth/key", keyLimit(auth(http.HandlerFunc(h.ActivateKey))))

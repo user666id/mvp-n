@@ -136,10 +136,13 @@ For a description of the fields, see [`api/README.md`](./api/README.md).
 ## Deploy
 
 Pull model: a systemd timer on the VPS polls GitHub every 2 min and, on a new commit
-to `main`, does `git reset --hard origin/main` +
+on the **`release`** branch, does `git reset --hard origin/release` +
 [`scripts/deploy.sh`](./scripts/deploy.sh), which rebuilds **only the changed**
 services (by diffing paths), reconciles the stack when compose changes, and syncs
 the built frontend. (Push deploy is impossible — the host's DDoS protection cuts off
 GitHub's CI runners.) xray/AmneziaWG/nginx live on the host and are installed once by
 the scripts in [`scripts/install`](./scripts/install). For details, see
 [`docs/deploy.md`](./docs/deploy.md).
+
+Committing/pushing to `main` is safe — nothing deploys; production ships only when
+the `release` branch advances (`git push origin main:release`).

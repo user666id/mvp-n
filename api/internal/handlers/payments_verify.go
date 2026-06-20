@@ -141,13 +141,17 @@ func fetchTONTransfers(ctx context.Context, wallet string) []transfer {
 			Actions []struct {
 				Type        string `json:"type"`
 				TonTransfer *struct {
-					Recipient struct{ Address string `json:"address"` } `json:"recipient"`
-					Amount    int64  `json:"amount"`
+					Recipient struct {
+						Address string `json:"address"`
+					} `json:"recipient"`
+					Amount int64 `json:"amount"`
 				} `json:"TonTransfer"`
 				JettonTransfer *struct {
-					Recipient struct{ Address string `json:"address"` } `json:"recipient"`
-					Amount    string `json:"amount"`
-					Jetton    struct {
+					Recipient struct {
+						Address string `json:"address"`
+					} `json:"recipient"`
+					Amount string `json:"amount"`
+					Jetton struct {
 						Symbol   string `json:"symbol"`
 						Decimals int    `json:"decimals"`
 					} `json:"jetton"`

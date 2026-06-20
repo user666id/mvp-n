@@ -13,11 +13,15 @@ Mini App. The bot is just the front door: it greets the user and hands them the
 ## What it does
 
 - **`/start` (or any plain text, treated as a restart)** → a short welcome
-  message with a single inline **web_app** button that opens the Mini App.
+  message with an inline **web_app** button that opens the Mini App. When the env
+  var `TEST_MINI_APP_URL` is set, a **second "Test" web_app button** is added that
+  opens the beta build (the bottom-tab-bar redesign, served at `/beta/`); it is
+  omitted when the var is unset (the default).
   ```
   mvp-n
 
   Press the button below to open.        [ Open console ]
+                                          [ Test ]          ← only if TEST_MINI_APP_URL is set
   ```
 - **Private chats only.** Handlers are mounted under `bot.chatType('private')`,
   so if the bot is added to a group or channel it stays silent — no console
@@ -68,9 +72,10 @@ the bot just uses `language_code` — so it degrades gracefully with no config.
 - **Bounded maps** — `langCache` and `lastConsoleMsg` are capped (LRU, 10 000
   entries) via `boundedSet`, so long-lived per-user/per-chat state can't grow
   without bound over the bot's lifetime.
-- **Startup** uses `drop_pending_updates: true` (skip the backlog queued while
-  the bot was down) and `allowed_updates: ['message']` (only fetch what we
-  handle) for lower startup lag and less wasted work.
+- **Startup** uses `drop_pending_updates: false` (process the backlog queued while
+  the bot was down — so payments aren't dropped on restart) and
+  `allowed_updates: ['message', 'pre_checkout_query']` (only fetch what we handle —
+  greetings plus Stars checkout) for less wasted work.
 - **Fail fast / shut down clean** — exits immediately if `BOT_TOKEN` is missing;
   handles `SIGINT`/`SIGTERM` so `docker stop` is graceful.
 
@@ -82,6 +87,7 @@ the bot just uses `language_code` — so it degrades gracefully with no config.
 |-----|----------|---------|
 | `BOT_TOKEN` | yes | Token from @BotFather — the **same** bot the API verifies `initData` against. |
 | `MINI_APP_URL` | — | Mini App URL; must match what nginx serves (default `https://app.mvp-n.net/v2/`). |
+| `TEST_MINI_APP_URL` | — | Beta build URL (the `/beta/` redesign). Set → adds a second inline **Test** button; unset (default) → no Test button. Passed through by docker-compose. |
 | `API_INTERNAL_URL` | — | Internal API base for the language lookup (compose: `http://api:8081`). Unset → skip lookup. |
 | `ADMIN_TOKEN` | — | Internal token for `/internal/user-lang` (compose: `${INTERNAL_TOKEN_BOT:-${CONNECT_ADMIN_TOKEN:-}}`). Unset → skip lookup. |
 

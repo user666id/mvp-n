@@ -33,11 +33,12 @@ const CANVAS_LIGHT = '#faf9f5'
 const DARK_CANVAS: Record<DarkShade, string> = {
   warm: '#20201e',
   black: '#000000',
+  fragment: '#1c1f24',
 }
 
 export type ThemePref = 'system' | 'light' | 'dark'
-/** Sub-choice for the dark theme: warm (default) or true black. */
-export type DarkShade = 'warm' | 'black'
+/** Sub-choice for the dark theme: warm (default), true black, or Fragment blue. */
+export type DarkShade = 'warm' | 'black' | 'fragment'
 
 /** User's theme choice; 'system' (default) follows the Telegram theme. */
 export function getTheme(): ThemePref {
@@ -54,7 +55,7 @@ export function setTheme(p: ThemePref) {
  *  A legacy 'neutral' value (removed) falls back to 'warm'. */
 export function getDarkShade(): DarkShade {
   const v = localStorage.getItem('mvpn_dark_shade')
-  return v === 'black' ? 'black' : 'warm'
+  return v === 'black' ? 'black' : v === 'fragment' ? 'fragment' : 'warm'
 }
 
 export function setDarkShade(s: DarkShade) {
@@ -70,8 +71,9 @@ export function isDarkActive(): boolean {
 }
 
 /** The effective page palette: 'light', or the dark shade ('warm' | 'black').
- *  Passed as ?theme= to the cross-origin legal pages so they match the in-app
- *  theme (the same-origin import page reads localStorage directly instead). */
+ *  Passed as ?theme= to the static pages (legal + the import/redirect page) so
+ *  they match the in-app theme even when opened in an external browser, where the
+ *  Mini App's localStorage isn't shared. */
 export function effectivePalette(): 'light' | DarkShade {
   return isDarkActive() ? getDarkShade() : 'light'
 }

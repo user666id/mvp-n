@@ -3,7 +3,7 @@
 > Lightweight short-link service for VPN clients. On every request it parses
 > the User-Agent → detects the device/client and updates `devices.last_seen`.
 
-**Port:** `3000` · **Language:** Go 1.22
+**Port:** `3000` · **Language:** Go 1.26
 
 ---
 

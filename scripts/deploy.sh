@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Deploy script — runs ON the VPS, invoked by scripts/pull-deploy.sh (the
-# systemd poll timer) after it has fetched + reset the repo to origin/main.
+# systemd poll timer) after it has fetched + reset the repo to origin/release.
 #
 # Rebuilds only the services whose files changed since $1 (the previous commit
 # sha), rebuilds the frontend if it changed, then health-checks.
@@ -46,7 +46,7 @@ fi
 if echo "$CHANGED" | grep -q '^frontend/'; then
   echo "==> Building frontend"
   docker run --rm -v "$PWD/frontend:/app" -w /app node:20-alpine \
-    sh -c "npm install --no-audit --no-fund && npm run build"
+    sh -c "npm ci --no-audit --no-fund && npm run build"
   # Sync everything EXCEPT hashed assets with --delete (refreshes index.html,
   # legal.js, etc. and prunes stale top-level files). Then add new hashed assets
   # WITHOUT --delete so old chunks survive a grace window: a client/edge/webview

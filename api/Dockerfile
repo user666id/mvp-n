@@ -13,8 +13,9 @@ RUN go mod download || true
 
 # Layer 2: source. This invalidates on any code change but go.mod cache remains.
 COPY . .
-RUN go mod tidy && \
-    CGO_ENABLED=0 GOOS=linux go build \
+# Build straight from the committed go.mod/go.sum (no `go mod tidy`) so the image
+# is reproducible and can't silently pull a different module set at build time.
+RUN CGO_ENABLED=0 GOOS=linux go build \
         -trimpath \
         -ldflags="-s -w -extldflags=-static" \
         -o /api .

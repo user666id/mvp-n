@@ -94,8 +94,9 @@ export async function request<T>(
   let res: Response
   try {
     res = await rawFetch(method, path, body, true)
-  } catch (e: any) {
-    const code = e?.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK'
+  } catch (e: unknown) {
+    const err = e as { name?: string; message?: string }
+    const code = err?.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK'
     const isGet = method.toUpperCase() === 'GET'
     // Retry transient failures before surfacing an error. GETs retry on any
     // transient blip; a non-idempotent write (e.g. POST /orders) retries ONLY on
@@ -106,7 +107,7 @@ export async function request<T>(
       await sleep(400 * (netTries + 1))
       return request<T>(method, path, body, retried, netTries + 1)
     }
-    throw new ApiError(code, e?.message || 'network error')
+    throw new ApiError(code, err?.message || 'network error')
   }
 
   // JWT expired/invalid → re-auth once and replay the request.

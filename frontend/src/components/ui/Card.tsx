@@ -1,6 +1,6 @@
 import React from 'react'
 
-/** A grouped section: optional uppercase header + footer hint around a card. */
+/** A grouped section: optional header + footer hint around a card. */
 export function Section({
   header,
   footer,
@@ -15,9 +15,7 @@ export function Section({
   return (
     <div className={'mb-5 ' + className}>
       {header && (
-        <div className="px-3 pb-2 text-[12px] font-semibold uppercase tracking-[0.07em] text-faint">
-          {header}
-        </div>
+        <div className="px-3 pb-2 text-[13px] font-semibold text-faint">{header}</div>
       )}
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
         {children}

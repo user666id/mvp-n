@@ -3,7 +3,7 @@
 > REST API for managing AmneziaWG peers. Runs alongside the `awg0` interface
 > on the host, adds/removes peers via the `awg` CLI, and serves a ready-to-use `.conf`.
 
-**Port:** `8080` · **Language:** Go 1.22 · **Network:** host (reads `awg0` directly)
+**Port:** `8080` · **Language:** Go 1.26 · **Network:** host (reads `awg0` directly)
 
 ---
 

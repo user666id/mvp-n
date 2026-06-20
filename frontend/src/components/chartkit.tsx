@@ -6,7 +6,7 @@ import { haptic, selection } from '../lib/telegram'
 // axis, tooltip card, drag crosshair, and haptics. The chart TYPE differs by
 // data nature; everything around it is unified here.
 
-export const CHART_PAD = { l: 40, r: 10, t: 14, b: 20 }
+export const CHART_PAD = { l: 46, r: 10, t: 14, b: 20 }
 
 /** Round up to a clean 1/2/2.5/5/10 ×10ⁿ ceiling for tidy axis headroom. */
 export function niceCeil(v: number): number {

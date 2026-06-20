@@ -4,6 +4,7 @@ import { Spinner } from '../components/ui/Spinner'
 import { LoadError } from '../components/ui/LoadError'
 import { AreaChart } from '../components/Chart'
 import { Globe, Clock, Monitor } from '../components/icons'
+import { StatusDot } from '../components/StatusDot'
 import { getServerStats, type ServerStats } from '../api'
 import { bytesRate } from '../lib/format'
 import { useT } from '../lib/i18n'
@@ -43,7 +44,9 @@ export function ServerStatsSheet({
           <Spinner size={28} />
         </div>
       ) : (
-        <StatsBody stats={stats} />
+        <div className="animate-fade">
+          <StatsBody stats={stats} />
+        </div>
       )}
     </Sheet>
   )
@@ -51,29 +54,16 @@ export function ServerStatsSheet({
 
 function StatsBody({ stats }: { stats: ServerStats }) {
   const { t, lang } = useT()
-  // CPU / RAM in green; network in amber-yellow (matching the admin traffic bars).
+  // All charts share one colour — the app's green "positive data" hue.
   const green = 'rgb(var(--c-success))'
-  const yellow = 'rgb(var(--c-chart-ram))'
 
   return (
     <>
       <div className="mb-3 flex items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3.5">
-        {stats.online ? (
-          <>
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
-            </span>
-            <span className="text-[16px] font-medium text-success">{t('stats.online')}</span>
-          </>
-        ) : (
-          <>
-            <span className="h-2.5 w-2.5 rounded-full" style={{ background: 'rgb(var(--c-danger))' }} />
-            <span className="text-[16px] font-medium" style={{ color: 'rgb(var(--c-danger))' }}>
-              {t('stats.offline')}
-            </span>
-          </>
-        )}
+        <StatusDot ok={stats.online} className="h-2.5 w-2.5" />
+        <span className={'text-[16px] font-medium ' + (stats.online ? 'text-success' : 'text-danger')}>
+          {stats.online ? t('stats.online') : t('stats.offline')}
+        </span>
       </div>
 
       <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-surface">
@@ -106,8 +96,8 @@ function StatsBody({ stats }: { stats: ServerStats }) {
         <AreaChart
           timestamps={stats.timestamps}
           series={[
-            { values: stats.net_out, color: yellow, tag: '↑' },
-            { values: stats.net_in, color: yellow, tag: '↓' },
+            { values: stats.net_out, color: green, tag: '↑' },
+            { values: stats.net_in, color: green, tag: '↓' },
           ]}
           format={(v) => bytesRate(v, lang)}
         />

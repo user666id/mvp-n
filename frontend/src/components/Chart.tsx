@@ -73,6 +73,10 @@ export function AreaChart({ timestamps, series, height = 160, format, axisFormat
   }
   const areaFor = (vals: number[]) =>
     pathFor(vals) + `L${xAt(n - 1)} ${PAD.t + innerH}L${xAt(0)} ${PAD.t + innerH}Z`
+  // One fill = the per-x max across series (envelope). Multiple same-colour series
+  // (e.g. network ↑/↓) then share a single translucent fill instead of stacking
+  // into a darker green than the single-series charts (CPU / RAM).
+  const envelopeVals = timestamps.map((_, i) => Math.max(0, ...series.map((s) => s.values[i] ?? 0)))
 
   const onMove = (clientX: number, rectLeft: number) => {
     const x = clientX - rectLeft
@@ -143,11 +147,9 @@ export function AreaChart({ timestamps, series, height = 160, format, axisFormat
           </g>
         ))}
 
+        <path d={areaFor(envelopeVals)} fill="url(#grad0)" />
         {series.map((s, i) => (
-          <g key={i}>
-            <path d={areaFor(s.values)} fill={`url(#grad${i})`} />
-            <path d={pathFor(s.values)} fill="none" stroke={s.color} strokeWidth="2" />
-          </g>
+          <path key={i} d={pathFor(s.values)} fill="none" stroke={s.color} strokeWidth="2" />
         ))}
 
         {/* drag crosshair + dots (one per series) */}

@@ -9,8 +9,8 @@ COPY go.sum* ./
 RUN go mod download || true
 
 COPY . .
-RUN go mod tidy && \
-    CGO_ENABLED=0 GOOS=linux go build \
+# Reproducible build from committed go.mod/go.sum (no `go mod tidy`).
+RUN CGO_ENABLED=0 GOOS=linux go build \
         -trimpath -ldflags="-s -w" -o /connect .
 
 FROM alpine:3.19

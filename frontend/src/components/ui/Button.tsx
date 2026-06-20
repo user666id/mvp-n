@@ -10,10 +10,13 @@ interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  // TEST: all actions are clay OUTLINE buttons (like the "Install in app" button).
-  // primary = full-strength clay border; secondary = lighter; danger = red outline.
-  primary: 'bg-transparent text-accent border border-accent active:bg-accent-soft',
-  secondary: 'bg-transparent text-accent border border-accent/40 active:bg-accent-soft',
+  // Single source of truth for button hierarchy:
+  //  primary   = solid clay CTA (matches the Create FAB / pay buttons)
+  //  secondary = solid clay, no shadow
+  //  ghost     = text-only clay (borderless link)
+  //  danger    = red outline
+  primary: 'bg-accent text-white shadow-btn active:bg-accent-hover',
+  secondary: 'bg-accent text-white active:bg-accent-hover',
   ghost: 'bg-transparent text-accent active:bg-accent-soft',
   danger: 'bg-transparent text-danger border border-danger/35 active:bg-danger/10',
 }

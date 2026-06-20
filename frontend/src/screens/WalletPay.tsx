@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { TonConnectUIProvider, useTonConnectUI, useTonAddress } from '@tonconnect/ui-react'
 import { Address, beginCell, toNano } from '@ton/core'
 import { Button } from '../components/ui/Button'
-import { Wallet } from '../components/icons'
 import { useT } from '../lib/i18n'
 import type { Order } from '../api'
 
@@ -20,6 +19,11 @@ interface Props {
   makeOrder: () => Promise<Order>
   onConfirmed: () => void
   onCancel: () => void
+  /** Override the button label (else "Connect wallet" / "Pay in wallet"). */
+  label?: string
+  /** Visual emphasis + extra classes — the parent owns hierarchy/spacing. */
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+  className?: string
 }
 
 /** Resolve the owner's USD₮ jetton-wallet address (where a jetton transfer must
@@ -43,7 +47,7 @@ async function resolveJettonWallet(owner: string): Promise<string> {
   return addr
 }
 
-function PayInner({ asset, makeOrder, onConfirmed, onCancel }: Props) {
+function PayInner({ asset, makeOrder, onConfirmed, onCancel, label, variant, className }: Props) {
   const { t } = useT()
   const [tonConnectUI] = useTonConnectUI()
   const address = useTonAddress() // friendly address, '' when not connected
@@ -107,8 +111,8 @@ function PayInner({ asset, makeOrder, onConfirmed, onCancel }: Props) {
   }
 
   return (
-    <Button onClick={onClick} loading={busy} stretched>
-      <Wallet size={19} /> {needConnect ? t('pay.connectWallet') : t('pay.payWallet')}
+    <Button onClick={onClick} loading={busy} variant={variant} className={className} stretched>
+      {label ?? (needConnect ? t('pay.connectWallet') : t('pay.payWallet'))}
     </Button>
   )
 }

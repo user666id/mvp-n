@@ -8,10 +8,9 @@ import { Segmented } from '../components/ui/Segmented'
 import { Button } from '../components/ui/Button'
 import { Sheet } from '../components/ui/Sheet'
 import { Spinner } from '../components/ui/Spinner'
-import { Avatar } from '../components/ui/Avatar'
 import { useToast } from '../components/ui/Toast'
 import {
-  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, Star, Vibrate,
+  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, User, Dollar, ChartLine, Vibrate,
 } from '../components/icons'
 import { ProfileDetails } from '../components/ProfileDetails'
 import { DevicesSheet } from './DevicesSheet'
@@ -21,7 +20,7 @@ import {
   confirmDialog, notify, hapticsEnabled, getTheme, setTheme, getDarkShade, setDarkShade,
   isDarkActive, type ThemePref, type DarkShade,
 } from '../lib/telegram'
-import { padId, formatBytes, plural } from '../lib/format'
+import { plural } from '../lib/format'
 import { useT } from '../lib/i18n'
 import { subLabel } from '../lib/subscription'
 import {
@@ -86,7 +85,7 @@ export function SettingsScreen({
 }: {
   active: boolean
   onLogout: () => void
-  onMenu: () => void
+  onMenu?: () => void
 }) {
   const { t, lang, setLang } = useT()
   const toast = useToast()
@@ -97,6 +96,7 @@ export function SettingsScreen({
   const [subOpen, setSubOpen] = useState(false)
   const [subscriptionOpen, setSubscriptionOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
+  const [usageOpen, setUsageOpen] = useState(false)
   const [haptics, setHaptics] = useState(hapticsEnabled())
   const [theme, setThemeState] = useState<ThemePref>(getTheme())
   const [shade, setShadeState] = useState<DarkShade>(getDarkShade())
@@ -214,7 +214,7 @@ export function SettingsScreen({
           <button
             onClick={() => setAboutOpen(true)}
             aria-label={t('settings.about')}
-            className="grid h-10 w-10 place-items-center rounded-full text-muted active:bg-surface-sunken"
+            className="-mr-1 grid h-11 w-11 place-items-center rounded-full text-muted active:bg-surface-sunken"
           >
             <Info size={22} />
           </button>
@@ -222,42 +222,26 @@ export function SettingsScreen({
       />
 
       <div className="px-4">
-        {/* profile — tap opens the account sheet (delete account lives there) */}
-        <Section>
-          <button
-            onClick={() => profile && setProfileOpen(true)}
-            className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-surface-sunken"
-          >
-            <Avatar name={profile?.first_name} fallback={profile?.username} size={48} />
-            <div className="min-w-0 flex-1">
-              {profile ? (
-                <>
-                  <div className="text-[16px] font-semibold text-ink">id{profile.id}</div>
-                  <div className="text-[13px] text-muted">
-                    {t('settings.internalId')}: {padId(profile.internal_id)}
-                    {profile.is_admin ? ` · ${t('settings.admin')}` : ''}
-                  </div>
-                  <div className="text-[13px] text-muted">
-                    {t('settings.used')}: {formatBytes(profile.traffic_used, lang)}
-                  </div>
-                </>
-              ) : (
-                <Spinner size={18} />
-              )}
-            </div>
-            {profile && <ChevronRight size={20} className="shrink-0 text-faint" />}
-          </button>
-        </Section>
-
-        {/* Admin panel moved to the main menu (drawer) — see App.tsx + Drawer. */}
-
-        {/* Subscription + VPN connection — one group */}
-        <Section header={t('settings.subscriptions')}>
+        {/* Account — profile, billing, usage, devices, limit, reset (Claude style:
+            the profile is a single row, not a big card; all in one group) */}
+        <Section header={t('settings.account')}>
           <Cell
-            before={<Star size={20} />}
+            before={<User size={20} />}
+            after={<ChevronRight size={20} className="text-faint" />}
+            title={t('settings.profile')}
+            onClick={() => profile && setProfileOpen(true)}
+          />
+          <Cell
+            before={<Dollar size={20} />}
             after={<ValueChevron value={profile ? subLabel(profile, t, lang).text : ''} />}
             title={t('sub.status')}
             onClick={() => profile && setSubscriptionOpen(true)}
+          />
+          <Cell
+            before={<ChartLine size={20} />}
+            after={<ChevronRight size={20} className="text-faint" />}
+            title={t('settings.usage')}
+            onClick={() => setUsageOpen(true)}
           />
           <Cell
             before={<Phone size={20} />}
@@ -350,6 +334,7 @@ export function SettingsScreen({
                 [
                   ['warm', t('settings.shadeWarm'), '#20201E', '#191917'],
                   ['black', t('settings.shadeBlack'), '#000000', '#0E0E0E'],
+                  ['fragment', t('settings.shadeFragment'), '#1C1F24', '#2E3A48'],
                 ] as const
               ).map(([val, label, bg, card]) => (
                 <button
@@ -398,12 +383,12 @@ export function SettingsScreen({
       </div>
 
       {/* account sheet — details + delete account (Claude: lives under the profile) */}
-      <Sheet open={profileOpen} onClose={() => setProfileOpen(false)} title={t('settings.account')}>
+      <Sheet open={profileOpen} onClose={() => setProfileOpen(false)} title={t('settings.profile')}>
         {profile && (
           <>
             <ProfileDetails p={profile} />
 
-            <Section header={t('settings.danger')}>
+            <Section>
               <Cell
                 before={<Trash size={20} />}
                 title={t('settings.deleteAccount')}
@@ -419,11 +404,12 @@ export function SettingsScreen({
       <DevicesSheet open={devicesOpen} onClose={() => setDevicesOpen(false)} onChanged={load} />
 
       {/* subscription settings */}
-      <Sheet open={subOpen} onClose={() => setSubOpen(false)} title={t('settings.subSettings')}>
-        <p className="mb-4 px-1 text-[13.5px] leading-snug text-muted">
-          {t('settings.subSettingsHint')}
-        </p>
-        <label className="px-1 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
+      <Sheet
+        open={subOpen}
+        onClose={() => setSubOpen(false)}
+        title={t('settings.subSettings')}
+      >
+        <label className="px-1 text-[12px] font-medium text-faint">
           {t('settings.deviceLimit')}
         </label>
         <input
@@ -448,6 +434,11 @@ export function SettingsScreen({
       />
 
       <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
+
+      {/* Usage — placeholder for now, to be filled in later */}
+      <Sheet open={usageOpen} onClose={() => setUsageOpen(false)} title={t('settings.usage')}>
+        <div className="py-16 text-center text-[14px] text-muted">{t('settings.usageSoon')}</div>
+      </Sheet>
 
 
       {busy && (

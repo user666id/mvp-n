@@ -134,7 +134,7 @@ export function BarChart({ data, height = 168, format }: Props) {
               width={barW}
               height={d.value > 0 ? h : 1}
               rx={Math.min(5, barW / 2)}
-              fill="rgb(var(--c-chart-ram))"
+              fill="rgb(var(--c-success))"
               fillOpacity={isActive ? 1 : isToday ? 0.45 : 0.85}
             />
           )
@@ -147,7 +147,7 @@ export function BarChart({ data, height = 168, format }: Props) {
             top={PAD.t}
             height={innerH}
             line={false}
-            dots={data[active].value > 0 ? [{ cy: yAt(data[active].value), color: 'rgb(var(--c-chart-ram))' }] : []}
+            dots={data[active].value > 0 ? [{ cy: yAt(data[active].value), color: 'rgb(var(--c-success))' }] : []}
           />
         )}
 
@@ -171,7 +171,7 @@ export function BarChart({ data, height = 168, format }: Props) {
           x={xCenter(active)}
           W={W}
           top={fmtDay(data[active].day)}
-          lines={[{ text: format(data[active].value), color: 'rgb(var(--c-chart-ram))' }]}
+          lines={[{ text: format(data[active].value), color: 'rgb(var(--c-success))' }]}
         />
       )}
     </div>

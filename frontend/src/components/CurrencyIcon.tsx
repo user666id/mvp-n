@@ -1,46 +1,27 @@
 import gramUrl from '../assets/coins/gram.svg'
 import starsUrl from '../assets/coins/stars.svg'
-import tonUrl from '../assets/coins/ton.svg'
 import usdtUrl from '../assets/coins/usdt.svg'
-import tronUrl from '../assets/coins/tron.svg'
+import usdtTonUrl from '../assets/coins/usdt-ton.svg'
+import usdtTronUrl from '../assets/coins/usdt-tron.svg'
 
 /**
- * Brand coin icons for the payment currency picker — bundled SVG files (pass the
- * Mini App CSP `img-src`).
- *  - GRAM: the official post-rebrand mark (ton.org brand assets — blue shield +
- *    white sparkle/gem).
- *  - USDT: the Tether disc + a small network badge — TON diamond for USDT-TON,
- *    TRON mark for USDT-TRC20.
- *  - Stars: the gold Telegram Stars star (official telegram-tt star geometry in
- *    the Stars gold palette).
+ * Brand coin icons for the payment currency picker (Fragment-style rounded
+ * diamonds) — bundled SVG files so they pass the Mini App CSP `img-src`.
+ *  - GRAM (TON): TON-blue diamond + white sparkle.
+ *  - USDT: teal Tether diamond. The network variants add a small corner badge —
+ *    a TON-blue crystal (USDT_TON) or a TRON-red mark (USDT_TRC20). Plain 'USDT'
+ *    (the grouped chip) shows the bare gem.
+ *  - Stars: the gold Telegram Stars star.
  */
+const SRC: Record<string, string> = {
+  TON: gramUrl,
+  STARS: starsUrl,
+  USDT_TON: usdtTonUrl,
+  USDT_TRC20: usdtTronUrl,
+}
+
 export function CurrencyIcon({ asset, size = 30 }: { asset: string; size?: number }) {
-  if (asset === 'TON') {
-    return <img src={gramUrl} width={size} height={size} alt="GRAM" className="block" />
-  }
-  if (asset === 'STARS') {
-    return (
-      <img
-        src={starsUrl}
-        width={size}
-        height={size}
-        alt="Telegram Stars"
-        className="block object-contain"
-      />
-    )
-  }
-  const badge = asset === 'USDT_TRC20' ? tronUrl : tonUrl
-  const b = Math.round(size * 0.46)
-  return (
-    <span className="relative inline-block" style={{ width: size, height: size }}>
-      <img src={usdtUrl} width={size} height={size} alt="USDT" className="block" />
-      {/* network badge — a ring in the surface colour separates it from the coin */}
-      <span
-        className="absolute grid place-items-center rounded-full bg-surface"
-        style={{ right: -2, bottom: -2, padding: 1.5 }}
-      >
-        <img src={badge} width={b} height={b} alt="" className="block rounded-full" />
-      </span>
-    </span>
-  )
+  const src = SRC[asset] ?? usdtUrl // plain 'USDT' / unknown → bare teal gem
+  const alt = asset === 'TON' ? 'GRAM' : asset === 'STARS' ? 'Telegram Stars' : 'USDT'
+  return <img src={src} width={size} height={size} alt={alt} className="block object-contain" />
 }

@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button'
 import { Spinner } from '../components/ui/Spinner'
 import { Qr } from '../components/Qr'
 import { CurrencyIcon } from '../components/CurrencyIcon'
-import { Check, Copy, QrCode, ChevronDown, Wallet } from '../components/icons'
+import { Check, Copy } from '../components/icons'
 import { useToast } from '../components/ui/Toast'
 import { copyText } from '../lib/clipboard'
 import { notify, confirmDialog, openInvoice } from '../lib/telegram'
@@ -53,8 +53,9 @@ export function SubscribeSheet({
   const [step, setStep] = useState<Step>('select')
   const [order, setOrder] = useState<Order | null>(null)
   const [pending, setPending] = useState<Order[]>([])
-  const [pickerOpen, setPickerOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [usdtMenuOpen, setUsdtMenuOpen] = useState(false)
+  const [usdtNetId, setUsdtNetId] = useState('') // remembered USDT network (persists across method switches)
   const poll = useRef<number | undefined>(undefined)
 
   const loadPending = () =>
@@ -67,9 +68,10 @@ export function SubscribeSheet({
     setStep('select')
     setOrder(null)
     setPending([])
-    setPickerOpen(false)
     setDays(7) // default to the first plan (7 days)
-    setAsset('') // no method preselected — user picks one, then prices appear
+    setAsset('') // no method preselected — Buy stays disabled until one is picked
+    setUsdtMenuOpen(false)
+    setUsdtNetId('')
     getPlans()
       .then((r) => {
         setPlans(r.plans)
@@ -131,21 +133,56 @@ export function SubscribeSheet({
   const cur = assets.find((a) => a.id === asset)
   const label = cur?.label ?? asset
   const network = cur?.network ?? 'TON'
-  // Prices are pegged to USD. USDT is 1:1; GRAM is converted at the live rate
-  // (approximate here — the exact amount is locked when the order is created).
-  const isGram = asset === 'TON'
   const isStars = asset === 'STARS'
+  const isUsdt = asset.startsWith('USDT_')
   // TON-network assets can pay via TON Connect (native GRAM or USD₮ jetton);
   // USDT-TRC20 is TRON, so it stays manual-only.
   const isTonNet = asset === 'TON' || asset === 'USDT_TON'
-  const priceNum = (p: Plan) => (isGram ? (gramUsd > 0 ? p.usd / gramUsd : 0) : p.usd)
+  // The method starts unpicked (asset === '') so the Buy button is disabled until
+  // chosen — but prices still render from the start, defaulting to GRAM. The card
+  // amount currency follows `displayAsset`, which switches once a method is set.
+  const displayAsset = asset || 'TON'
+  const dIsGram = displayAsset === 'TON'
+  const dIsStars = displayAsset === 'STARS'
+  // Prices are pegged to USD. USDT is 1:1; GRAM is converted at the live rate
+  // (approximate here — the exact amount is locked when the order is created).
+  const priceNum = (p: Plan) => (dIsGram ? (gramUsd > 0 ? p.usd / gramUsd : 0) : p.usd)
   const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2))
-  // Stars: the integer Star count for the plan; otherwise the per-asset amount.
-  const priceStr = (p: Plan) =>
-    isStars ? `${starsByDays[p.days] ?? '—'} ⭐` : `${fmtNum(priceNum(p))} ${label}`
+  // Amount shown next to the coin icon (Stars = integer count, else per-asset).
+  const priceMain = (p: Plan) => (dIsStars ? String(starsByDays[p.days] ?? '—') : fmtNum(priceNum(p)))
+  // Longer plans are cheaper per day — show the saving vs the priciest (shortest) plan.
+  const perDay = (p: Plan) => (p.days > 0 ? p.usd / p.days : 0)
+  const basePerDay = plans.length ? Math.max(...plans.map(perDay)) : 0
+  const discountPct = (p: Plan) => (basePerDay > 0 ? Math.round((1 - perDay(p) / basePerDay) * 100) : 0)
   const dayName = (d: number) =>
     ({ 7: t('pay.d7'), 30: t('pay.d30'), 90: t('pay.d90'), 365: t('pay.d365') } as Record<number, string>)[d] ||
     String(d)
+
+  // Payment-method chips (Fragment layout: icon left, 3 across): GRAM, a single
+  // grouped USDT (its network — TON / TRC20 — is chosen just below), and Stars.
+  const usdts = assets.filter((a) => a.id.startsWith('USDT_'))
+  // Remember the chosen USDT network so it persists when switching methods away
+  // and back — the chip keeps showing e.g. "USDT TON", not a bare "USDT".
+  const usdtNetLabel = usdtNetId ? assets.find((a) => a.id === usdtNetId)?.network ?? '' : ''
+  type Chip = { key: string; label: string; iconId: string; net: string; group?: boolean; targetId?: string }
+  const gramAsset = assets.find((a) => a.id === 'TON')
+  const starsAsset = assets.find((a) => a.id === 'STARS')
+  const methodChips: Chip[] = []
+  if (gramAsset) methodChips.push({ key: 'TON', label: gramAsset.label, iconId: 'TON', net: gramAsset.network, targetId: 'TON' })
+  if (usdts.length) methodChips.push({ key: 'USDT', label: 'USDT', iconId: 'USDT', net: usdtNetLabel, group: true })
+  if (starsAsset) methodChips.push({ key: 'STARS', label: starsAsset.label, iconId: 'STARS', net: '', targetId: 'STARS' })
+  const selectMethod = (m: Chip) => {
+    if (m.group) {
+      const id = usdtNetId || usdts.find((u) => u.network === 'TON')?.id || usdts[0]?.id || ''
+      setUsdtNetId(id)
+      setAsset(id)
+    } else if (m.targetId) {
+      setAsset(m.targetId)
+    }
+  }
+  const chipCls = (on: boolean) =>
+    'flex w-full items-center gap-2 rounded-2xl border px-3 py-3 text-left transition-colors ' +
+    (on ? 'border-accent bg-surface' : 'border-border bg-surface active:bg-surface-sunken')
 
   const startPay = async () => {
     setBusy(true)
@@ -244,7 +281,7 @@ export function SubscribeSheet({
         <>
           {pending.length > 0 && (
             <div className="mb-5">
-              <div className="mb-2 px-1 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
+              <div className="mb-2 px-1 text-[13px] font-semibold text-faint">
                 {t('pay.resumeTitle')}
               </div>
               <div className="overflow-hidden rounded-2xl border border-border bg-surface">
@@ -280,135 +317,172 @@ export function SubscribeSheet({
             </div>
           )}
 
-          <div className="mb-2 px-1 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
-            {t('pay.method')}
-          </div>
-          {/* Method dropdown — the list unfolds from the row itself (anchored
-              overlay), not a separate block that pushes content down. */}
-          <div className="relative mb-5">
-            {/* Backdrop: tap outside closes the dropdown. */}
-            {pickerOpen && (
-              <button
-                type="button"
-                aria-label={t('common.close')}
-                onClick={() => setPickerOpen(false)}
-                className="fixed inset-0 z-10 cursor-default"
-              />
-            )}
-            <button
-              onClick={() => setPickerOpen((v) => !v)}
-              className={
-                'relative z-20 flex w-full items-center gap-3 border bg-surface px-4 py-3.5 text-left transition-colors active:bg-surface-sunken ' +
-                (pickerOpen ? 'rounded-t-2xl border-accent' : 'rounded-2xl border-border')
-              }
-            >
-              {asset ? (
-                <CurrencyIcon asset={asset} size={28} />
-              ) : (
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-sunken text-faint">
-                  <Wallet size={16} />
-                </span>
-              )}
-              <div className="min-w-0 flex-1">
-                {asset ? (
-                  <>
-                    <div className="text-[15px] font-medium text-ink">{cur?.label}</div>
-                    <div className="text-[12px] text-faint">{cur?.network}</div>
-                  </>
-                ) : (
-                  <div className="text-[15px] font-medium text-muted">{t('pay.choose')}</div>
-                )}
-              </div>
-              <ChevronDown
-                size={20}
-                className={'shrink-0 text-faint transition-transform ' + (pickerOpen ? 'rotate-180' : '')}
-              />
-            </button>
-            {pickerOpen && (
-              <div className="absolute inset-x-0 top-full z-20 overflow-hidden rounded-b-2xl border border-t-0 border-accent bg-surface shadow-xl shadow-black/15">
-                {assets.map((a, i) => (
-                  <button
-                    key={a.id}
-                    onClick={() => {
-                      setAsset(a.id)
-                      setPickerOpen(false)
-                    }}
+          {/* Plan first (Fragment order: packages, then payment method, then Buy).
+              Each card: radio + name + orange saving badge, and on the right the
+              amount (coin icon + value) with the USD price in grey beside it. */}
+          <div className="mb-2 px-1 text-[13px] font-semibold text-faint">{t('pay.plan')}</div>
+          <div className="mb-5 flex flex-col gap-2">
+            {plans.map((p) => {
+              const selected = days === p.days
+              const disc = discountPct(p)
+              return (
+                <button
+                  key={p.days}
+                  onClick={() => setDays(p.days)}
+                  className={
+                    'flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors ' +
+                    (selected
+                      ? 'border-accent bg-surface'
+                      : 'border-border bg-surface active:bg-surface-sunken')
+                  }
+                >
+                  <span
                     className={
-                      'flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-sunken ' +
-                      (asset === a.id ? 'bg-surface-sunken ' : '') +
-                      (i === assets.length - 1 ? '' : 'border-b border-border')
+                      'grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ' +
+                      (selected ? 'border-accent' : 'border-border')
                     }
                   >
-                    <CurrencyIcon asset={a.id} size={24} />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[14px] font-medium text-ink">{a.label}</div>
-                      <div className="text-[11px] text-faint">{a.network}</div>
+                    {selected && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
+                  </span>
+                  <span className="text-[15px] font-medium text-ink">{dayName(p.days)}</span>
+                  {disc > 0 && (
+                    <span className="rounded-md bg-accent px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white">
+                      −{disc}%
+                    </span>
+                  )}
+                  {/* price row: coin icon + amount, then USD in grey. tabular-nums
+                      + fixed-width columns keep amounts and USD aligned across
+                      cards (same treatment for GRAM, USDT and Stars). */}
+                  <span className="ml-auto flex items-center gap-2.5 tabular-nums">
+                    <span className="flex items-center gap-1.5 text-[15px] font-medium text-ink">
+                      <CurrencyIcon asset={displayAsset} size={16} />
+                      {priceMain(p)}
+                    </span>
+                    <span className="w-12 text-right text-[13px] text-faint">${fmtNum(p.usd)}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Payment method — a horizontal row of chips (icon left). USDT groups
+              both networks under one chip; the network is chosen just below. */}
+          <div className="mb-2 px-1 text-[13px] font-semibold text-faint">{t('pay.method')}</div>
+          <div className="mb-5">
+            <div className="grid grid-cols-3 gap-2">
+              {methodChips.map((m) => {
+                const active = m.group ? isUsdt : asset === m.targetId
+                if (m.group) {
+                  // USDT groups its networks under one chip; tapping it opens a
+                  // dropdown below the chip, over the Buy button (Fragment style).
+                  return (
+                    <div key={m.key} className="relative">
+                      <button
+                        onClick={() => {
+                          selectMethod(m)
+                          setUsdtMenuOpen((o) => !o)
+                        }}
+                        className={chipCls(active)}
+                      >
+                        <CurrencyIcon asset={m.iconId} size={22} />
+                        <span className="flex min-w-0 items-baseline gap-1">
+                          <span className="truncate text-[14px] font-medium leading-tight text-ink">{m.label}</span>
+                          {m.net && <span className="text-[11px] leading-tight text-muted">{m.net}</span>}
+                        </span>
+                      </button>
+                      {usdtMenuOpen && usdts.length > 1 && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setUsdtMenuOpen(false)} />
+                          <div className="absolute left-1/2 top-[calc(100%+8px)] z-40 w-[200px] -translate-x-1/2 rounded-2xl border border-border bg-surface p-1.5 shadow-sheet">
+                            {usdts.map((u) => (
+                              <button
+                                key={u.id}
+                                onClick={() => {
+                                  setAsset(u.id)
+                                  setUsdtNetId(u.id)
+                                  setUsdtMenuOpen(false)
+                                }}
+                                className={
+                                  'flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors ' +
+                                  (asset === u.id ? 'bg-surface-sunken' : 'active:bg-surface-sunken')
+                                }
+                              >
+                                <CurrencyIcon asset={u.id} size={24} />
+                                <span className="flex items-baseline gap-1.5">
+                                  <span className="text-[15px] font-medium text-ink">USDT</span>
+                                  <span className="text-[12px] uppercase tracking-wide text-muted">{u.network}</span>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
-                    {asset === a.id && <Check size={18} className="shrink-0 text-accent" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="mb-2 px-1 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
-            {t('pay.plan')}
-          </div>
-          <div className="mb-5 flex flex-col gap-2">
-            {plans.map((p) => (
-              <button
-                key={p.days}
-                onClick={() => setDays(p.days)}
-                className={
-                  'flex items-center justify-between rounded-2xl border px-4 py-3.5 text-left ' +
-                  (days === p.days ? 'border-accent bg-accent-soft' : 'border-border bg-surface')
+                  )
                 }
-              >
-                <span className="text-[15px] font-medium text-ink">{dayName(p.days)}</span>
-                {/* Price depends on the chosen currency — shown only after a method is picked. */}
-                {asset && <span className="text-[15px] text-ink">{priceStr(p)}</span>}
-              </button>
-            ))}
+                return (
+                  <button
+                    key={m.key}
+                    onClick={() => {
+                      setUsdtMenuOpen(false)
+                      selectMethod(m)
+                    }}
+                    className={chipCls(active)}
+                  >
+                    <CurrencyIcon asset={m.iconId} size={22} />
+                    <span className="flex min-w-0 items-baseline gap-1">
+                      <span className="truncate text-[14px] font-medium leading-tight text-ink">{m.label}</span>
+                      {m.net && <span className="text-[11px] leading-tight text-muted">{m.net}</span>}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
-          {/* Pay actions appear inline once a method is picked — no separate
-              confirm screen. The highlighted plan row shows the amount; the
-              immediate-start / 14-day-withdrawal waiver is covered by the Terms
-              (accepted at sign-in), so no per-payment checkbox. */}
-          {asset && (
+          {/* Buy — single primary CTA (a manual fallback stays for the TON wallet
+              flow). The immediate-start / 14-day-withdrawal waiver is covered by
+              the Terms accepted at sign-in, so no per-payment checkbox. */}
+          {plans.length > 0 && (
             <div className="flex flex-col">
-              {isGram && (
-                <p className="mb-2 px-1 text-[12px] leading-snug text-faint">{t('pay.approxHint')}</p>
-              )}
-              {isStars ? (
+              {!asset ? (
+                // No method picked yet → dim, disabled Buy (lights up on select).
+                <Button disabled stretched>
+                  {t('pay.buy')}
+                </Button>
+              ) : isStars ? (
                 <Button onClick={payStars} loading={busy} stretched>
-                  {t('pay.payStars', { n: starsByDays[days] ?? '' })}
+                  {t('pay.buy')}
                 </Button>
               ) : isTonNet ? (
                 <>
-                  {/* TON-network (GRAM native / USD₮ jetton): pay via the connected
-                      wallet. Lazy — the SDK loads only when a method is picked. */}
+                  {/* TON Connect wallet is the primary action here (connect → pay):
+                      solid clay, white label. Lazy: the SDK loads only when a
+                      TON-net method is picked. Label is dynamic: "Connect wallet"
+                      until linked, "Pay in wallet" once connected. */}
                   <Suspense
                     fallback={
-                      <Button loading stretched>
-                        {t('pay.payWallet')}
+                      <Button variant="primary" loading stretched>
+                        {t('pay.connectWallet')}
                       </Button>
                     }
                   >
                     <WalletPay
                       asset={asset}
+                      variant="primary"
                       makeOrder={makeWalletOrder}
                       onConfirmed={() => setStep('pay')}
                       onCancel={() => toast(t('pay.walletCancelled'))}
                     />
                   </Suspense>
-                  <Button onClick={startPay} loading={busy} variant="secondary" stretched className="mt-3">
-                    <QrCode size={18} /> {t('pay.payManual')}
+                  {/* Manual payment (QR + exact amount) — de-emphasized ghost link. */}
+                  <Button variant="ghost" onClick={startPay} loading={busy} stretched className="mt-1">
+                    {t('pay.buy')}
                   </Button>
                 </>
               ) : (
                 <Button onClick={startPay} loading={busy} stretched>
-                  {t('pay.toPayment')}
+                  {t('pay.buy')}
                 </Button>
               )}
             </div>

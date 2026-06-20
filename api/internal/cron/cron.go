@@ -50,6 +50,10 @@ func New(db *sql.DB, netIface string, xc *xray.Client) *Scheduler {
 	c := cron.New(
 		cron.WithLocation(loc),
 		cron.WithLogger(cron.VerbosePrintfLogger(log.Default())),
+		// Don't let a slow run overlap its next tick — the per-minute jobs
+		// (collectTraffic, verifyPayments) would otherwise pile up if an upstream
+		// (xray API, tonapi/trongrid) is briefly slow.
+		cron.WithChain(cron.SkipIfStillRunning(cron.VerbosePrintfLogger(log.Default()))),
 	)
 	return &Scheduler{
 		cron:      c,
@@ -101,7 +105,16 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		spec, name, fn := j.spec, j.name, j.fn
 		_, err := s.cron.AddFunc(spec, func() {
 			start := time.Now()
-			if err := fn(ctx); err != nil {
+			// Bound every run so a hung upstream can't wedge a job indefinitely.
+			// dbVacuum gets a longer budget: VACUUM ANALYZE on a growing table can
+			// legitimately exceed the per-minute jobs' 2-minute cap.
+			to := 2 * time.Minute
+			if name == "dbVacuum" {
+				to = 20 * time.Minute
+			}
+			jctx, cancel := context.WithTimeout(ctx, to)
+			defer cancel()
+			if err := fn(jctx); err != nil {
 				log.Printf("[cron] %s FAILED in %s: %v", name, time.Since(start), err)
 				return
 			}
@@ -428,7 +441,9 @@ func (s *Scheduler) cleanupDevices(ctx context.Context) error {
 
 func (s *Scheduler) dbVacuum(ctx context.Context) error {
 	for _, t := range []string{"users", "vpn_configs", "devices", "access_keys", "server_metrics"} {
-		_, _ = s.db.ExecContext(ctx, "VACUUM ANALYZE "+t)
+		if _, err := s.db.ExecContext(ctx, "VACUUM ANALYZE "+t); err != nil {
+			log.Printf("[cron] dbVacuum %s: %v", t, err) // e.g. cancelled by the job deadline
+		}
 	}
 	return nil
 }

@@ -1,6 +1,6 @@
 # mvp-n.net — project Makefile
 
-.PHONY: api connect awg-server bot frontend docker-up docker-down
+.PHONY: api connect awg-server bot frontend docker-up docker-down tidy mirror mirror-dry
 
 api:
 	cd api && go build -o api . && ./api
@@ -27,3 +27,11 @@ tidy:
 	cd api && go mod tidy
 	cd connect && go mod tidy
 	cd awg-server && go mod tidy
+
+# Sync the public sanitized mirror from HEAD (scrub + leak-scan gate + force-push).
+mirror:
+	bash scripts/sync-mirror.sh
+
+# Build + scrub + scan only — preview without pushing.
+mirror-dry:
+	bash scripts/sync-mirror.sh --dry-run

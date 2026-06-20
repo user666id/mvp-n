@@ -86,7 +86,7 @@
 ```json
 {
   "user_id":    123456789,
-  "username":   "user666id",
+  "username":   "alex_k",
   "first_name": "Alex",
   "last_name":  "",
   "iat":        1748275200,

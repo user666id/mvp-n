@@ -15,7 +15,9 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		"statusCode": 200,
 		"data": map[string]any{
 			"service": "api",
-			"version": "1.5.0",
+			// Keep in sync with the product version (frontend/bot package.json,
+			// i18n about.version, CHANGELOG). Bump on every release.
+			"version": "1.9.0",
 			"uptime":  int(time.Since(startTime).Seconds()),
 		},
 	})

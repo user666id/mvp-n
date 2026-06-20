@@ -10,6 +10,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -139,34 +140,56 @@ func (s *server) handleSubscription(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Placeholder served to web browsers that open the raw link (UA "Mozilla/…") —
+	// they aren't VPN clients, so the real config is never exposed to them. The
+	// fragment is what a human would see as the node name in a client list.
+	const browserStub = "vless://00000000-0000-0000-0000-000000000000@127.0.0.1:1?encryption=none&type=tcp&security=none#App%20not%20supported"
+
 	// Traffic accounting — lifetime bytes for this user. The monotonic counter
 	// users.traffic_used is accumulated from xray deltas by the api collectTraffic
 	// cron (the old per-row traffic_usage table was dropped). Reported as download
-	// so every launcher shows it as "used"; total=0 → ∞, expire=0 → no expiry.
-	var used int64
+	// so every launcher shows it as "used". paid_until → the expiry clients display.
+	var (
+		used      int64
+		paidUntil sql.NullTime
+	)
 	_ = s.db.QueryRowContext(ctx, `
-		SELECT COALESCE(traffic_used, 0) FROM users WHERE id = $1
-	`, userID).Scan(&used)
+		SELECT COALESCE(traffic_used, 0), paid_until FROM users WHERE id = $1
+	`, userID).Scan(&used, &paidUntil)
 
-	// Subscription-Userinfo: bytes. total=0 → ∞, expire=0 → no expiration.
-	userInfo := fmt.Sprintf("upload=0; download=%d; total=0; expire=0", used)
-
-	// Per-device provisioning: each (device, launcher) gets its own VLESS UUID
-	// from the API. Falls back to the config's stored URI when the API is
-	// unavailable, so the VPN never breaks.
-	info, uid := deviceIdentity(r)
-	name := deviceDisplayName(info)
-	status, provURI := s.provision(id, name, info.Client, uid, info.OS)
-	if status == http.StatusForbidden {
-		http.Error(w, "device limit reached or device blocked", http.StatusForbidden)
-		return
+	// Subscription-Userinfo: bytes. total=0 → ∞ (data is unlimited). expire is the
+	// subscription end as a Unix timestamp, so clients show "expires <date>" / a
+	// countdown; 0 = no expiry (key-activated users have a NULL paid_until).
+	var expire int64
+	if paidUntil.Valid {
+		expire = paidUntil.Time.Unix()
 	}
+	userInfo := fmt.Sprintf("upload=0; download=%d; total=0; expire=%d", used, expire)
+
+	info, uid := deviceIdentity(r)
+
 	uri := vlessURI
-	if status == http.StatusOK && provURI != "" {
-		uri = provURI
+	if strings.HasPrefix(strings.ToLower(r.Header.Get("User-Agent")), "mozilla/") {
+		// A web browser opened the raw link — not a VPN client. Don't provision a
+		// device or expose the real config; return the placeholder (this also stops
+		// browser/scraper hits from consuming device slots).
+		uri = browserStub
 	} else {
-		// Fallback path — API didn't provision; still track the device.
-		go s.recordDeviceVisit(userID, r)
+		// Per-device provisioning: each (device, launcher) gets its own VLESS UUID
+		// from the API. Falls back to the config's stored URI when the API is
+		// unavailable, so the VPN never breaks.
+		name := deviceDisplayName(info)
+		status, provURI := s.provision(id, name, info.Client, uid, info.OS)
+		if status == http.StatusForbidden {
+			http.Error(w, "device limit reached or device blocked", http.StatusForbidden)
+			return
+		}
+		if status == http.StatusOK && provURI != "" {
+			uri = provURI
+		} else {
+			// Fallback path — API didn't provision; still track the device.
+			go s.recordDeviceVisit(userID, r)
+		}
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -177,7 +200,10 @@ func (s *server) handleSubscription(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Subscription-Userinfo", userInfo)
 	w.Header().Set("Cache-Control", "no-store, max-age=0")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(uri + "\n"))
+	// Base64-encode the body — the de-facto subscription standard; every client
+	// decodes it and it's the most compatible across launchers (and a browser
+	// opening the link sees opaque base64, not a raw vless:// line).
+	_, _ = w.Write([]byte(base64.StdEncoding.EncodeToString([]byte(uri + "\n"))))
 }
 
 // recordDeviceVisit parses the User-Agent and upserts the devices row.
@@ -188,7 +214,7 @@ func (s *server) recordDeviceVisit(userID int64, r *http.Request) {
 	info, uid := deviceIdentity(r)
 	name := deviceDisplayName(info)
 	client := info.Client // launcher: Happ / v2RayTun / V2Box / ...
-	os := info.OS // stored separately from name so the UI can show OS + model
+	os := info.OS         // stored separately from name so the UI can show OS + model
 	// uid: unique per-install id from any launcher (X-Hwid header or Happ UA id)
 	// NOTE: we deliberately do NOT capture the user's IP — it's the most sensitive
 	// PII and isn't needed; identity is keyed off the launcher install id only.

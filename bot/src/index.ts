@@ -48,7 +48,8 @@ function boundedSet<K, V>(m: Map<K, V>, key: K, val: V, cap: number) {
   if (m.size > cap) m.delete(m.keys().next().value as K)
 }
 
-// Inline button (inside the message) that launches the Mini App. No emoji.
+// Inline button (inside the message) that launches the Mini App. No emoji,
+// neutral colour (theme default) — the green `style` experiment was reverted.
 const consoleKeyboard = {
   inline_keyboard: [[{ text: BUTTON, web_app: { url: MINI_APP_URL } }]],
 }
@@ -142,15 +143,17 @@ bot.catch((err) => {
 
 // ── Bootstrap ──────────────────────────────────────────────────────────────────
 async function main() {
-  // The bottom-left menu button shows the commands menu (with /start) rather than
-  // launching the Mini App directly — so tapping it lets the user restart the
-  // console (/start) instead of opening a possibly-stale web view.
+  // The bottom-left menu button is an "Open" web_app launcher (not the commands
+  // menu) so one tap opens the console directly. The stale-webview risk that made
+  // us prefer /start is now covered by the auto-update-on-open check in main.tsx
+  // (boot compares the bundle hash and reloads if a newer deploy exists).
+  // The chat menu button is configured in BotFather (Bot Settings → Menu Button),
+  // NOT here — setting it via the API at startup overrode that on every deploy and
+  // the web_app label still wouldn't render on the user's clients. We only clear
+  // the command list so the menu button stays a pure "Open" (not a "Меню").
   await Promise.all([
-    bot.api.setChatMenuButton({ menu_button: { type: 'commands' } }),
-    bot.api.setMyCommands([{ command: 'start', description: 'Open mvp-n' }]),
-    bot.api.setMyCommands([{ command: 'start', description: 'Открыть mvp-n' }], {
-      language_code: 'ru',
-    }),
+    bot.api.setMyCommands([]),
+    bot.api.setMyCommands([], { language_code: 'ru' }),
   ])
 
   console.log(`[bot] starting; mini app = ${MINI_APP_URL}`)

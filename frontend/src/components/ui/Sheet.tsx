@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronLeft } from '../icons'
 import { useT } from '../../lib/i18n'
 
@@ -50,6 +51,7 @@ export function Sheet({
   onBack,
   title,
   children,
+  footer,
 }: {
   open: boolean
   onClose: () => void
@@ -57,6 +59,10 @@ export function Sheet({
   onBack?: () => void
   title: React.ReactNode
   children: React.ReactNode
+  /** Optional sticky action bar pinned to the bottom (the sheet's primary
+   *  action). The body scrolls above it. Used by the beta layout system so every
+   *  sheet's main action lives in the same place. */
+  footer?: React.ReactNode
 }) {
   const { t } = useT()
 
@@ -92,7 +98,10 @@ export function Sheet({
 
   if (!mounted) return null
 
-  return (
+  // Portal to <body> so the sheet escapes any screen-level stacking context
+  // (e.g. the animated tab containers) — otherwise the beta bottom-nav could
+  // paint over a full-screen sheet. At body level its z-50 reliably wins.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex flex-col bg-canvas will-change-transform"
       role="dialog"
@@ -102,19 +111,33 @@ export function Sheet({
         transition: `transform ${DUR}ms ${EASE}`,
       }}
     >
-      <div className="flex items-center gap-3 px-4 pb-3 pt-[max(12px,env(safe-area-inset-top))]">
+      <div className="flex items-center px-3 pb-3 pt-[max(12px,env(safe-area-inset-top))]">
         <button
           onClick={onBack ?? onClose}
-          className="-ml-1 grid h-9 w-9 place-items-center rounded-full text-ink active:bg-surface-sunken"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink active:bg-surface-sunken"
           aria-label={t('common.back')}
         >
           <ChevronLeft size={26} />
         </button>
-        <h2 className="font-display text-[22px] font-semibold text-ink">{title}</h2>
+        <h2 className="font-display flex-1 truncate px-2 text-center text-[17px] font-semibold text-ink">
+          {title}
+        </h2>
+        <span className="w-11 shrink-0" />
       </div>
-      <div className="no-scrollbar animate-fade flex-1 overflow-y-auto px-4 pb-[max(20px,env(safe-area-inset-bottom))]">
+      <div
+        className={
+          'no-scrollbar animate-fade flex-1 overflow-y-auto px-4 ' +
+          (footer ? 'pb-4' : 'pb-[max(20px,env(safe-area-inset-bottom))]')
+        }
+      >
         {children}
       </div>
-    </div>
+      {footer && (
+        <div className="border-t border-border bg-canvas px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
+          {footer}
+        </div>
+      )}
+    </div>,
+    document.body,
   )
 }

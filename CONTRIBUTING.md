@@ -26,7 +26,13 @@ make awg-server     # awg-server
 make bot            # bot in watch mode
 make docker-up      # the whole stack in Docker
 make tidy           # go mod tidy across all Go modules
+make mirror         # rebuild & force-push the public sanitized mirror from HEAD
+make mirror-dry     # dry run of the mirror sync (no push) — preview the scrub/leak-scan
 ```
+
+`make mirror` ([`scripts/sync-mirror.sh`](./scripts/sync-mirror.sh)) archives HEAD,
+scrubs wallets / origin-IP, runs a leak-scan gate, and force-pushes to
+`github.com/user666id/mvp-n` — it only pushes if the leak-scan is clean.
 
 **Mini App without a backend.** The fastest loop for UI:
 
@@ -62,7 +68,10 @@ Each service also has its own `.env.example` and a README with run instructions.
 
 ## CI
 
-GitHub Actions on every push to `main` and PR:
+GitHub Actions workflows (`.github/workflows/{build,lint,codeql,security}.yml`) are
+all `on: workflow_dispatch` — **manual only**. They do **not** auto-run on push or PR
+(intentional — to stop the failure-email noise). Trigger them by hand from the Actions
+tab when you want a check:
 
 | Workflow | What it checks |
 |----------|---------------|
@@ -82,8 +91,10 @@ GitHub Actions on every push to `main` and PR:
 
 ## Commits and deploy
 
-- The default branch is `main`. A push to it is picked up by autodeploy within
-  ~2 min (the VPS timer's polling interval).
+- The default branch is `main`, but **autodeploy is gated on the `release` branch**.
+  A push to `main` is safe — nothing deploys. Ship to production by advancing
+  `release`: `git push origin main:release`. The VPS timer picks it up within ~2 min
+  (its polling interval).
 - The deploy rebuilds only the changed services; edits in `docs/`/README
   are not touched by the deploy.
 - Secrets — only in `.env` on the VPS (gitignore). Do not commit tokens,

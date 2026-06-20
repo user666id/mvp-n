@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
+import { PageHeader } from '../components/PageHeader'
 import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { Button } from '../components/ui/Button'
@@ -9,6 +10,7 @@ import { Badge } from '../components/ui/Badge'
 import { Avatar } from '../components/ui/Avatar'
 import { Copy, ChevronRight, Ban, Trash, ExternalLink, Refresh, Check } from '../components/icons'
 import { DeviceRow } from '../components/DeviceRow'
+import { StatusDot } from '../components/StatusDot'
 import { ProfileDetails } from '../components/ProfileDetails'
 import { TrafficSheet } from './TrafficSheet'
 import { useToast } from '../components/ui/Toast'
@@ -29,7 +31,7 @@ import {
 const profileName = (p: AdminProfile) =>
   p.username ? '@' + p.username : p.first_name || ''
 
-export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AdminScreen({ active, onMenu }: { active: boolean; onMenu?: () => void }) {
   const { t, lang } = useT()
   const toast = useToast()
   const [profiles, setProfiles] = useState<AdminProfile[] | null>(null)
@@ -82,12 +84,12 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
   }
 
   useEffect(() => {
-    if (open) {
+    if (active) {
       loadProfiles()
       loadKeys()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }, [active])
 
   const generate = async () => {
     setGenBusy(true)
@@ -162,38 +164,37 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
   return (
     <>
-      {/* Single-window navigation: a child sheet hides the parent (gated `open`),
-          and each child shows a ‹ back button — so only one window is ever shown. */}
-      <Sheet open={open} onClose={onClose} title={t('admin.title')}>
-        {/* traffic — a plain row; totals + the by-day chart live inside */}
-        <Section>
-          <Cell
-            title={t('admin.traffic')}
-            after={<ChevronRight size={18} className="text-faint" />}
-            onClick={() => setTrafficOpen(true)}
-            last
-          />
-        </Section>
-
-        <Section>
-          <Cell
-            title={t('admin.profiles')}
-            after={<CountChevron n={profiles?.length} />}
-            onClick={() => setProfilesOpen(true)}
-          />
-          <Cell
-            title={t('admin.keys')}
-            after={<CountChevron n={keys?.length} />}
-            onClick={() => setKeysOpen(true)}
-          />
-          <Cell
-            title={t('admin.domains')}
-            after={<ChevronRight size={18} className="text-faint" />}
-            onClick={() => setDomainsOpen(true)}
-            last
-          />
-        </Section>
-      </Sheet>
+      {/* Admin opens as a top-level tab (hamburger header), like Configs/Settings.
+          Its drill-downs (keys, profiles, …) still open as ‹back› child sheets. */}
+      <div className="animate-fade min-h-screen pb-10">
+        <PageHeader title={t('admin.title')} onMenu={onMenu} />
+        <div className="px-4">
+          {/* one column: traffic + profiles + keys + statuses */}
+          <Section>
+            <Cell
+              title={t('admin.traffic')}
+              after={<ChevronRight size={18} className="text-faint" />}
+              onClick={() => setTrafficOpen(true)}
+            />
+            <Cell
+              title={t('admin.profiles')}
+              after={<CountChevron n={profiles?.length} />}
+              onClick={() => setProfilesOpen(true)}
+            />
+            <Cell
+              title={t('admin.keys')}
+              after={<CountChevron n={keys?.length} />}
+              onClick={() => setKeysOpen(true)}
+            />
+            <Cell
+              title={t('admin.domains')}
+              after={<ChevronRight size={18} className="text-faint" />}
+              onClick={() => setDomainsOpen(true)}
+              last
+            />
+          </Section>
+        </div>
+      </div>
 
       {/* ── Keys sheet: generator on top, list below ── */}
       <Sheet
@@ -213,7 +214,7 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
                   className={
                     'rounded-full border px-3.5 py-1.5 text-[13px] font-medium ' +
                     (keyDays === d
-                      ? 'border-accent bg-accent text-white'
+                      ? 'border-accent bg-surface text-ink'
                       : 'border-border bg-surface text-muted')
                   }
                 >
@@ -306,7 +307,7 @@ export function AdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
                         {padId(p.internal_id)}
                       </span>
                       {name && <span className="truncate text-[14px] text-muted">{name}</span>}
-                      {p.is_admin && <Badge tone="accent">{t('settings.admin')}</Badge>}
+                      {p.is_admin && <Badge tone="neutral">{t('settings.admin')}</Badge>}
                       {p.is_blocked && <Badge>{t('devices.blockedShort')}</Badge>}
                       {(() => {
                         const s = subLabel(p, t, lang)
@@ -403,7 +404,7 @@ function DomainStatusSheet({
                     (i === group.length - 1 ? '' : 'border-b border-border ')
                   const inner = (
                     <>
-                      <span className={'h-2.5 w-2.5 shrink-0 rounded-full ' + (d.ok ? 'bg-success' : 'bg-danger')} />
+                      <StatusDot ok={d.ok} className="h-2.5 w-2.5" />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[15px] font-medium text-ink">
                           {d.name}
@@ -573,7 +574,6 @@ function AdminProfileSheet({
       <Section>
         <Cell
           before={<Refresh size={20} />}
-          after={<ChevronRight size={20} />}
           title={t('admin.resetSub')}
           onClick={reset}
         />
@@ -585,7 +585,7 @@ function AdminProfileSheet({
         />
       </Section>
 
-      <Section header={t('settings.danger')}>
+      <Section>
         <Cell
           before={<Trash size={20} />}
           title={t('admin.deleteProfile')}
@@ -704,7 +704,7 @@ function AdminProfileSheet({
               last
             />
           </Section>
-          <Section header={t('settings.danger')}>
+          <Section>
             <Cell
               before={<Trash size={20} />}
               title={t('devices.deleteOne')}

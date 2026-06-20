@@ -105,12 +105,38 @@ GET    /admin/profiles/{id}                         → profile by tg_id / inter
 GET    /admin/profiles/{id}/devices                 → profile devices (VLESS + AWG)
 GET    /admin/profiles/{id}/configs                 → profile configs
 PATCH  /admin/profiles/{id}/reset                   → reset the profile's subscription
+POST   /admin/profiles/{id}/grant                   → grant/extend a paid subscription (admin)
 POST   /admin/profiles/{id}/block                   → ban/unban a profile
 DELETE /admin/profiles/{id}                         → delete profile (purge xray + DB)
 POST   /admin/profiles/{id}/devices/{did}/block     → block device
 POST   /admin/profiles/{id}/devices/{did}/unblock   → unblock device
 DELETE /admin/profiles/{id}/devices/{did}           → delete a profile device
 ```
+
+---
+
+## Subscriptions / payments (JWT)
+
+```
+GET    /plans                         → available plans (USD-pegged) + live GRAM/USD rate
+POST   /orders                        → create a crypto order (reserves a unique amount)
+GET    /orders/pending                → in-flight orders (polled until confirmed)
+GET    /orders/history                → past orders (paid rows carry the tx hash)
+GET    /orders/{id}                   → single order status
+POST   /orders/{id}/cancel            → cancel a pending order
+POST   /stars/invoice                 → create a Telegram Stars invoice link
+```
+
+Internal (bot → api, `X-Internal-Token`, not JWT):
+
+```
+POST   /internal/credit-subscription  → credit a confirmed Stars payment
+                                        (idempotent on telegram_payment_charge_id)
+```
+
+Crypto orders are matched off-chain by a per-minute cron that polls tonapi (TON:
+GRAM + USDT) and trongrid (USDT-TRC20) and reconciles a pending order by its unique
+amount. Subscription state lives in `users.paid_until` (NULL = no time limit).
 
 ---
 
@@ -130,7 +156,7 @@ Online status is estimated from traffic growth via xray gRPC (`last_active`).
 ## Stack
 
 ```
-Language:  Go 1.22 (net/http, ServeMux with methods and {param})
+Language:  Go 1.26 (net/http, ServeMux with methods and {param})
 DB:        PostgreSQL 16 (schema — api/internal/config/config.go, migrations are idempotent)
 Auth:      JWT (HS256) + Telegram WebApp initData
 VPN:       xray gRPC :10085 (AddUser/RemoveUser/GetStats); awg-server HTTP :8080

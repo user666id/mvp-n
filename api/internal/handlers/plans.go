@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -87,36 +88,68 @@ var (
 
 // gramUSD returns the USD price of 1 GRAM. CRITICAL: it never blocks the caller
 // on the network — order creation must stay snappy. It returns the cached value
-// immediately (or the baked fallback on a cold start) and refreshes the rate in
-// the background when it's missing or older than 5 min. A first GRAM order right
-// after a restart uses the ~1.8 fallback (≈0.5% off live, and the amount is
-// locked anyway); subsequent orders use the live cached rate.
+// immediately. StartRateRefresher (called at boot) warms the cache within ~1s of
+// start and refreshes it every 2 min, so requests serve a live rate. The lazy
+// refresh here is just a safety net if the rate is somehow missing or stale; the
+// baked fallback only covers the brief window before the first fetch lands.
 func gramUSD(_ context.Context) float64 {
 	rateMu.Lock()
 	v := rateValue
 	stale := time.Since(rateFetched) >= 5*time.Minute
-	if (v == 0 || stale) && !rateInflight {
-		rateInflight = true
-		go refreshGramUSD()
-	}
 	rateMu.Unlock()
 
+	if v == 0 || stale {
+		go refreshGramUSD() // self-guards against concurrent refreshes
+	}
 	if v > 0 {
 		return v
 	}
 	return gramUSDFallback
 }
 
-// refreshGramUSD fetches the live rate off the request path (background context,
-// bounded by payHTTP's own timeout) and updates the cache.
+// refreshGramUSD fetches the live rate off the request path and updates the cache.
+// It self-guards (rateInflight) so concurrent calls from the ticker and the lazy
+// request path don't pile up duplicate fetches.
 func refreshGramUSD() {
+	rateMu.Lock()
+	if rateInflight {
+		rateMu.Unlock()
+		return
+	}
+	rateInflight = true
+	rateMu.Unlock()
+
 	live := fetchGramUSD(context.Background())
+
 	rateMu.Lock()
 	if live > 0 {
 		rateValue, rateFetched = live, time.Now()
 	}
 	rateInflight = false
 	rateMu.Unlock()
+}
+
+// StartRateRefresher warms the GRAM/USD rate at boot and refreshes it on a ticker,
+// so every request — including the first one after a restart — serves a live rate
+// instead of the baked fallback. Call once from main at startup.
+func StartRateRefresher(ctx context.Context) {
+	go func() {
+		refreshGramUSD() // warm ASAP after boot
+		rateMu.Lock()
+		warmed := rateValue
+		rateMu.Unlock()
+		log.Printf("gram/usd rate warmed: %.4f (fallback %.2f)", warmed, gramUSDFallback)
+		t := time.NewTicker(2 * time.Minute)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				refreshGramUSD()
+			}
+		}
+	}()
 }
 
 // fetchGramUSD queries tonapi for the TON/USD price. Returns 0 on any failure.

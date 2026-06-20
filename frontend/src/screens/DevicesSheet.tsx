@@ -6,10 +6,8 @@ import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
-import { Note } from '../components/ui/Note'
-import { ChevronRight, Ban, Check, Trash, Info, Phone } from '../components/icons'
+import { ChevronRight, Ban, Check, Trash } from '../components/icons'
 import { DeviceRow, isOSName } from '../components/DeviceRow'
-import { EmptyState } from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 import { confirmDialog } from '../lib/telegram'
 import { useT } from '../lib/i18n'
@@ -173,23 +171,15 @@ export function DevicesSheet({
   return (
     <>
       <Sheet open={open} onClose={onClose} title={t('devices.title')}>
-        <div className="mb-4">
-          <Note tone="info" icon={<Info size={20} />}>{t('devices.note')}</Note>
-        </div>
-
         {failed ? (
           <LoadError onRetry={load} />
         ) : !devices ? (
           <ListSkeleton rows={3} />
         ) : devices.length === 0 ? (
-          <EmptyState
-            icon={<Phone size={26} />}
-            title={t('devices.empty')}
-            subtitle={t('devices.emptySub')}
-          />
+          <div className="py-14 text-center text-[15px] text-muted">{t('devices.empty')}</div>
         ) : (
           // A labelled category per protocol that has devices.
-          <>
+          <div className="animate-fade">
             {vlessList.length > 0 && (
               <>
                 {groupHeader(t('devices.catVless'))}
@@ -202,11 +192,11 @@ export function DevicesSheet({
                 {renderGroup(awgList)}
               </>
             )}
-          </>
+          </div>
         )}
 
         {devices && devices.length > 0 && (
-          <Section header={t('settings.danger')}>
+          <Section>
             <Cell
               before={<Trash size={20} />}
               title={t('devices.deleteAll')}
@@ -235,7 +225,7 @@ export function DevicesSheet({
                 last
               />
             </Section>
-            <Section header={t('settings.danger')}>
+            <Section>
               <Cell
                 before={<Trash size={20} />}
                 title={t('devices.deleteOne')}

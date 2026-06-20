@@ -24,7 +24,8 @@ After it runs, `/etc/mvpn/credentials.json` will contain all generated data.
 ```
 scripts/
 ├── deploy.sh             # rebuild changed services (called by pull-deploy.sh)
-├── pull-deploy.sh        # on the VPS: git fetch; on a new commit to main → deploy.sh
+├── pull-deploy.sh        # on the VPS: git fetch origin release; on a new commit → deploy.sh
+├── sync-mirror.sh        # rebuild & force-push the public sanitized mirror (make mirror)
 ├── setup.sh              # master script (apt, firewall, runs install/*)
 ├── setup-deploy.sh       # bootstrap pull auto-deploy (root): clone, web-root, deploy-key, timer
 ├── systemd/              # mvpn-deploy.service + .timer (polls GitHub every 2 min)

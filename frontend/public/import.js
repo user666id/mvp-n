@@ -8,15 +8,24 @@
       light: { bg: '#faf9f5', ink: '#1f1e1d', muted: '#6b6a65', accent: '#d97757', scheme: 'light' },
       warm: { bg: '#20201e', ink: '#f7f7f5', muted: '#9f9f9d', accent: '#d97757', scheme: 'dark' },
       black: { bg: '#000000', ink: '#f7f7f5', muted: '#9f9f9d', accent: '#d97757', scheme: 'dark' },
+      fragment: { bg: '#1c1f24', ink: '#fcfbfc', muted: '#747e89', accent: '#2589db', scheme: 'dark' },
     }
     var key
-    try {
-      var t = localStorage.getItem('mvpn_theme')
-      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-      var dark = t === 'dark' || (t !== 'light' && prefersDark)
-      key = !dark ? 'light' : localStorage.getItem('mvpn_dark_shade') === 'black' ? 'black' : 'warm'
-    } catch (e) {
-      key = 'warm'
+    // The app passes ?theme=light|warm|black so the page matches the in-app theme
+    // even when opened in an EXTERNAL browser (where the Mini App's localStorage
+    // isn't shared). Fall back to same-origin localStorage / OS scheme otherwise.
+    var pTheme = new URLSearchParams(location.search).get('theme')
+    if (pTheme === 'light' || pTheme === 'warm' || pTheme === 'black' || pTheme === 'fragment') {
+      key = pTheme
+    } else {
+      try {
+        var t = localStorage.getItem('mvpn_theme')
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        var dark = t === 'dark' || (t !== 'light' && prefersDark)
+        key = !dark ? 'light' : localStorage.getItem('mvpn_dark_shade') === 'black' ? 'black' : 'warm'
+      } catch (e) {
+        key = 'warm'
+      }
     }
     var c = PAL[key]
     document.documentElement.style.colorScheme = c.scheme

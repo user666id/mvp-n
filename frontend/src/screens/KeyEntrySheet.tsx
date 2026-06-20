@@ -36,8 +36,18 @@ export function KeyEntrySheet({
     }
   }
 
+  const primaryBtn = (
+    <Button stretched loading={busy} disabled={!key.trim()} onClick={submit}>
+      {t('key.activate')}
+    </Button>
+  )
+
   return (
-    <Sheet open={open} onClose={onClose} title={t('key.activateTitle')}>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={t('key.activateTitle')}
+    >
       <p className="mb-4 text-[14px] leading-relaxed text-muted">{t('key.activateHint')}</p>
       <input
         value={key}
@@ -47,9 +57,7 @@ export function KeyEntrySheet({
         className="h-[52px] w-full rounded-2xl border border-transparent bg-surface-sunken px-4 text-[16px] tracking-wider text-ink outline-none placeholder:text-faint focus:border-accent"
       />
       {error && <p className="mt-3 text-[14px] text-danger">{error}</p>}
-      <Button stretched className="mt-5" loading={busy} disabled={!key.trim()} onClick={submit}>
-        {t('key.activate')}
-      </Button>
+      <div className="mt-5">{primaryBtn}</div>
     </Sheet>
   )
 }

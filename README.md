@@ -3,7 +3,7 @@
 # mvp-n.net
 
 A private VPN that lives entirely inside Telegram.
-VLESS + REALITY and AmneziaWG · console in a Mini App · access via one-time keys.
+VLESS + REALITY and AmneziaWG · console in a Mini App · access via one-time keys or a paid subscription.
 
 [Status](./STATUS.md) · [Roadmap](./ROADMAP.md) · [Documentation](./docs/README.md)
 
@@ -26,6 +26,7 @@ without a domain and without Cloudflare on the path.
 - **VLESS + REALITY** in three modes: Normal (Vision/TCP), Reinforced (XHTTP, disguised as HTTPS), Gaming (minimal latency).
 - **AmneziaWG** — WireGuard with obfuscation, import into AmneziaVPN via `.conf` + QR.
 - **One-tap connection** — pick a client and import the subscription via web-redirect.
+- **Paid access** — one-time keys or a paid subscription (7 / 30 / 90 / 365 days); pay in crypto (GRAM / USDT on TON or TRC20) or Telegram Stars, one-tap from a TON wallet via TON Connect.
 - **Per-HWID device accounting** — each device is separate on a single link, with its real model; block and rename one at a time.
 - **Owner console** — keys, profiles, traffic (total / today in MSK), domain statuses.
 - **Server charts** — CPU / RAM / network in real units.
@@ -97,8 +98,8 @@ Telegram `initData`, exchanged for a JWT.
 
 | Folder | Description | Technology |
 |-------|----------|-----------|
-| [`api/`](./api) | REST API — auth, configs, profile, devices, admin, cron, gRPC to xray, provisioning | Go 1.22 |
-| [`connect/`](./connect) | Subscription service `/to/:id` — per-device VLESS subscription | Go 1.22 |
+| [`api/`](./api) | REST API — auth, configs, profile, devices, admin, cron, gRPC to xray, provisioning | Go 1.26 |
+| [`connect/`](./connect) | Subscription service `/to/:id` — per-device VLESS subscription | Go 1.26 |
 | [`awg-server/`](./awg-server) | AmneziaWG peer management (create/delete/enable/disable/stats) | Go + `awg` CLI |
 | [`bot/`](./bot) | Telegram bot — `/start` → Mini App button, language sync | TypeScript (grammY) |
 | [`frontend/`](./frontend) | Mini App, Claude-style design, i18n EN/RU | React 18 · TS · Tailwind · Vite |
@@ -124,15 +125,15 @@ VPN traffic does not use a domain — the client connects via IP:port.
 
 | Layer | Technologies |
 |------|-----------|
-| Backend | Go 1.22 · PostgreSQL 16 · JWT · gRPC to xray |
+| Backend | Go 1.26 · PostgreSQL 16 · JWT · gRPC to xray |
 | Bot | TypeScript (Node 20) · grammY · long polling |
 | Frontend | React 18 · TypeScript · Tailwind · Vite |
 | VPN | Xray VLESS+REALITY (`:43000` / `:43001`) · AmneziaWG (`:51820`) |
 | Infra | nginx (ssl_preread SNI) · Docker Compose · XanMod + BBR3 |
 | CI | GitHub Actions — lint · build · test · security |
-| Deploy | pull model: a systemd timer on the VPS polls GitHub every 2 min |
+| Deploy | pull model: a systemd timer on the VPS polls the `release` branch every 2 min |
 
-Tested versions: Ubuntu 22.04 LTS, Docker Compose v2, PostgreSQL 16, Go 1.22,
+Tested versions: Ubuntu 22.04 LTS, Docker Compose v2, PostgreSQL 16, Go 1.26,
 Node.js 20, XanMod kernel + BBR3. Xray-core and AmneziaWG are installed by `scripts/install/*`.
 
 ## Configuration
@@ -144,10 +145,12 @@ token, REALITY keys, AmneziaWG token, etc.). Real values live only in
 ## Deploy and backup
 
 Deploy — pull model: on the VPS a systemd timer polls GitHub every 2 min and on a
-new commit to `main` runs [`scripts/deploy.sh`](./scripts/deploy.sh) —
+new commit on the **`release`** branch runs [`scripts/deploy.sh`](./scripts/deploy.sh) —
 rebuilds only the changed services, reconciles the stack when compose changes,
-syncs the built Mini App. (GitHub Actions cannot reach the VPS — the host's DDoS
-protection throttles CI runners.) More details — [`docs/deploy.md`](./docs/deploy.md).
+syncs the built Mini App. Committing/pushing to `main` is safe (nothing deploys);
+ship to production with `git push origin main:release`. (GitHub Actions cannot reach
+the VPS — the host's DDoS protection throttles CI runners.) More details —
+[`docs/deploy.md`](./docs/deploy.md).
 
 Backup: the `db-backup` service makes a daily `pg_dump` with rotation (7d / 4w / 6m) into the
 Docker volume `db_backups`. Restore — unpack the dump and feed it into the `psql` of

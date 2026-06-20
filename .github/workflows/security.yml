@@ -1,12 +1,7 @@
 name: Security
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-  schedule:
-    - cron: '0 6 * * 1' # weekly Monday 06:00 UTC
-  workflow_dispatch:
+  workflow_dispatch: # manual only — no push/PR/schedule auto-runs, no failure emails
 
 jobs:
   govulncheck:
@@ -22,8 +17,8 @@ jobs:
       matrix:
         mod: [api, connect, awg-server]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.26'
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest
@@ -36,8 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true # noisy SAST — report, don't block
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.26'
       - run: go install github.com/securego/gosec/v2/cmd/gosec@latest
@@ -57,8 +52,8 @@ jobs:
       matrix:
         dir: [frontend, bot]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: npm audit (prod deps, high+)

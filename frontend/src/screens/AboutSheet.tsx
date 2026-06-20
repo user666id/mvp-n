@@ -102,17 +102,6 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const legalUrl = (doc: 'terms' | 'privacy') =>
     `https://legal.mvp-n.net/${doc}?lang=${lang}&theme=${effectivePalette()}`
 
-  const faq: { q: TKey; a: TKey }[] = [
-    { q: 'about.q1', a: 'about.a1' },
-    { q: 'about.q2', a: 'about.a2' },
-    { q: 'about.q3', a: 'about.a3' },
-    { q: 'about.q4', a: 'about.a4' },
-    { q: 'about.q5', a: 'about.a5' },
-    { q: 'about.q6', a: 'about.a6' },
-    { q: 'about.q7', a: 'about.a7' },
-    { q: 'about.q8', a: 'about.a8' },
-  ]
-
   const fmtDate = (s: string) => {
     const [y, m, d] = s.split('-').map(Number)
     return new Date(y, (m || 1) - 1, d || 1).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', {
@@ -177,21 +166,7 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
           />
         </Section>
 
-        <div className="mb-2 px-3 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
-          {t('about.faq')}
-        </div>
-        <div className="mb-5 flex flex-col gap-2">
-          {faq.map((f) => (
-            <Collapse key={f.q} title={<span className="text-[15px]">{t(f.q)}</span>}>
-              <p className="px-4 py-3.5 text-[14px] leading-relaxed text-muted">{t(f.a)}</p>
-            </Collapse>
-          ))}
-        </div>
-
-        <div className="flex flex-col items-center gap-1.5 pb-2">
-          <span className="rounded-full bg-accent-soft px-3.5 py-1 text-[12px] font-medium text-accent">
-            {t('about.versionLabel')} {APP_VERSION}
-          </span>
+        <div className="flex flex-col items-center pb-2">
           <span className="font-display text-[13px] text-faint">{BRAND}</span>
         </div>
       </Sheet>
@@ -212,7 +187,7 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
                   <span className="font-display font-semibold">v{r.version}</span>
                   <span className="text-[12px] text-faint">{fmtDate(r.date)}</span>
                   {i === 0 && (
-                    <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent">
+                    <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] font-medium text-muted">
                       {t('about.latest')}
                     </span>
                   )}

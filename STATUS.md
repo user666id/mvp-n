@@ -25,13 +25,22 @@ What is implemented and running in production. Plans — [ROADMAP.md](./ROADMAP.
 - Per-device provisioning by HWID: each physical device is a separate record with its own xray-UUID on a single shared link. Identity is taken from Remnawave HWID headers (`X-Hwid`, `X-Device-Model`, `X-Device-Os`; sent by v2RayTun ≥2.3.5, Happ, Streisand, Hiddify) or from the install-id in the User-Agent for Happ. The real device model is shown; each device can be managed separately (`POST /internal/provision`).
 - Used traffic is returned in `Subscription-Userinfo` — visible in any launcher.
 
-## API (Go 1.22)
+## Paid subscriptions & payments
+
+- Time-based access via `users.paid_until` (**NULL = no time limit** — key-activated / grandfathered users). Config creation and provisioning are gated on an active subscription; on expiry a 15-min cron wipes configs/devices and revokes xray + AWG access (the account is kept — renewing restores it).
+- USD-pegged plans (7 / 30 / 90 / 365 days). Payment methods:
+  - **Telegram Stars** — in-bot invoice (`POST /stars/invoice`), fulfilled by the bot's `successful_payment` → `POST /internal/credit-subscription` (idempotent on `charge_id`).
+  - **Crypto, self-custody** — GRAM (Toncoin) + USDT on TON, USDT-TRC20 on TRON. `POST /orders` reserves a collision-free unique amount; a per-minute cron polls tonapi / trongrid and matches the deposit by amount (no memo), then extends the subscription (idempotent per tx). TON Connect gives one-tap GRAM / USDT-TON; manual address + QR is the fallback.
+- Order window 1 h; pending orders auto-confirm in-app by polling. Pricing is USD; the GRAM/USD rate is live — warmed at boot and refreshed every 2 min (`StartRateRefresher`), with a baked fallback.
+
+## API (Go 1.26)
 
 - **Auth:** Telegram `initData` → JWT; access via one-time keys (TTL 12 h).
 - **Configs:** create (VLESS / AWG), list, details, rename, mode, delete, server metrics, AWG statistics.
 - **Profile:** account, devices (VLESS + AWG), device renaming/block/unblock/delete, device limit, subscription reset (full cleanup of configs and devices), UI language, account deletion.
 - **Admin:** key issuance/list/revoke, profiles (+traffic total/today), profile card, profile devices, block/unblock, profile deletion.
-- **Internal:** `/internal/provision` (connect→api), `/internal/user-lang` (bot→api). A token per service (`INTERNAL_TOKEN_CONNECT`/`INTERNAL_TOKEN_BOT`), constant-time comparison.
+- **Subscriptions / payments:** `/plans`, `/orders` (+ `/orders/pending`, `/orders/history`, `/orders/{id}`, `/orders/{id}/cancel`), `/stars/invoice`.
+- **Internal:** `/internal/provision` (connect→api), `/internal/user-lang` (bot→api), `/internal/credit-subscription` (bot→api, Stars). A token per service (`INTERNAL_TOKEN_CONNECT`/`INTERNAL_TOKEN_BOT`), constant-time comparison.
 - **Cron:** collection of `server_metrics` (CPU/RAM/network) and traffic (xray gRPC → `users.traffic_used`, daily aggregate `traffic_daily` by MSK).
 
 ## Security
@@ -56,8 +65,8 @@ What is implemented and running in production. Plans — [ROADMAP.md](./ROADMAP.
 
 - Docker Compose: postgres, api, connect, awg-server, bot, db-backup (daily `pg_dump` with rotation).
 - nginx `:443` (ssl_preread SNI router) + Cloudflare Origin Cert. VPN traffic goes past nginx, directly to xray/AmneziaWG.
-- CI: GitHub Actions (lint + `go test` + build + security scanners). Deploy is a pull model: a systemd timer on the VPS polls GitHub every 2 min and, on a new commit to `main`, runs `scripts/deploy.sh` (rebuilding only the changed services, reconciling the stack when compose changes). The VPS pulls the code over a read-only SSH deploy key (port 443); Actions cannot connect to the VPS — the host's DDoS protection blocks CI runners.
-- Bot `@mvp_n_net_bot`: `/start` → Mini App button; private chats only; language synced with the app.
+- CI: GitHub Actions (lint + `go test` + build + security scanners) — all four workflows are `workflow_dispatch` (manual only; they do not auto-run on push/PR). Deploy is a pull model: a systemd timer on the VPS polls GitHub every 2 min and, on a new commit on the `release` branch, runs `scripts/deploy.sh` (rebuilding only the changed services, reconciling the stack when compose changes). Committing/pushing to `main` is safe (nothing deploys); ship with `git push origin main:release`. The VPS pulls the code over a read-only SSH deploy key (port 443); Actions cannot connect to the VPS — the host's DDoS protection blocks CI runners.
+- Bot `@mvp_n_net_bot`: an inline **"Open"** button launches the Mini App (the chat menu button is configured in BotFather, not set via the API); Telegram Stars fulfilment (`pre_checkout_query` + `successful_payment`); private chats only; language synced with the app.
 
 ## Limitations
 

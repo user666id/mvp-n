@@ -286,7 +286,8 @@ func verifyTelegramInitData(initData, botToken string) (tgUser, error) {
 
 	mac := hmac.New(sha256.New, secretKey)
 	mac.Write([]byte(dataCheckString))
-	if hex.EncodeToString(mac.Sum(nil)) != hash {
+	suppliedMAC, err := hex.DecodeString(hash)
+	if err != nil || !hmac.Equal(mac.Sum(nil), suppliedMAC) {
 		return tgUser{}, errBadInitData
 	}
 

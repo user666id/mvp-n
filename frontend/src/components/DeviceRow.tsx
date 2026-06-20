@@ -40,7 +40,7 @@ export function DeviceRow({
 
   return (
     <div className={'flex min-h-[54px] items-center gap-3 px-4 py-2.5 ' + (border ? 'border-b border-border' : '')}>
-      <Icon size={22} className={d.is_blocked ? 'text-faint' : 'text-accent'} />
+      <Icon size={22} className={d.is_blocked ? 'text-faint' : 'text-muted'} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-[15px] font-medium text-ink">{primary}</span>

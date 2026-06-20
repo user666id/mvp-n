@@ -7,11 +7,12 @@ import { Collapse } from '../components/ui/Collapse'
 import { Switch } from '../components/ui/Switch'
 import { Spinner } from '../components/ui/Spinner'
 import { Qr } from '../components/Qr'
-import { Pencil, Copy, QrCode, ChevronRight, Check, X, Trash } from '../components/icons'
+import { Pencil, Copy, QrCode, ChevronRight, ChevronDown, ExternalLink, Trash } from '../components/icons'
+import { StatusDot } from '../components/StatusDot'
 import { useToast } from '../components/ui/Toast'
 import { copyText } from '../lib/clipboard'
 import { subLink } from '../lib/config'
-import { confirmDialog, notify, openLink } from '../lib/telegram'
+import { confirmDialog, notify, openLink, effectivePalette } from '../lib/telegram'
 import { useT } from '../lib/i18n'
 import { configMeta, configSpecLine } from '../lib/configMeta'
 import type { Config } from '../api'
@@ -20,16 +21,75 @@ import type { Config } from '../api'
 // done by a tiny web page (import.html) opened in the external browser, because
 // custom-scheme deeplinks (happ://, …) are blocked inside Telegram's webview.
 // One-tap import clients for VLESS subscriptions.
-const APPS: { id: string; name: string }[] = [
-  { id: 'v2raytun', name: 'v2RayTun' },
-  { id: 'happ', name: 'Happ' },
-  { id: 'v2rayng', name: 'v2rayNG' },
+// Launchers and where to get them, per OS. A missing OS means the launcher isn't
+// available there: v2rayNG is Android-only; v2RayTun is no longer in the Russian
+// App Store, so its iOS list is Global-only. Happ & v2RayTun cover desktop too.
+type OSKey = 'ios' | 'android' | 'windows' | 'macos' | 'linux'
+type StoreLink = { label: string; href: string }
+
+const OS_OPTS: { key: OSKey; label: string }[] = [
+  { key: 'ios', label: 'iOS' },
+  { key: 'android', label: 'Android' },
+  { key: 'windows', label: 'Windows' },
+  { key: 'macos', label: 'macOS' },
+  { key: 'linux', label: 'Linux' },
 ]
+
+const APPS: { id: string; name: string; stores: Partial<Record<OSKey, StoreLink[]>> }[] = [
+  {
+    id: 'happ',
+    name: 'Happ',
+    stores: {
+      ios: [
+        { label: 'App Store (RU)', href: 'https://apps.apple.com/ru/app/id6504287215' },
+        { label: 'App Store (Global)', href: 'https://apps.apple.com/us/app/id6504287215' },
+      ],
+      android: [{ label: 'Google Play', href: 'https://play.google.com/store/apps/details?id=com.happproxy' }],
+      windows: [{ label: 'happ.su', href: 'https://www.happ.su/main' }],
+      macos: [{ label: 'happ.su', href: 'https://www.happ.su/main' }],
+      linux: [{ label: 'happ.su', href: 'https://www.happ.su/main' }],
+    },
+  },
+  {
+    id: 'v2raytun',
+    name: 'v2RayTun',
+    stores: {
+      ios: [{ label: 'App Store (Global)', href: 'https://apps.apple.com/us/app/id6476628951' }],
+      android: [{ label: 'Google Play', href: 'https://play.google.com/store/apps/details?id=com.v2raytun.android' }],
+      windows: [{ label: 'v2raytun.com', href: 'https://v2raytun.com/' }],
+      macos: [{ label: 'v2raytun.com', href: 'https://v2raytun.com/' }],
+      linux: [{ label: 'v2raytun.com', href: 'https://v2raytun.com/' }],
+    },
+  },
+  {
+    id: 'v2rayng',
+    name: 'v2rayNG',
+    stores: {
+      android: [{ label: 'Google Play', href: 'https://play.google.com/store/apps/details?id=com.v2ray.ang' }],
+    },
+  },
+]
+
+const launchersFor = (os: OSKey) => APPS.filter((a) => a.stores[os])
+
+/** Best-guess OS for the install guide — Telegram platform, else the UA. */
+function detectOs(): OSKey {
+  const p = (window as { Telegram?: { WebApp?: { platform?: string } } }).Telegram?.WebApp?.platform
+  if (p === 'android') return 'android'
+  if (p === 'ios') return 'ios'
+  if (p === 'macos') return 'macos'
+  const ua = navigator.userAgent
+  if (/android/i.test(ua)) return 'android'
+  if (/iphone|ipad|ipod/i.test(ua)) return 'ios'
+  if (/mac os x|macintosh/i.test(ua)) return 'macos'
+  if (/linux/i.test(ua)) return 'linux'
+  return 'windows'
+}
 
 /** URL of the redirect page next to the app (…/v2/import.html). */
 function importPage(appId: string, target: string, lang: string): string {
   return new URL(
-    `import.html?app=${appId}&u=${encodeURIComponent(target)}&lang=${lang}`,
+    `import.html?app=${appId}&u=${encodeURIComponent(target)}&lang=${lang}&theme=${effectivePalette()}`,
     location.href,
   ).href
 }
@@ -55,6 +115,9 @@ export function ConfigDetailSheet({
   const toast = useToast()
   const [showQr, setShowQr] = useState(false)
   const [showApps, setShowApps] = useState(false)
+  const [os, setOs] = useState<OSKey>(detectOs)
+  const [launcher, setLauncher] = useState<string>(() => launchersFor(detectOs())[0]?.id ?? 'happ')
+  const [osOpen, setOsOpen] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
   const [showRename, setShowRename] = useState(false)
   const [renameVal, setRenameVal] = useState('')
@@ -169,12 +232,22 @@ export function ConfigDetailSheet({
                 <Copy size={20} />
               </button>
             </div>
-            <Button variant="secondary" stretched onClick={() => setShowApps(true)}>
+            <Button
+              variant="secondary"
+              stretched
+              onClick={() => {
+                const o = detectOs()
+                setOs(o)
+                setLauncher(launchersFor(o)[0]?.id ?? 'happ')
+                setOsOpen(false)
+                setShowApps(true)
+              }}
+            >
               {t('detail.installToApp')}
             </Button>
             <button
               onClick={() => setShowRaw(true)}
-              className="mt-3 block w-full text-center text-[13px] text-muted active:opacity-60"
+              className="mt-3 block w-full text-center text-[13px] font-medium text-accent active:opacity-60"
             >
               {t('detail.otherFormat')}
             </button>
@@ -184,7 +257,14 @@ export function ConfigDetailSheet({
         {/* settings — collapsible accordion (VLESS only) */}
         {!isAwg && (
         <div className="mb-5">
-          <Collapse title={t('create.advanced')}>
+          <Collapse
+            title={t('create.advanced')}
+            footer={
+              <p className="px-3 pt-2 text-[13px] leading-snug text-muted">
+                {t('detail.afterChange')}
+              </p>
+            }
+          >
             <ToggleRow
               title={t('create.enhanced')}
               checked={config.enhanced}
@@ -199,39 +279,22 @@ export function ConfigDetailSheet({
               last
             />
           </Collapse>
-          <p className="px-3 pt-2 text-[13px] leading-snug text-muted">
-            {t('detail.afterChange')}
-          </p>
         </div>
         )}
 
         {/* server status → stats (reflects the real server_online flag) */}
         <button
           onClick={onOpenStats}
-          className="mb-5 flex w-full items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5 text-left active:bg-surface-sunken"
+          className="mb-5 flex w-full items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3 text-left active:bg-surface-sunken"
         >
-          <span
-            className={
-              'grid h-6 w-6 shrink-0 place-items-center rounded-full ' +
-              (config.server_online ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger')
-            }
-          >
-            {config.server_online ? (
-              <Check size={15} strokeWidth={2.5} />
-            ) : (
-              <X size={15} strokeWidth={2.5} />
-            )}
+          <StatusDot ok={config.server_online} className="h-2 w-2" />
+          <span className={'text-[15px] font-medium ' + (config.server_online ? 'text-success' : 'text-danger')}>
+            {config.server_online ? t('server.online') : t('server.offline')}
           </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-medium text-ink">
-              {config.server_online ? t('server.online') : t('server.offline')}
-            </div>
-            <div className="text-[13px] text-muted">{t('detail.serverOkSub')}</div>
-          </div>
-          <ChevronRight size={20} className="text-faint" />
+          <ChevronRight size={18} className="ml-auto text-faint" />
         </button>
 
-        <Section header={t('settings.danger')}>
+        <Section>
           <Cell
             before={<Trash size={20} />}
             title={t('detail.delete')}
@@ -248,22 +311,101 @@ export function ConfigDetailSheet({
         )}
       </Sheet>
 
-      {/* app chooser — one-tap import into a client */}
+      {/* app chooser — pick OS (dropdown) + launcher (tabs); the page updates */}
       <Sheet open={showApps} onClose={() => setShowApps(false)} onBack={() => setShowApps(false)} title={t('detail.chooseApp')}>
-        <Section>
-          {APPS.map((app, i) => (
-            <Cell
+        {/* OS selector — a dropdown like the payment-network picker */}
+        <div className="relative mb-3">
+          <button
+            onClick={() => setOsOpen((o) => !o)}
+            className="flex h-11 w-full items-center justify-between rounded-2xl border border-border bg-surface px-4 text-left active:bg-surface-sunken"
+          >
+            <span className="text-[15px] font-medium text-ink">{OS_OPTS.find((o) => o.key === os)?.label}</span>
+            <ChevronDown size={18} className={'text-muted transition-transform ' + (osOpen ? 'rotate-180' : '')} />
+          </button>
+          {osOpen && (
+            <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl border border-border bg-surface shadow-sheet">
+              {OS_OPTS.map((o) => (
+                <button
+                  key={o.key}
+                  onClick={() => {
+                    setOs(o.key)
+                    setLauncher(launchersFor(o.key)[0]?.id ?? 'happ')
+                    setOsOpen(false)
+                  }}
+                  className={
+                    'flex h-11 w-full items-center px-4 text-left text-[15px] ' +
+                    (os === o.key ? 'bg-surface-sunken font-medium text-ink' : 'text-muted active:bg-surface-sunken')
+                  }
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* launcher tabs — selecting one changes the page below */}
+        <div className="mb-3 flex gap-2">
+          {launchersFor(os).map((app) => (
+            <button
               key={app.id}
-              title={app.name}
-              after={<ChevronRight size={20} className="text-faint" />}
-              onClick={() => {
-                openLink(importPage(app.id, link, lang))
-                setShowApps(false)
-              }}
-              last={i === APPS.length - 1}
-            />
+              onClick={() => setLauncher(app.id)}
+              className={
+                'h-9 flex-1 rounded-full border bg-surface text-[14px] font-medium text-ink transition-colors ' +
+                (launcher === app.id ? 'border-accent' : 'border-border active:bg-surface-sunken')
+              }
+            >
+              {app.name}
+            </button>
           ))}
-        </Section>
+        </div>
+        {/* the chosen launcher's page: install → add subscription → connect */}
+        {(() => {
+          const app = APPS.find((a) => a.id === launcher) ?? launchersFor(os)[0]
+          if (!app) return null
+          const stores = app.stores[os] ?? []
+          const isMobile = os === 'ios' || os === 'android'
+          return (
+            <div className="rounded-2xl border border-border bg-surface px-4 py-4 text-[13px] leading-relaxed text-muted">
+              <p className="font-semibold text-ink">{t('detail.step1Title')}</p>
+              <p className="mt-1">{t(isMobile ? 'detail.step1Body' : 'detail.step1BodyDesktop')}</p>
+              <div className="mb-4 mt-2.5 flex flex-col gap-2">
+                {stores.map((s) => (
+                  <button
+                    key={s.label}
+                    onClick={() => openLink(s.href)}
+                    className="inline-flex h-9 items-center justify-center gap-1 rounded-full border border-accent/30 text-[13.5px] font-medium text-accent active:bg-accent-soft"
+                  >
+                    {s.label}
+                    <ExternalLink size={13} />
+                  </button>
+                ))}
+              </div>
+              <p className="font-semibold text-ink">{t('detail.step2Title')}</p>
+              <p className="mt-1">{t(isMobile ? 'detail.step2Body' : 'detail.step2BodyDesktop')}</p>
+              {isMobile ? (
+                <Button
+                  stretched
+                  className="mb-4 mt-2.5"
+                  onClick={() => {
+                    openLink(importPage(app.id, link, lang))
+                    setShowApps(false)
+                  }}
+                >
+                  {t('detail.addSub')}
+                </Button>
+              ) : (
+                <button
+                  onClick={() => copy(link, t('detail.linkCopied'))}
+                  className="mb-4 mt-2.5 inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-accent text-[14px] font-medium text-white active:bg-accent-hover"
+                >
+                  <Copy size={15} /> {t('detail.copyLink')}
+                </button>
+              )}
+              <p className="font-semibold text-ink">{t('detail.step3Title')}</p>
+              <p className="mt-1">{t('detail.step3Body')}</p>
+            </div>
+          )
+        })()}
       </Sheet>
 
       {/* QR */}
@@ -300,9 +442,6 @@ export function ConfigDetailSheet({
 
       {/* rename */}
       <Sheet open={showRename} onClose={() => setShowRename(false)} onBack={() => setShowRename(false)} title={t('detail.renameTitle')}>
-        <p className="mb-4 px-1 text-[14px] leading-snug text-muted">
-          {t('detail.renameHint')}
-        </p>
         <label className="px-1 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
           {t('detail.name')}
         </label>

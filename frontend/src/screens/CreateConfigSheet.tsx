@@ -1,14 +1,12 @@
 import React, { useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Button } from '../components/ui/Button'
-import { Section } from '../components/ui/Card'
-import { RadioRow } from '../components/ui/Radio'
 import { Switch } from '../components/ui/Switch'
 import { Collapse } from '../components/ui/Collapse'
-import { Note } from '../components/ui/Note'
 import { Badge } from '../components/ui/Badge'
 import { Globe } from '../components/icons'
 import { useT } from '../lib/i18n'
+import { selection } from '../lib/telegram'
 import type { Protocol } from '../api/types'
 
 export function CreateConfigSheet({
@@ -37,43 +35,67 @@ export function CreateConfigSheet({
     { id: 'awg', title: 'AmneziaWG', transport: 'UDP' },
   ]
 
+  const primaryBtn = (
+    <Button stretched loading={busy} onClick={() => onCreate({ protocol, enhanced, game_mode: game })}>
+      {t('configs.create')}
+    </Button>
+  )
+
   return (
-    <Sheet open={open} onClose={onClose} title={t('create.title')}>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={t('create.title')}
+    >
       {/* Location — single, fixed */}
-      <div className="mb-2 px-1 pt-1 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
+      <div className="mb-2 px-1 pt-1 text-[13px] font-semibold text-faint">
         {t('create.location')}
       </div>
       <div className="mb-3 flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5">
-        <span className="text-[22px]">🇳🇱</span>
-        <span className="flex-1 text-[16px] font-medium text-ink">{t('configs.country')}</span>
         <Globe size={20} className="text-faint" />
+        <span className="flex flex-1 items-center gap-2">
+          <span className="text-[22px]">🇳🇱</span>
+          <span className="text-[16px] font-medium text-ink">{t('configs.country')}</span>
+        </span>
       </div>
       <div className="mb-5" />
 
-      {/* Protocol */}
-      <Section header={t('create.protocolHeader')}>
-        {protocols.map((p, i) => (
-          <RadioRow
-            key={p.id}
-            selected={protocol === p.id}
-            onSelect={() => setProtocol(p.id)}
-            title={p.title}
-            badge={
-              <>
-                <Badge tone="neutral">{p.transport}</Badge>
-                {p.recommended && <Badge tone="success">{t('create.recommended')}</Badge>}
-              </>
-            }
-            last={i === protocols.length - 1}
-          />
-        ))}
-      </Section>
+      {/* Protocol — outline cards, matching the subscription plan picker */}
+      <div className="mb-2 px-1 text-[13px] font-semibold text-faint">{t('create.protocolHeader')}</div>
+      <div className="mb-5 flex flex-col gap-2">
+        {protocols.map((p) => {
+          const sel = protocol === p.id
+          return (
+            <button
+              key={p.id}
+              onClick={() => {
+                selection()
+                setProtocol(p.id)
+              }}
+              className={
+                'flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors ' +
+                (sel ? 'border-accent bg-surface' : 'border-border bg-surface active:bg-surface-sunken')
+              }
+            >
+              <span
+                className={
+                  'grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ' +
+                  (sel ? 'border-accent' : 'border-border')
+                }
+              >
+                {sel && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
+              </span>
+              <span className="text-[16px] font-medium text-ink">{p.title}</span>
+              <Badge tone="neutral">{p.transport}</Badge>
+              {p.recommended && <Badge tone="success">{t('create.recommended')}</Badge>}
+            </button>
+          )
+        })}
+      </div>
 
-      {/* AmneziaWG note */}
+      {/* AmneziaWG note — plain small caption, no framed box */}
       {protocol === 'awg' && (
-        <div className="mb-5">
-          <Note tone="info">{t('create.awgNote')}</Note>
-        </div>
+        <p className="mb-5 px-1 text-[12px] leading-snug text-faint">{t('create.awgNote')}</p>
       )}
 
       {/* Additional settings — VLESS only */}
@@ -103,15 +125,7 @@ export function CreateConfigSheet({
         </div>
       )}
 
-      <div className="pb-2">
-        <Button
-          stretched
-          loading={busy}
-          onClick={() => onCreate({ protocol, enhanced, game_mode: game })}
-        >
-          {t('configs.create')}
-        </Button>
-      </div>
+      <div className="pb-2">{primaryBtn}</div>
     </Sheet>
   )
 }

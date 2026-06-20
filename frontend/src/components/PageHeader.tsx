@@ -15,26 +15,24 @@ export function PageHeader({
   onMenu?: () => void
 }) {
   return (
-    <header className="px-5 pb-4 pt-[max(14px,env(safe-area-inset-top))]">
-      {(onMenu || action) && (
-        <div className="mb-1.5 flex min-h-[36px] items-center justify-between">
-          {onMenu ? (
+    <header className="px-3 pb-2 pt-[max(10px,env(safe-area-inset-top))]">
+      <div className="flex min-h-[44px] items-center">
+        <div className="flex w-11 justify-start">
+          {onMenu && (
             <button
               onClick={onMenu}
               aria-label="Menu"
-              className="-ml-1.5 grid h-9 w-9 place-items-center rounded-full text-ink active:bg-surface-sunken"
+              className="grid h-11 w-11 place-items-center rounded-full text-ink active:bg-surface-sunken"
             >
               <Menu size={24} />
             </button>
-          ) : (
-            <span />
           )}
-          {action ?? <span />}
         </div>
-      )}
-      <h1 className="font-display text-[34px] font-semibold leading-[1.1] tracking-tight text-ink">
-        {title}
-      </h1>
+        <h1 className="font-display flex-1 truncate text-center text-[17px] font-semibold text-ink">
+          {title}
+        </h1>
+        <div className="flex w-11 justify-end">{action}</div>
+      </div>
     </header>
   )
 }

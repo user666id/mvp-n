@@ -11,20 +11,27 @@
 ```
 1. systemd timer mvpn-deploy.timer fires every 2 min
    → runs mvpn-deploy.service → scripts/pull-deploy.sh
-2. pull-deploy.sh: git fetch origin main
-   ├─ HEAD == origin/main → exits (nothing new, cheap)
-   └─ there is a new commit → git reset --hard origin/main, then
+2. pull-deploy.sh: git fetch origin release
+   ├─ HEAD == origin/release → exits (nothing new, cheap)
+   └─ there is a new commit → git reset --hard origin/release, then
       bash scripts/deploy.sh <old_head>:
         ├─ determines changed folders (api/ connect/ bot/ awg-server/ frontend/)
         ├─ docker compose up -d --build <only changed services>
         ├─ if docker-compose.yml changed — reconcile the stack (--remove-orphans)
-        ├─ if frontend/ changed — build in node:20 and rsync to /var/www/mini-app-f7/
+        ├─ if frontend/ changed — build TWICE in node:20: prod → rsync to
+        │     /var/www/mini-app-f7/ (served at /v2/), and a BETA variant
+        │     (VITE_BETA=1, the bottom-tab-bar redesign) → /var/www/mini-app-beta/
+        │     (served at /beta/, opened by the bot's "Test" button)
         └─ docker prune + health-probe (curl /health on api and connect)
 ```
 
 The VPS pulls code from GitHub via a read-only **deploy key** (SSH over port 443 —
 outbound 22 on the VPS is closed): remote = `ssh://git@ssh.github.com:443/...`,
 the key `/root/.ssh/github_deploy` is set in `git config core.sshCommand`.
+
+> **Deploy is gated on the `release` branch, not `main`.** A commit/push to `main`
+> is safe — nothing deploys. To ship to production, advance `release`:
+> `git push origin main:release`.
 
 > **The deploy does NOT touch nginx.** The nginx config is maintained on the VPS by hand; the
 > repository [`nginx/`](../nginx) is a mirror for reference. Change it — by hand (`nginx -t` → reload).
@@ -61,7 +68,7 @@ The private key is **not printed** to the terminal.
 
 One manual step remains — add the public deploy key as read-only:
 <https://github.com/user666id/vpn-project/settings/keys>, then verify
-`git -C /opt/mvpn fetch origin main`. Port 443 — because outbound :22 on the VPS
+`git -C /opt/mvpn fetch origin release`. Port 443 — because outbound :22 on the VPS
 is usually closed.
 
 ### Step 3 — `.env` on the VPS
@@ -75,7 +82,9 @@ Required (the stack won't start without them): `POSTGRES_PASSWORD`, `JWT_SECRET`
 `XRAY_PUBLIC_KEY` / `XRAY_SHORT_ID` (from `scripts/install/xray.sh`) — otherwise links
 are issued with empty `pbk/sid`. Internal tokens: `INTERNAL_TOKEN_CONNECT` and
 `INTERNAL_TOKEN_BOT` (or legacy `CONNECT_ADMIN_TOKEN`). `MINI_APP_URL` —
-required with the `/v2/` path. Generate a secret: `openssl rand -hex 24`.
+required with the `/v2/` path. `TEST_MINI_APP_URL` (optional) — points the bot's
+second "Test" inline button at the beta build (the `/beta/` path); leave it unset
+to hide that button. Generate a secret: `openssl rand -hex 24`.
 
 ### Step 4 — First run
 
@@ -87,7 +96,8 @@ curl http://localhost:8081/health && curl http://localhost:3000/health
 ```
 
 Both responded `{"status":true}` → from then on the rollout runs by itself on the timer on every
-push to `main`.
+new commit on the `release` branch (advance it with `git push origin main:release`;
+plain pushes to `main` do not deploy).
 
 ---
 
@@ -106,8 +116,8 @@ docker compose ps                          # container status
 ## Rollback
 
 ```bash
-# Option A — revert the commit, the timer rolls back automatically within ~2 min
-git revert <bad_sha> && git push
+# Option A — revert the commit and advance release; the timer rolls back within ~2 min
+git revert <bad_sha> && git push origin main:release
 
 # Option B — by hand on the VPS
 cd /opt/mvpn && git reset --hard <good_sha> && docker compose up -d --build
@@ -126,11 +136,17 @@ cd /opt/mvpn && git reset --hard <good_sha> && docker compose up -d --build
 
 - Delete the old one in *Settings → Deploy keys*, generate a new one
   (`ssh-keygen -t ed25519 -f /root/.ssh/github_deploy`), add the pubkey,
-  verify `git -C /opt/mvpn fetch origin main`.
+  verify `git -C /opt/mvpn fetch origin release`.
 
 ---
 
 ## Branch protection (recommended)
 
-**Settings → Branches → Add rule** for `main`: require status checks
-(`Go lint`, `Frontend lint`, `Go build`, `Frontend build`) + require PR.
+The CI workflows (`.github/workflows/{build,lint,codeql,security}.yml`) are all
+`on: workflow_dispatch` — **manual only**, they do not auto-run on push or PR — so
+they can't be wired up as required status checks. Run them by hand from the Actions
+tab before shipping.
+
+Since production tracks the `release` branch, protect **`release`** (Settings →
+Branches → Add rule): restrict who can push and require a PR into it. `main` stays
+the everyday working branch; ship with `git push origin main:release`.

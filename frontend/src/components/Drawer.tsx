@@ -3,7 +3,7 @@ import { Layers, Settings, ShieldCheck } from './icons'
 import { BRAND } from '../lib/config'
 import { useT, type TKey } from '../lib/i18n'
 
-export type Tab = 'configs' | 'settings'
+export type Tab = 'configs' | 'settings' | 'admin'
 
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 const DUR = 320
@@ -20,7 +20,6 @@ export function Drawer({
   active,
   onSelect,
   isAdmin,
-  onOpenAdmin,
 }: {
   open: boolean
   onClose: () => void
@@ -28,7 +27,6 @@ export function Drawer({
   onSelect: (t: Tab) => void
   /** Show the admin entry at the bottom (admins only). */
   isAdmin?: boolean
-  onOpenAdmin?: () => void
 }) {
   const { t } = useT()
   const [mounted, setMounted] = useState(open)
@@ -75,7 +73,7 @@ export function Drawer({
                 }}
                 className={
                   'mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ' +
-                  (on ? 'bg-accent-soft text-accent' : 'text-ink active:bg-surface-sunken')
+                  (on ? 'border border-ink/15 bg-surface-sunken text-ink' : 'text-ink active:bg-surface-sunken')
                 }
               >
                 <Icon size={22} strokeWidth={on ? 2.1 : 1.75} />
@@ -83,23 +81,25 @@ export function Drawer({
               </button>
             )
           })}
-        </nav>
 
-        {/* Admin panel — admins only, pinned to the bottom with a divider. */}
-        {isAdmin && onOpenAdmin && (
-          <div className="mt-auto border-t border-border px-3 pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
+          {/* Admin panel — a top-level tab like the rest, right below them (admins
+              only): selecting it switches tabs and highlights, same as Configs. */}
+          {isAdmin && (
             <button
               onClick={() => {
-                onOpenAdmin()
+                onSelect('admin')
                 onClose()
               }}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-ink transition-colors active:bg-surface-sunken"
+              className={
+                'mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors ' +
+                (active === 'admin' ? 'border border-ink/15 bg-surface-sunken text-ink' : 'text-ink active:bg-surface-sunken')
+              }
             >
-              <ShieldCheck size={22} />
+              <ShieldCheck size={22} strokeWidth={active === 'admin' ? 2.1 : 1.75} />
               <span className="text-[16px] font-medium">{t('settings.adminPanel')}</span>
             </button>
-          </div>
-        )}
+          )}
+        </nav>
       </div>
     </div>
   )

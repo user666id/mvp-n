@@ -70,12 +70,8 @@ export function ProfileDetails({ p }: { p: ProfileDetailsData }) {
             <span className="truncate text-[18px] font-semibold text-ink">
               {p.first_name || 'id' + p.id}
             </span>
-            {p.is_admin && <Badge tone="accent">{t('settings.admin')}</Badge>}
+            {p.is_admin && <Badge tone="neutral">{t('settings.admin')}</Badge>}
             {p.is_blocked && <Badge>{t('devices.blockedShort')}</Badge>}
-            <Badge tone={sub.tone === 'muted' ? 'neutral' : sub.tone}>{sub.text}</Badge>
-          </div>
-          <div className="text-[13px] text-muted">
-            {t('admin.profileFallback', { id: padId(p.internal_id) })}
           </div>
         </div>
       </div>
