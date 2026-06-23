@@ -1,0 +1,161 @@
+@import 'tailwindcss';
+@config '../tailwind.config.ts';
+
+/* ── Claude palette ───────────────────────────────────────────────────────
+   Warm ivory canvas + terracotta accent. Values are space-separated RGB
+   channels so Tailwind's `<alpha-value>` works.                              */
+:root {
+  --c-canvas: 250 249 245; /* #FAF9F5 ivory */
+  --c-surface: 255 255 255; /* card */
+  --c-surface-sunken: 240 238 230; /* #F0EEE6 sunken panel / input */
+  --c-border: 230 227 217; /* #E6E3D9 */
+  --c-ink: 31 30 29; /* #1F1E1D */
+  --c-muted: 107 106 101; /* #6B6A65 */
+  --c-faint: 150 148 140; /* #96948C */
+  --c-accent: 217 119 87; /* #D97757 Claude clay */
+  --c-accent-hover: 193 99 68; /* #C16344 */
+  --c-accent-soft: 244 224 213; /* tint for soft fills */
+  --c-success: 79 138 91; /* #4F8A5B warm green */
+  --c-danger: 193 74 60; /* #C14A3C */
+  --c-chart-cpu: 217 119 87; /* clay */
+  --c-chart-ram: 201 153 78; /* amber */
+  --c-chart-net: 90 138 130; /* teal-sage */
+}
+
+.dark {
+  /* Claude-matched dark: warm grey page, slightly darker cards. */
+  --c-canvas: 32 32 30; /* #20201E — page background */
+  --c-surface: 25 25 23; /* #191917 — cards / capsules */
+  --c-surface-sunken: 35 35 33; /* #232321 — inputs / sunken */
+  --c-border: 46 46 44; /* #2E2E2C — dividers */
+  --c-ink: 247 247 245; /* #F7F7F5 — text */
+  --c-muted: 159 159 157; /* #9F9F9D — icons & headings */
+  --c-faint: 130 130 128; /* #828280 — faint hints */
+  --c-accent: 217 119 87;
+  --c-accent-hover: 230 137 106;
+  --c-accent-soft: 64 50 43;
+  --c-success: 112 168 124;
+  --c-danger: 214 110 96;
+  --c-chart-cpu: 224 137 106;
+  --c-chart-ram: 214 172 102;
+  --c-chart-net: 124 173 164;
+}
+
+/* Dark-theme shade override (data-shade set by applyScheme). Only the greys
+   change — text/accent stay. 'warm' is the base .dark above. */
+.dark[data-shade='black'] {
+  --c-canvas: 0 0 0; /* #000000 — true OLED black */
+  --c-surface: 14 14 14; /* #0E0E0E */
+  --c-surface-sunken: 22 22 22; /* #161616 */
+  --c-border: 34 34 34; /* #222222 */
+}
+
+/* Fragment — an opt-in blue dark theme. Unlike warm/black (greys only) this also
+   swaps the accent clay → Fragment blue, so actions/links read blue here. */
+.dark[data-shade='fragment'] {
+  --c-canvas: 28 31 36; /* #1C1F24 — page background */
+  --c-surface: 35 42 51; /* #232A33 — cards */
+  --c-surface-sunken: 46 58 72; /* #2E3A48 — capsules / selectors */
+  --c-border: 56 68 82; /* #384452 — dividers */
+  --c-ink: 252 251 252; /* #FCFBFC — white text */
+  --c-muted: 116 126 137; /* #747E89 — grey text */
+  --c-faint: 96 106 117; /* #606A75 — fainter grey */
+  --c-accent: 37 137 219; /* #2589DB — buttons */
+  --c-accent-hover: 96 166 226; /* #60A6E2 — lighter (links/hover) */
+  --c-accent-soft: 30 47 64; /* #1E2F40 — soft blue fill */
+  --c-success: 86 179 130; /* keep status green legible on slate */
+  --c-danger: 226 96 96;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Gentle content entrance — used on screen/sheet content so it fades in instead
+   of popping (e.g. after a skeleton). Respects reduced-motion. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade {
+  animation: fade-in 240ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade {
+    animation: none;
+  }
+}
+
+/* Loading skeleton — a soft light band sweeps across the sunken base. Smoother
+   and more "alive" than an opacity pulse. Falls back to a gentle pulse when the
+   user prefers reduced motion. */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.skeleton {
+  background-color: rgb(var(--c-surface-sunken));
+  background-image: linear-gradient(
+    90deg,
+    rgb(var(--c-surface-sunken)) 0%,
+    rgb(var(--c-border)) 50%,
+    rgb(var(--c-surface-sunken)) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    background-image: none;
+    animation: none;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink));
+  font-family: 'Hanken Grotesk', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* Long-press / selection callout off (iOS Telegram) except real inputs. */
+*:not(input):not(textarea) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Headings use the same sans as the body (Inter) — like Claude's UI — just
+   tighter tracking for an editorial feel. */
+.font-display {
+  font-family: 'Hanken Grotesk', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Hide scrollbars inside sheets but keep scrolling. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
