@@ -13,7 +13,7 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o awg-server .
 # Runtime needs the AmneziaWG userspace tools (`awg`) to manage peers on the
 # host's awg0 interface (kernel module lives on the host; container has host net
 # + NET_ADMIN). amneziawg-tools comes from the amnezia PPA → ubuntu base.
-FROM ubuntu:22.04
+FROM ubuntu:26.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
