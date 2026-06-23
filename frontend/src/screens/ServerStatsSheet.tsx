@@ -59,14 +59,14 @@ function StatsBody({ stats }: { stats: ServerStats }) {
 
   return (
     <>
-      <div className="mb-3 flex items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3.5">
+      <div className="mb-3 flex items-center gap-2.5 rounded-3xl border border-border bg-surface px-4 py-3.5">
         <StatusDot ok={stats.online} className="h-2.5 w-2.5" />
         <span className={'text-[16px] font-medium ' + (stats.online ? 'text-success' : 'text-danger')}>
           {stats.online ? t('stats.online') : t('stats.offline')}
         </span>
       </div>
 
-      <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-surface">
+      <div className="mb-5 overflow-hidden rounded-3xl border border-border bg-surface">
         <InfoRow icon={<Globe size={20} />} text={t('stats.location')} />
         {stats.server_ip && <InfoRow icon={<Monitor size={20} />} text={stats.server_ip} />}
         <InfoRow icon={<Clock size={20} />} text={t('stats.uptime', { n: stats.uptime_days })} last />
@@ -135,7 +135,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
       <div className="mb-2 px-1 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
         {title}
       </div>
-      <div className="rounded-2xl border border-border bg-surface p-3">{children}</div>
+      <div className="rounded-3xl border border-border bg-surface p-3">{children}</div>
     </div>
   )
 }

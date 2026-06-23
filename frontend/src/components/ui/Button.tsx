@@ -15,8 +15,8 @@ const variants: Record<Variant, string> = {
   //  secondary = solid clay, no shadow
   //  ghost     = text-only clay (borderless link)
   //  danger    = red outline
-  primary: 'bg-accent text-white shadow-btn active:bg-accent-hover',
-  secondary: 'bg-accent text-white active:bg-accent-hover',
+  primary: 'bg-accent/80 text-white border border-white/20 shadow-btn backdrop-blur-md backdrop-saturate-150 active:bg-accent',
+  secondary: 'bg-accent/65 text-white border border-white/15 backdrop-blur-md backdrop-saturate-150 active:bg-accent/80',
   ghost: 'bg-transparent text-accent active:bg-accent-soft',
   danger: 'bg-transparent text-danger border border-danger/35 active:bg-danger/10',
 }

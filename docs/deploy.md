@@ -18,10 +18,8 @@
         ├─ determines changed folders (api/ connect/ bot/ awg-server/ frontend/)
         ├─ docker compose up -d --build <only changed services>
         ├─ if docker-compose.yml changed — reconcile the stack (--remove-orphans)
-        ├─ if frontend/ changed — build TWICE in node:20: prod → rsync to
-        │     /var/www/mini-app-f7/ (served at /v2/), and a BETA variant
-        │     (VITE_BETA=1, the bottom-tab-bar redesign) → /var/www/mini-app-beta/
-        │     (served at /beta/, opened by the bot's "Test" button)
+        ├─ if frontend/ changed — build in node:20 → rsync to
+        │     /var/www/mini-app-f7/ (served at /v2/)
         └─ docker prune + health-probe (curl /health on api and connect)
 ```
 
@@ -82,9 +80,7 @@ Required (the stack won't start without them): `POSTGRES_PASSWORD`, `JWT_SECRET`
 `XRAY_PUBLIC_KEY` / `XRAY_SHORT_ID` (from `scripts/install/xray.sh`) — otherwise links
 are issued with empty `pbk/sid`. Internal tokens: `INTERNAL_TOKEN_CONNECT` and
 `INTERNAL_TOKEN_BOT` (or legacy `CONNECT_ADMIN_TOKEN`). `MINI_APP_URL` —
-required with the `/v2/` path. `TEST_MINI_APP_URL` (optional) — points the bot's
-second "Test" inline button at the beta build (the `/beta/` path); leave it unset
-to hide that button. Generate a secret: `openssl rand -hex 24`.
+required with the `/v2/` path. Generate a secret: `openssl rand -hex 24`.
 
 ### Step 4 — First run
 

@@ -1,7 +1,12 @@
 name: Lint
 
 on:
-  workflow_dispatch: # manual only — no push/PR auto-runs, no failure emails
+  workflow_dispatch: # also runnable by hand from the Actions tab
+  # Run gofmt/vet/go test + tsc automatically on PRs into the working/release
+  # branches, so regressions are caught before they can be shipped to `release`.
+  # (Build/security/codeql stay manual; this is the lightweight always-on gate.)
+  pull_request:
+    branches: [main, release]
 
 jobs:
   go:
@@ -64,3 +69,7 @@ jobs:
       - name: TypeScript check
         working-directory: ./frontend
         run: npx tsc --noEmit
+
+      - name: Test
+        working-directory: ./frontend
+        run: npm test

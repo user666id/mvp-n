@@ -17,17 +17,38 @@ log() { echo -e "${GREEN}[xray]${NC} $1"; }
 log "Installing Xray-core..."
 bash <(curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh) @ install
 
-# Generate credentials.
-UUID=$(cat /proc/sys/kernel/random/uuid)
-KEYS=$(xray x25519)
-PRIVATE_KEY=$(echo "$KEYS" | grep -i "private" | awk '{print $NF}')
-PUBLIC_KEY=$(echo  "$KEYS" | grep -i "public"  | awk '{print $NF}')
-SHORT_ID=$(openssl rand -hex 4)
+# ── Credentials: REUSE if present, else generate ─────────────────────────────
+# The REALITY keypair / UUID / short_id are baked into every issued client URI.
+# Re-running this installer must NOT rotate them, or every existing client breaks.
+# If a prior install left /etc/mvpn/credentials.json, reuse those values; generate
+# fresh ones only on a clean host (or to fill a partial creds file).
+CRED=/etc/mvpn/credentials.json
+jval() { sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$CRED" | head -1; }
+
+if [ -f "$CRED" ]; then
+  log "Existing credentials found at $CRED — reusing keys (no client-breaking rotation)."
+  UUID=$(jval uuid)
+  PRIVATE_KEY=$(jval private_key)
+  PUBLIC_KEY=$(jval public_key)
+  SHORT_ID=$(jval short_id)
+  SERVER_IP=$(jval server_ip)
+fi
+
+[ -z "${UUID:-}" ] && UUID=$(cat /proc/sys/kernel/random/uuid)
+if [ -z "${PRIVATE_KEY:-}" ] || [ -z "${PUBLIC_KEY:-}" ]; then
+  KEYS=$(xray x25519)
+  PRIVATE_KEY=$(echo "$KEYS" | grep -i "private" | awk '{print $NF}')
+  PUBLIC_KEY=$(echo  "$KEYS" | grep -i "public"  | awk '{print $NF}')
+fi
+[ -z "${SHORT_ID:-}" ] && SHORT_ID=$(openssl rand -hex 4)
+
 # Public IP is baked into every REALITY URI — a silent empty value would produce
 # broken configs for all users. Try several providers, then fail hard.
-SERVER_IP=$(curl -fsS --max-time 10 https://api.ipify.org || true)
-[ -z "$SERVER_IP" ] && SERVER_IP=$(curl -fsS --max-time 10 https://ifconfig.me || true)
-[ -z "$SERVER_IP" ] && SERVER_IP=$(curl -fsS --max-time 10 https://icanhazip.com | tr -d '[:space:]' || true)
+if [ -z "${SERVER_IP:-}" ]; then
+  SERVER_IP=$(curl -fsS --max-time 10 https://api.ipify.org || true)
+  [ -z "$SERVER_IP" ] && SERVER_IP=$(curl -fsS --max-time 10 https://ifconfig.me || true)
+  [ -z "$SERVER_IP" ] && SERVER_IP=$(curl -fsS --max-time 10 https://icanhazip.com | tr -d '[:space:]' || true)
+fi
 if [ -z "$SERVER_IP" ]; then
   echo "ERROR: could not determine public IP (all providers failed). Set it manually and re-run." >&2
   exit 1
@@ -44,9 +65,13 @@ XRAY_API_BIND="$(ip -4 -o addr show docker0 2>/dev/null | awk '{print $4}' | cut
 
 mkdir -p /usr/local/etc/xray /var/log/xray /etc/mvpn
 
+# Privacy: access logging is OFF ("access":"none"). A privacy VPN shouldn't keep a
+# per-connection record of user emails + destination addresses. Only warnings and
+# errors go to error.log (rotated below). Flip access to a path only for transient
+# debugging, then set it back to "none".
 cat > /usr/local/etc/xray/config.json <<EOF
 {
-  "log": { "loglevel": "warning", "access": "/var/log/xray/access.log", "error": "/var/log/xray/error.log" },
+  "log": { "loglevel": "warning", "access": "none", "error": "/var/log/xray/error.log" },
   "api": { "tag": "api", "services": ["HandlerService", "StatsService"] },
   "stats": {},
   "policy": {

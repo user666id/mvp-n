@@ -181,8 +181,8 @@ export function SubscribeSheet({
     }
   }
   const chipCls = (on: boolean) =>
-    'flex w-full items-center gap-2 rounded-2xl border px-3 py-3 text-left transition-colors ' +
-    (on ? 'border-accent bg-surface' : 'border-border bg-surface active:bg-surface-sunken')
+    'flex w-full items-center gap-2 rounded-3xl border px-3 py-3 text-left transition-colors ' +
+    (on ? 'border-accent bg-accent/[0.08]' : 'border-border bg-surface active:bg-surface-sunken')
 
   const startPay = async () => {
     setBusy(true)
@@ -284,7 +284,7 @@ export function SubscribeSheet({
               <div className="mb-2 px-1 text-[13px] font-semibold text-faint">
                 {t('pay.resumeTitle')}
               </div>
-              <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+              <div className="overflow-hidden rounded-3xl border border-border bg-surface">
                 {pending.map((o, i) => (
                   <div
                     key={o.id}
@@ -301,7 +301,7 @@ export function SubscribeSheet({
                     </div>
                     <button
                       onClick={() => resume(o)}
-                      className="shrink-0 rounded-full bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white active:bg-accent-hover"
+                      className="shrink-0 rounded-full border border-white/20 bg-accent/70 px-3.5 py-1.5 text-[13px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
                     >
                       {t('pay.resumeBtn')}
                     </button>
@@ -330,9 +330,9 @@ export function SubscribeSheet({
                   key={p.days}
                   onClick={() => setDays(p.days)}
                   className={
-                    'flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors ' +
+                    'flex items-center gap-3 rounded-3xl border px-4 py-3.5 text-left transition-colors ' +
                     (selected
-                      ? 'border-accent bg-surface'
+                      ? 'border-accent bg-accent/[0.08]'
                       : 'border-border bg-surface active:bg-surface-sunken')
                   }
                 >
@@ -393,7 +393,7 @@ export function SubscribeSheet({
                       {usdtMenuOpen && usdts.length > 1 && (
                         <>
                           <div className="fixed inset-0 z-30" onClick={() => setUsdtMenuOpen(false)} />
-                          <div className="absolute left-1/2 top-[calc(100%+8px)] z-40 w-[200px] -translate-x-1/2 rounded-2xl border border-border bg-surface p-1.5 shadow-sheet">
+                          <div className="absolute left-1/2 top-[calc(100%+8px)] z-40 w-[200px] -translate-x-1/2 rounded-3xl border border-border bg-surface/85 p-1.5 shadow-sheet backdrop-blur-xl backdrop-saturate-150">
                             {usdts.map((u) => (
                               <button
                                 key={u.id}
@@ -403,7 +403,7 @@ export function SubscribeSheet({
                                   setUsdtMenuOpen(false)
                                 }}
                                 className={
-                                  'flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors ' +
+                                  'flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left transition-colors ' +
                                   (asset === u.id ? 'bg-surface-sunken' : 'active:bg-surface-sunken')
                                 }
                               >
@@ -412,6 +412,7 @@ export function SubscribeSheet({
                                   <span className="text-[15px] font-medium text-ink">USDT</span>
                                   <span className="text-[12px] uppercase tracking-wide text-muted">{u.network}</span>
                                 </span>
+                                {asset === u.id && <Check size={16} className="ml-auto text-accent" />}
                               </button>
                             ))}
                           </div>
@@ -500,7 +501,7 @@ export function SubscribeSheet({
 
           <button
             onClick={() => copy(order.amount)}
-            className="mt-4 flex w-full items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3 text-left"
+            className="mt-4 flex w-full items-center justify-between rounded-3xl border border-border bg-surface px-4 py-3 text-left"
           >
             <span className="text-[12px] text-faint">{t('pay.amount')}</span>
             <span className="flex items-center gap-2 text-[15px] font-semibold text-ink">
@@ -509,7 +510,7 @@ export function SubscribeSheet({
           </button>
           <button
             onClick={() => copy(order.address)}
-            className="mt-2 flex w-full items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 text-left"
+            className="mt-2 flex w-full items-center gap-2 rounded-3xl border border-border bg-surface px-4 py-3 text-left"
           >
             <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-ink">{order.address}</span>
             <Copy size={16} className="shrink-0 text-faint" />
@@ -519,7 +520,7 @@ export function SubscribeSheet({
             <Spinner size={16} /> {t('pay.waiting')}
           </div>
           <p className="mt-2 px-2 text-[12px] leading-snug text-faint">{t('pay.exactHint')}</p>
-          <p className="mt-3 rounded-xl bg-surface-sunken px-3 py-2.5 text-[12px] leading-snug text-muted">
+          <p className="mt-3 rounded-2xl bg-surface-sunken px-3 py-2.5 text-[12px] leading-snug text-muted">
             {t('pay.autoHint')}
           </p>
         </div>

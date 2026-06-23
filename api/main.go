@@ -93,6 +93,7 @@ func main() {
 	mux.Handle("GET /configs/{id}/awgStats", auth(http.HandlerFunc(h.AwgStats)))
 
 	mux.Handle("GET /profile", auth(http.HandlerFunc(h.Profile)))
+	mux.Handle("GET /profile/traffic", auth(http.HandlerFunc(h.ProfileTraffic)))
 	mux.Handle("GET /profile/devices", auth(http.HandlerFunc(h.ListDevices)))
 	mux.Handle("PATCH /profile/devices/{id}/name", auth(http.HandlerFunc(h.RenameDevice)))
 	mux.Handle("POST /profile/devices/{id}/block", auth(http.HandlerFunc(h.BlockDevice)))

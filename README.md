@@ -37,7 +37,7 @@ without a domain and without Cloudflare on the path.
 Management (web) — behind Cloudflare and the nginx SNI router on `:443`:
 
 ```text
-Юзер → бот → Mini App ──initData → JWT──► Cloudflare → nginx :443 (SNI)
+User → bot → Mini App ──initData → JWT──► Cloudflare → nginx :443 (SNI)
                                                ├─► api :8081 ──gRPC :10085─► xray
                                                │             └─HTTP :8080──► awg-server
                                                └─► connect :3000
@@ -47,8 +47,8 @@ Management (web) — behind Cloudflare and the nginx SNI router on `:443`:
 VPN traffic — clients connect directly to the host, bypassing Cloudflare and nginx:
 
 ```text
-VPN-клиенты ──TCP :43000 / :43001 (REALITY)───────► xray        напрямую,
-            ──UDP :51820 (WireGuard + обфускация)──► AmneziaWG   мимо CF и nginx
+VPN clients ──TCP :43000 / :43001 (REALITY)───────► xray        directly,
+            ──UDP :51820 (WireGuard + obfuscation)─► AmneziaWG   bypassing CF & nginx
 ```
 
 ### Ports

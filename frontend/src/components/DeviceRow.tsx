@@ -10,7 +10,7 @@ export const isOSName = (s?: string) => !s || KNOWN_OS.has(s.trim().toLowerCase(
 
 /**
  * Shared device row used identically in the user devices list and the admin
- * panel: icon + "Устройство N" (or custom name) + "{OS} · {launcher} · status".
+ * panel: icon + "Device N" (or custom name) + "{OS} · {launcher} · status".
  * Each caller supplies its own trailing control (chevron / delete) via `trailing`.
  */
 export function DeviceRow({
@@ -32,7 +32,7 @@ export function DeviceRow({
   const primary = renamed ? d.name : `${t('common.device')} ${i + 1}`
   // Subtitle: "{OS} · {launcher}". Prefer the dedicated os field; fall back to
   // the name when it is itself an OS (legacy rows saved before os was stored
-  // separately). The title is a model/custom name or "Устройство N" — never the
+  // separately). The title is a model/custom name or "Device N" — never the
   // bare OS — so OS in the subtitle never duplicates it.
   const osLabel = d.os || (renamed ? '' : d.name)
   const meta = [osLabel, d.client].filter(Boolean).join(' · ')

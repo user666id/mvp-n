@@ -22,10 +22,15 @@ echo "$CHANGED" | sed 's/^/    /'
 
 # Map changed dirs → docker-compose services to rebuild.
 SERVICES=""
-echo "$CHANGED" | grep -q '^api/'        && SERVICES="$SERVICES api"        || true
-echo "$CHANGED" | grep -q '^connect/'    && SERVICES="$SERVICES connect"    || true
-echo "$CHANGED" | grep -q '^bot/'        && SERVICES="$SERVICES bot"        || true
-echo "$CHANGED" | grep -q '^awg-server/' && SERVICES="$SERVICES awg-server" || true
+# NB: here-strings, NOT `echo "$CHANGED" | grep -q` — under `set -o pipefail`,
+# grep -q closing the pipe on an early match SIGPIPEs echo, so the pipeline returns
+# non-zero and the && flakily SKIPS that service (this silently skipped an api/
+# rebuild on the v2.1.0 release: api/ sorts first, so grep matched line 1 and
+# closed the pipe before echo finished). A here-string has no pipe → reliable.
+grep -q '^api/'        <<<"$CHANGED" && SERVICES="$SERVICES api"        || true
+grep -q '^connect/'    <<<"$CHANGED" && SERVICES="$SERVICES connect"    || true
+grep -q '^bot/'        <<<"$CHANGED" && SERVICES="$SERVICES bot"        || true
+grep -q '^awg-server/' <<<"$CHANGED" && SERVICES="$SERVICES awg-server" || true
 
 if [ -n "$SERVICES" ]; then
   echo "==> Rebuilding:$SERVICES"
@@ -37,16 +42,21 @@ fi
 # docker-compose.yml changed → reconcile the whole stack so NEW services (e.g.
 # db-backup) get created and env/config changes are applied. Uses existing
 # images (no rebuild) and only recreates containers whose definition changed.
-if echo "$CHANGED" | grep -q '^docker-compose\.yml$'; then
+if grep -q '^docker-compose\.yml$' <<<"$CHANGED"; then
   echo "==> Reconciling compose stack (compose file changed)"
   docker compose up -d --remove-orphans
 fi
 
 # Frontend: build in a node container, sync to the nginx web root (/v2/).
-if echo "$CHANGED" | grep -q '^frontend/'; then
+if grep -q '^frontend/' <<<"$CHANGED"; then
   echo "==> Building frontend"
+  # npm install (not ci): tolerant of a lockfile that's missing a platform's
+  # optional binaries (esbuild/rollup) — the repo is developed on Windows and
+  # built here on linux/musl, so a Windows-generated lockfile can omit the linux
+  # entries and break strict `npm ci`. The committed lockfile is kept complete,
+  # but this won't hard-fail prod if it ever drifts again.
   docker run --rm -v "$PWD/frontend:/app" -w /app node:20-alpine \
-    sh -c "npm ci --no-audit --no-fund && npm run build"
+    sh -c "npm install --no-audit --no-fund --no-save && npm run build"
   # Sync everything EXCEPT hashed assets with --delete (refreshes index.html,
   # legal.js, etc. and prunes stale top-level files). Then add new hashed assets
   # WITHOUT --delete so old chunks survive a grace window: a client/edge/webview

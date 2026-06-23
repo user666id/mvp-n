@@ -183,6 +183,11 @@ export function adminGetTraffic(days = 30) {
   return request<{ days: TrafficDay[]; total: number }>('GET', `/admin/traffic?days=${days}`)
 }
 
+/** The authed user's own daily traffic (Usage chart). `total` = lifetime bytes. */
+export function getProfileTraffic(days = 30) {
+  return request<{ days: TrafficDay[]; total: number }>('GET', `/profile/traffic?days=${days}`)
+}
+
 export function adminGetProfileDevices(id: number) {
   return request<Device[]>('GET', `/admin/profiles/${id}/devices`)
 }

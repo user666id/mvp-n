@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft } from '../icons'
 import { useT } from '../../lib/i18n'
+import { inTelegram, pushBackHandler, popBackHandler } from '../../lib/telegram'
 
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 const DUR = 360 // ms — enter/exit slide
@@ -96,6 +97,18 @@ export function Sheet({
     return () => unlockBodyScroll()
   }, [mounted])
 
+  // Drive Telegram's native BackButton from the sheet stack while mounted, routing
+  // a press to this sheet's back/close. A ref keeps the handler current without
+  // re-subscribing on every parent re-render (onClose is often an inline closure).
+  const backRef = useRef<() => void>(() => {})
+  backRef.current = onBack ?? onClose
+  useEffect(() => {
+    if (!mounted) return
+    const handler = () => backRef.current()
+    pushBackHandler(handler)
+    return () => popBackHandler(handler)
+  }, [mounted])
+
   if (!mounted) return null
 
   // Portal to <body> so the sheet escapes any screen-level stacking context
@@ -111,14 +124,21 @@ export function Sheet({
         transition: `transform ${DUR}ms ${EASE}`,
       }}
     >
-      <div className="flex items-center px-3 pb-3 pt-[max(12px,env(safe-area-inset-top))]">
-        <button
-          onClick={onBack ?? onClose}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink active:bg-surface-sunken"
-          aria-label={t('common.back')}
-        >
-          <ChevronLeft size={26} />
-        </button>
+      <div className="flex items-center px-3 pb-3 pt-[max(12px,env(safe-area-inset-top),var(--tg-safe-top,0px))]">
+        {/* Inside Telegram the native BackButton (wired below) shows a ‹ back in the
+            client header — don't duplicate it. Keep the title centred with a spacer.
+            Outside Telegram (browser) our in-sheet ‹ is the only back, so keep it. */}
+        {inTelegram ? (
+          <span className="w-11 shrink-0" />
+        ) : (
+          <button
+            onClick={onBack ?? onClose}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink active:bg-surface-sunken"
+            aria-label={t('common.back')}
+          >
+            <ChevronLeft size={26} />
+          </button>
+        )}
         <h2 className="font-display flex-1 truncate px-2 text-center text-[17px] font-semibold text-ink">
           {title}
         </h2>

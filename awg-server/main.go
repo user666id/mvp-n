@@ -319,7 +319,8 @@ func (s *Server) createClient(w http.ResponseWriter, r *http.Request) {
 
 	priv, pub, err := genKeyPair()
 	if err != nil {
-		s.fail(w, 500, "keygen failed: "+err.Error())
+		log.Printf("[awg] keygen: %v", err)
+		s.fail(w, 500, "keygen failed")
 		return
 	}
 
@@ -332,7 +333,8 @@ func (s *Server) createClient(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.wgCmd("set", s.cfg.Interface, "peer", pub, "allowed-ips", ip); err != nil {
-		s.fail(w, 500, "peer add failed: "+err.Error())
+		log.Printf("[awg] peer add: %v", err)
+		s.fail(w, 500, "peer add failed")
 		return
 	}
 	s.store.set(c)

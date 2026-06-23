@@ -13,15 +13,11 @@ Mini App. The bot is just the front door: it greets the user and hands them the
 ## What it does
 
 - **`/start` (or any plain text, treated as a restart)** → a short welcome
-  message with an inline **web_app** button that opens the Mini App. When the env
-  var `TEST_MINI_APP_URL` is set, a **second "Test" web_app button** is added that
-  opens the beta build (the bottom-tab-bar redesign, served at `/beta/`); it is
-  omitted when the var is unset (the default).
+  message with an inline **web_app** button that opens the Mini App.
   ```
   mvp-n
 
   Press the button below to open.        [ Open console ]
-                                          [ Test ]          ← only if TEST_MINI_APP_URL is set
   ```
 - **Private chats only.** Handlers are mounted under `bot.chatType('private')`,
   so if the bot is added to a group or channel it stays silent — no console
@@ -87,7 +83,7 @@ the bot just uses `language_code` — so it degrades gracefully with no config.
 |-----|----------|---------|
 | `BOT_TOKEN` | yes | Token from @BotFather — the **same** bot the API verifies `initData` against. |
 | `MINI_APP_URL` | — | Mini App URL; must match what nginx serves (default `https://app.mvp-n.net/v2/`). |
-| `TEST_MINI_APP_URL` | — | Beta build URL (the `/beta/` redesign). Set → adds a second inline **Test** button; unset (default) → no Test button. Passed through by docker-compose. |
+| `ADMIN_ALERT_CHAT_ID` | — | Chat id to ping if a paid Stars charge can't be credited after retries; unset → no admin ping. Passed through by docker-compose. |
 | `API_INTERNAL_URL` | — | Internal API base for the language lookup (compose: `http://api:8081`). Unset → skip lookup. |
 | `ADMIN_TOKEN` | — | Internal token for `/internal/user-lang` (compose: `${INTERNAL_TOKEN_BOT:-${CONNECT_ADMIN_TOKEN:-}}`). Unset → skip lookup. |
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { ChevronDown } from '../icons'
 
-/** Collapsible block used for "Дополнительные настройки". */
+/** Collapsible block used for "Additional settings". */
 export function Collapse({
   title,
   defaultOpen = false,
@@ -17,7 +17,7 @@ export function Collapse({
   const [open, setOpen] = useState(defaultOpen)
   return (
     <>
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}

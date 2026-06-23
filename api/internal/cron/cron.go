@@ -250,7 +250,8 @@ func (s *Scheduler) revokeExpiredSubs(ctx context.Context) error {
 // pre-existing traffic isn't counted as a sudden spike or false "online".
 func (s *Scheduler) collectTraffic(ctx context.Context) error {
 	active := 0
-	var dayDelta int64 // sum of all positive deltas this pass → today's traffic
+	var dayDelta int64           // sum of all positive deltas this pass → today's traffic
+	perUser := map[int64]int64{} // per-user positive deltas this pass → user_traffic_daily
 
 	// ── VLESS (xray per-user stats, keyed by device.vpn_email) ──
 	if s.xray != nil {
@@ -289,6 +290,7 @@ func (s *Scheduler) collectTraffic(ctx context.Context) error {
 				_, _ = s.db.ExecContext(ctx,
 					`UPDATE users SET traffic_used = traffic_used + $1 WHERE id = $2`, delta, d.userID)
 				dayDelta += delta
+				perUser[d.userID] += delta
 				active++
 			case !d.seen.Valid || newBaseline != d.seen.Int64:
 				// First sample (prime baseline) or xray restart (counter reset →
@@ -337,6 +339,7 @@ func (s *Scheduler) collectTraffic(ctx context.Context) error {
 				_, _ = s.db.ExecContext(ctx,
 					`UPDATE users SET traffic_used = traffic_used + $1 WHERE id = $2`, delta, c.userID)
 				dayDelta += delta
+				perUser[c.userID] += delta
 				active++
 			case !c.seen.Valid || newBaseline != c.seen.Int64:
 				// First sample (prime baseline) or awg-server counter reset.
@@ -351,6 +354,16 @@ func (s *Scheduler) collectTraffic(ctx context.Context) error {
 			INSERT INTO traffic_daily (day, bytes)
 			VALUES ((NOW() AT TIME ZONE 'Europe/Moscow')::date, $1)
 			ON CONFLICT (day) DO UPDATE SET bytes = traffic_daily.bytes + EXCLUDED.bytes`, dayDelta)
+	}
+	// Same positive deltas, split per user → powers the user-facing "Usage" chart.
+	for uid, b := range perUser {
+		if b <= 0 {
+			continue
+		}
+		_, _ = s.db.ExecContext(ctx, `
+			INSERT INTO user_traffic_daily (user_id, day, bytes)
+			VALUES ($1, (NOW() AT TIME ZONE 'Europe/Moscow')::date, $2)
+			ON CONFLICT (user_id, day) DO UPDATE SET bytes = user_traffic_daily.bytes + EXCLUDED.bytes`, uid, b)
 	}
 	if active > 0 {
 		log.Printf("[cron] collectTraffic: %d peers active, +%d bytes", active, dayDelta)

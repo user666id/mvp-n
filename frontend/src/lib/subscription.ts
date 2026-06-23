@@ -26,12 +26,13 @@ export function txExplorerUrl(asset: string, txHash?: string): string {
   return `https://tonviewer.com/transaction/${txHash.split(':')[0]}`
 }
 
-export function fmtSubDate(s: string, lang: 'en' | 'ru') {
-  return new Date(s).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
+export function fmtSubDate(s: string, _lang: 'en' | 'ru') {
+  // Always DD.MM.YYYY with dots. The en-US locale rendered slashes (07/19/2026),
+  // which clashed with the app's style; dotted reads cleaner and is locale-stable.
+  const d = new Date(s)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${dd}.${mm}.${d.getFullYear()}`
 }
 
 /** Human label + a tone for badges/dots. `lifetime`/`active` are good (green),

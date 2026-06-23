@@ -106,7 +106,7 @@ function profile(): Profile {
 const adminProfiles = [
   { id: 100000001, internal_id: 1, username: 'mvpn_admin', first_name: 'mvp-n', is_active: true, is_blocked: false, is_admin: true, created_at: ago(43200), traffic_used: 42_949_672_960, devices_count: 4, configs_count: 1, paid_until: null, is_expired: false }, // key/lifetime
   { id: 552310118, internal_id: 2, username: 'alex_k', first_name: 'Alex', is_active: true, is_blocked: false, is_admin: false, created_at: ago(20000), traffic_used: 8_589_934_592, devices_count: 2, configs_count: 1, paid_until: new Date(Date.now() + 12 * 86_400_000).toISOString(), is_expired: false }, // paid, active
-  { id: 690221764, internal_id: 3, username: '', first_name: 'Иван', is_active: true, is_blocked: false, is_admin: false, created_at: ago(5000), traffic_used: 1_073_741_824, devices_count: 1, configs_count: 1, paid_until: new Date(Date.now() - 3 * 86_400_000).toISOString(), is_expired: true }, // paid, expired
+  { id: 690221764, internal_id: 3, username: '', first_name: 'Ivan', is_active: true, is_blocked: false, is_admin: false, created_at: ago(5000), traffic_used: 1_073_741_824, devices_count: 1, configs_count: 1, paid_until: new Date(Date.now() - 3 * 86_400_000).toISOString(), is_expired: true }, // paid, expired
 ]
 let adminKeys: any[] = [
   { id: uuid(), key: 'A1B2-C3D4', comment: '', expires_at: ago(-600), created_at: ago(120), is_valid: true },
@@ -139,7 +139,7 @@ export async function mockRequest(
   if (path === '/auth/key') {
     if (!body?.key?.trim()) throw { errorCode: 'BAD_REQUEST', message: 'key required' }
     activated = true
-    paidUntil = null // a key grants lifetime access (бессрочно)
+    paidUntil = null // a key grants lifetime access (unlimited)
     return { activated: true, internal_id: 1 }
   }
 
@@ -325,6 +325,18 @@ export async function mockRequest(
       return { day: iso, bytes: i === n - 1 ? 3_900_000_000 : base }
     })
     return { days, total: days.reduce((s, d) => s + d.bytes, 0) }
+  }
+  if (path.startsWith('/profile/traffic') && m === 'GET') {
+    const n = 30
+    const days = Array.from({ length: n }, (_, i) => {
+      const d = new Date()
+      d.setDate(d.getDate() - (n - 1 - i))
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      // per-user sample (smaller than the server-wide admin series; first days 0)
+      const base = i < 6 ? 0 : 300_000_000 + ((i * 53) % 7) * 180_000_000
+      return { day: iso, bytes: i === n - 1 ? 140_000_000 : base }
+    })
+    return { days, total: 8_589_934_592 }
   }
   const apCfg = path.match(/^\/admin\/profiles\/([^/]+)\/configs$/)
   if (apCfg) {

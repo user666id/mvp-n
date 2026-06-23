@@ -7,10 +7,8 @@ Technical details of the bot — [`bot/README.md`](../bot/README.md), of the fro
 ## Bot
 
 `@mvp_n_net_bot` is intentionally minimal: `/start` (or any text) → a short
-greeting with an inline **web_app** button that opens the Mini App. When the env var
-`TEST_MINI_APP_URL` is set, a second inline **Test** button is added that opens the
-beta build (the bottom-tab-bar redesign, served at `/beta/`); it stays hidden when
-the var is unset (the default). It works only in private chats, over long polling.
+greeting with an inline **web_app** button that opens the Mini App. It works only
+in private chats, over long polling.
 The greeting language is synced with the choice in the app (EN by default).
 Details — [`bot/README.md`](../bot/README.md).
 

@@ -57,6 +57,10 @@ and a code / VPS / repo cleanup.
   at the top of the "Payment" pane (`WalletStatus`, lazy TON Connect). Not-connected
   is the same capsule with a filled-orange **Connect** pill; **Disconnect** is red.
   The session persists, so once linked a renewal is one tap.
+- **Wallet returns to the app.** Both TON Connect providers set `twaReturnUrl` to
+  the Main Mini App, so Tonkeeper / Telegram Wallet bring the user back after
+  signing instead of leaving them stranded in the wallet (`WalletPay`,
+  `WalletStatus`) — fixes the "Tonkeeper opens but nothing comes back" stall.
 - **Fragment-style blue theme.** An optional 4th dark shade (Settings → App):
   links `#60a6e2`, buttons `#2589db`, background `#1c1f24`, capsules `#2e3a48`
   (`DarkShade += 'fragment'`; `telegram.ts`, `index.css`, `import.js`/`legal.js`).
@@ -74,7 +78,7 @@ and a code / VPS / repo cleanup.
   `style:'success'` experiment was reverted). The chat **menu** button is left to
   **BotFather** (Bot Settings → Menu Button) — the bot no longer sets it via the API
   on each deploy, which overrode that config and still wouldn't render the web_app
-  label on every client. Commands are cleared so it stays a pure "Open", not a "Меню".
+  label on every client. Commands are cleared so it stays a pure "Open", not a "Menu".
 - Smaller: collapse-gated config note, chart y-axis padding.
 
 ## [1.8.0] — 2026-06-18

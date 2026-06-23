@@ -16,6 +16,10 @@ const MINI_APP_URL = process.env.MINI_APP_URL || 'https://app.mvp-n.net/v2/'
 // unset/unreachable the bot just falls back to the Telegram language_code.
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || ''
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || ''
+// Optional: a chat id to ping if a paid Stars charge can't be credited after
+// retries, so a charged-but-unactivated buyer never goes unnoticed. Unset = no
+// admin ping (the buyer is still messaged and it's logged loudly).
+const ADMIN_ALERT_CHAT_ID = process.env.ADMIN_ALERT_CHAT_ID || ''
 
 const bot = new Bot(BOT_TOKEN)
 
@@ -99,6 +103,90 @@ bot.on('pre_checkout_query', async (ctx) => {
   }
 })
 
+// ── Stars credit: deliver, with retries + a persistent in-memory queue ───────
+// Crediting is the fulfillment step AFTER Telegram has already charged the buyer.
+// The internal API can be briefly unreachable (a deploy restart, a transient
+// blip), and a single failed attempt would leave a paid user with no subscription.
+// So we retry with backoff and, if that still fails, keep the job in an in-memory
+// queue that a background loop keeps re-attempting for the life of the process.
+// Crediting is idempotent on charge_id, so every re-attempt is safe.
+type Credit = { tgId: number; days: number; stars: number; chargeId: string; chatId: number; warned: boolean }
+const pendingCredits = new Map<string, Credit>() // keyed by charge_id
+const creditInFlight = new Set<string>()          // guards against overlapping retries
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+async function sendSafe(chatId: number, text: string) {
+  try {
+    await bot.api.sendMessage(chatId, text)
+  } catch (e) {
+    console.error('[bot] sendMessage failed', chatId, e)
+  }
+}
+
+// One credit attempt. Returns true only on a 2xx from the internal API.
+async function postCredit(c: Credit): Promise<boolean> {
+  if (!API_INTERNAL_URL || !ADMIN_TOKEN) {
+    console.error('[bot] CREDIT IMPOSSIBLE — API_INTERNAL_URL/ADMIN_TOKEN unset; buyer charged', c.chargeId)
+    return false
+  }
+  try {
+    const res = await fetch(`${API_INTERNAL_URL}/internal/credit-subscription`, {
+      method: 'POST',
+      headers: { 'X-Internal-Token': ADMIN_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tg_id: c.tgId,
+        plan_days: c.days,
+        stars_amount: c.stars,
+        charge_id: c.chargeId, // dedup key + refund handle
+      }),
+      signal: AbortSignal.timeout(8000),
+    })
+    if (res.ok) return true
+    console.error('[bot] credit HTTP', res.status, 'for charge', c.chargeId)
+    return false
+  } catch (e) {
+    console.error('[bot] credit error for charge', c.chargeId, e)
+    return false
+  }
+}
+
+// Try to credit now (a few times with backoff); on continued failure enqueue for
+// the background loop and tell the buyer their payment landed and activation is in
+// progress — exactly once. On eventual success, confirm if we had warned them.
+async function deliverCredit(c: Credit) {
+  if (creditInFlight.has(c.chargeId)) return
+  creditInFlight.add(c.chargeId)
+  try {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      if (await postCredit(c)) {
+        pendingCredits.delete(c.chargeId)
+        if (c.warned) await sendSafe(c.chatId, '✅ Subscription activated. Thanks!')
+        return
+      }
+      if (attempt < 3) await sleep(1500 * attempt) // 1.5s, then 3s
+    }
+    // Still failing — keep it queued for the background loop, warn the buyer once.
+    pendingCredits.set(c.chargeId, c)
+    if (!c.warned) {
+      c.warned = true
+      await sendSafe(c.chatId, '✅ Payment received. Activating your subscription — this can take a moment and will apply automatically.')
+      console.error('[bot] CREDIT DEFERRED — queued for retry; buyer charged, not yet credited', c.chargeId)
+      if (ADMIN_ALERT_CHAT_ID) {
+        await sendSafe(Number(ADMIN_ALERT_CHAT_ID), `⚠️ Stars credit failing for charge ${c.chargeId} (tg ${c.tgId}, ${c.days}d). Retrying in background.`)
+      }
+    }
+  } finally {
+    creditInFlight.delete(c.chargeId)
+  }
+}
+
+// Background retry loop: re-attempt any still-pending credits every 30s. Survives
+// long API outages as long as the bot stays up. Jobs are only lost if the bot
+// restarts with credits still pending (logged loudly above).
+setInterval(() => {
+  for (const c of pendingCredits.values()) void deliverCredit(c)
+}, 30_000)
+
 // successful_payment is a service Message (no .text, so the text handler below
 // won't swallow it). Fulfillment source of truth — credit via the internal API.
 pm.on('message:successful_payment', async (ctx) => {
@@ -109,28 +197,14 @@ pm.on('message:successful_payment', async (ctx) => {
     console.error('[bot] successful_payment payload/amount mismatch', sp)
     return
   }
-  if (!API_INTERNAL_URL || !ADMIN_TOKEN) {
-    console.error('[bot] CREDIT IMPOSSIBLE — API_INTERNAL_URL/ADMIN_TOKEN unset; buyer charged', sp.telegram_payment_charge_id)
-    return
-  }
-  try {
-    const res = await fetch(`${API_INTERNAL_URL}/internal/credit-subscription`, {
-      method: 'POST',
-      headers: { 'X-Internal-Token': ADMIN_TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tg_id: p.uid,
-        plan_days: p.days,
-        stars_amount: sp.total_amount,
-        charge_id: sp.telegram_payment_charge_id, // dedup key + refund handle
-      }),
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) {
-      console.error('[bot] CREDIT FAILED — buyer charged, not credited', sp.telegram_payment_charge_id, res.status)
-    }
-  } catch (e) {
-    console.error('[bot] CREDIT ERROR — buyer charged, not credited', sp.telegram_payment_charge_id, e)
-  }
+  await deliverCredit({
+    tgId: p.uid,
+    days: p.days,
+    stars: sp.total_amount,
+    chargeId: sp.telegram_payment_charge_id,
+    chatId: ctx.chat.id,
+    warned: false,
+  })
 })
 
 // Any plain text in a private chat → fresh console (kept LAST so the specific
@@ -150,7 +224,7 @@ async function main() {
   // The chat menu button is configured in BotFather (Bot Settings → Menu Button),
   // NOT here — setting it via the API at startup overrode that on every deploy and
   // the web_app label still wouldn't render on the user's clients. We only clear
-  // the command list so the menu button stays a pure "Open" (not a "Меню").
+  // the command list so the menu button stays a pure "Open" (not a "Menu").
   await Promise.all([
     bot.api.setMyCommands([]),
     bot.api.setMyCommands([], { language_code: 'ru' }),

@@ -162,9 +162,9 @@ func (h *Handler) ActivateKey(w http.ResponseWriter, r *http.Request) {
 			`SELECT EXISTS(SELECT 1 FROM access_keys WHERE key = $1)`, req.Key,
 		).Scan(&exists)
 		if exists {
-			h.writeError(w, 400, "KEY_EXPIRED", "ключ просрочен или уже использован")
+			h.writeError(w, 400, "KEY_EXPIRED", "key expired or already used")
 		} else {
-			h.writeError(w, 400, "KEY_NOT_FOUND", "неверный ключ")
+			h.writeError(w, 400, "KEY_NOT_FOUND", "invalid key")
 		}
 		return
 	}

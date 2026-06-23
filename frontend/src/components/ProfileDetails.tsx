@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Avatar } from './ui/Avatar'
 import { Badge } from './ui/Badge'
 import { Copy, ExternalLink } from './icons'
@@ -27,7 +27,12 @@ export interface ProfileDetailsData {
  * Unified profile header + info card. The single standard shared by the user's
  * own "Account" sheet and the admin "Profile" sheet, so both look identical.
  */
-export function ProfileDetails({ p }: { p: ProfileDetailsData }) {
+/** The TON wallet capsule — the SAME component used on the Subscription screen
+ *  (lazy, its own TonConnectUIProvider). Shown at the bottom of the user's own
+ *  profile; connects in place. */
+const WalletStatus = lazy(() => import('../screens/WalletStatus'))
+
+export function ProfileDetails({ p, showWallet }: { p: ProfileDetailsData; showWallet?: boolean }) {
   const { t, lang } = useT()
   const toast = useToast()
   const sub = subLabel(p, t, lang)
@@ -76,7 +81,17 @@ export function ProfileDetails({ p }: { p: ProfileDetailsData }) {
         </div>
       </div>
 
-      <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-surface">
+      {/* Wallet capsule — only on the user's OWN profile (admin view omits it).
+          The same capsule as on the Subscription screen; connects in place. */}
+      {showWallet && (
+        <Suspense fallback={<div className="mb-5 h-[60px] animate-pulse rounded-3xl bg-surface-sunken" />}>
+          <div className="mb-5">
+            <WalletStatus />
+          </div>
+        </Suspense>
+      )}
+
+      <div className="mb-5 overflow-hidden rounded-3xl border border-border bg-surface">
         <Row
           k="Telegram ID"
           v={String(p.id)}

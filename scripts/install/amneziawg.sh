@@ -21,18 +21,41 @@ modprobe amneziawg
 
 mkdir -p /etc/amnezia/amneziawg /etc/mvpn
 
-# ── Generate server keys + obfuscation params ────────────────────────────────
-PRIV=$(awg genkey)
-PUB=$(echo "$PRIV" | awg pubkey)
-EGRESS=$(ip route get 1.1.1.1 | grep -oP 'dev \K\S+')
-SERVER_IP=$(curl -s https://api.ipify.org)
-PORT=51820; MTU=1420; DNS="1.1.1.1"; SUBNET="10.8.0.0/24"
+# ── Server keys + obfuscation params: REUSE if present, else generate ────────
+# The server keypair AND the Jc/Jmin/Jmax/S1/S2/H1-H4 obfuscation params are part
+# of every peer's handshake — regenerating them on a re-run breaks ALL existing
+# AmneziaWG clients. Reuse what a prior install wrote (private key from awg0.conf,
+# the rest from awg-params.json); generate only on a clean host / to fill gaps.
+AWGCONF=/etc/amnezia/amneziawg/awg0.conf
+PARAMS=/etc/mvpn/awg-params.json
+pval() { sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" "$PARAMS" | head -1; }     # string
+pnum() { sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p"     "$PARAMS" | head -1; } # number
 
-JC=5; JMIN=50; JMAX=1000
-S1=$(( (RANDOM % 136) + 15 ))
-S2=$(( (RANDOM % 136) + 15 )); while [ $((S1 + 56)) -eq "$S2" ]; do S2=$(( (RANDOM % 136) + 15 )); done
-rnd() { echo $(( (RANDOM<<15 | RANDOM) % 2000000000 + 5 )); }
-H1=$(rnd); H2=$(rnd); H3=$(rnd); H4=$(rnd)
+PORT=51820; MTU=1420; DNS="1.1.1.1"; SUBNET="10.8.0.0/24"
+EGRESS=$(ip route get 1.1.1.1 | grep -oP 'dev \K\S+')
+
+if [ -f "$AWGCONF" ] && [ -f "$PARAMS" ]; then
+  log "Existing AmneziaWG config found — reusing server key + obfuscation params (no peer-breaking rotation)."
+  PRIV=$(sed -n 's/^[[:space:]]*PrivateKey[[:space:]]*=[[:space:]]*//p' "$AWGCONF" | head -1)
+  PUB=$(pval public_key)
+  SERVER_IP=$(pval server_ip)
+  JC=$(pnum jc); JMIN=$(pnum jmin); JMAX=$(pnum jmax)
+  S1=$(pnum s1); S2=$(pnum s2)
+  H1=$(pnum h1); H2=$(pnum h2); H3=$(pnum h3); H4=$(pnum h4)
+fi
+
+if [ -z "${PRIV:-}" ] || [ -z "${PUB:-}" ]; then
+  PRIV=$(awg genkey)
+  PUB=$(echo "$PRIV" | awg pubkey)
+fi
+[ -z "${SERVER_IP:-}" ] && SERVER_IP=$(curl -s https://api.ipify.org)
+if [ -z "${JC:-}" ]; then
+  JC=5; JMIN=50; JMAX=1000
+  S1=$(( (RANDOM % 136) + 15 ))
+  S2=$(( (RANDOM % 136) + 15 )); while [ $((S1 + 56)) -eq "$S2" ]; do S2=$(( (RANDOM % 136) + 15 )); done
+  rnd() { echo $(( (RANDOM<<15 | RANDOM) % 2000000000 + 5 )); }
+  H1=$(rnd); H2=$(rnd); H3=$(rnd); H4=$(rnd)
+fi
 
 cat > /etc/amnezia/amneziawg/awg0.conf <<EOF
 [Interface]

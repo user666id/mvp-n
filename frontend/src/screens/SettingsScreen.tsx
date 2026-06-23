@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useForegroundRefetch } from '../lib/useForeground'
-import { PageHeader } from '../components/PageHeader'
 import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { Switch } from '../components/ui/Switch'
-import { Segmented } from '../components/ui/Segmented'
+import { Dropdown } from '../components/ui/Dropdown'
 import { Button } from '../components/ui/Button'
 import { Sheet } from '../components/ui/Sheet'
 import { Spinner } from '../components/ui/Spinner'
 import { useToast } from '../components/ui/Toast'
 import {
-  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, User, Dollar, ChartLine, Vibrate,
+  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, User, ChartLine, Vibrate,
+  Monitor, Sun, Moon,
 } from '../components/icons'
 import { ProfileDetails } from '../components/ProfileDetails'
 import { DevicesSheet } from './DevicesSheet'
 import { AboutSheet } from './AboutSheet'
-import { SubscriptionSheet } from './SubscriptionSheet'
+import { UsageSheet } from './UsageSheet'
 import {
   confirmDialog, notify, hapticsEnabled, getTheme, setTheme, getDarkShade, setDarkShade,
-  isDarkActive, type ThemePref, type DarkShade,
+  isDarkActive, addToHomeScreen, canAddToHomeScreen, type ThemePref, type DarkShade,
 } from '../lib/telegram'
 import { plural } from '../lib/format'
 import { useT } from '../lib/i18n'
@@ -44,48 +44,14 @@ function ValueChevron({ value }: { value: ReactNode }) {
   )
 }
 
-/** Mini mockup preview for the theme cards (Claude style). */
-function ThemePreview({ kind }: { kind: 'light' | 'dark' | 'system' }) {
-  const dot = '#d97757'
-  if (kind === 'system') {
-    return (
-      <div className="relative h-16 w-full">
-        <div
-          className="absolute inset-0"
-          style={{ background: 'linear-gradient(120deg, #faf9f5 0 50%, #262624 50% 100%)' }}
-        />
-        <div className="relative p-2">
-          <div className="h-1.5 w-3/4 rounded-full" style={{ background: 'rgba(128,128,128,.45)' }} />
-          <div className="mt-1 h-1.5 w-1/2 rounded-full" style={{ background: 'rgba(128,128,128,.35)' }} />
-          <div className="mt-2 h-2.5 w-2.5 rounded-full" style={{ background: dot }} />
-        </div>
-      </div>
-    )
-  }
-  const isLight = kind === 'light'
-  return (
-    <div className="h-16 w-full p-2" style={{ background: isLight ? '#faf9f5' : '#262624' }}>
-      <div
-        className="h-1.5 w-3/4 rounded-full"
-        style={{ background: isLight ? 'rgba(0,0,0,.16)' : 'rgba(255,255,255,.20)' }}
-      />
-      <div
-        className="mt-1 h-1.5 w-1/2 rounded-full"
-        style={{ background: isLight ? 'rgba(0,0,0,.10)' : 'rgba(255,255,255,.12)' }}
-      />
-      <div className="mt-2 h-2.5 w-2.5 rounded-full" style={{ background: dot }} />
-    </div>
-  )
-}
-
-export function SettingsScreen({
-  active,
+export function AccountSheet({
+  open,
+  onClose,
   onLogout,
-  onMenu,
 }: {
-  active: boolean
+  open: boolean
+  onClose: () => void
   onLogout: () => void
-  onMenu?: () => void
 }) {
   const { t, lang, setLang } = useT()
   const toast = useToast()
@@ -94,10 +60,10 @@ export function SettingsScreen({
   const [devicesOpen, setDevicesOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [subOpen, setSubOpen] = useState(false)
-  const [subscriptionOpen, setSubscriptionOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
   const [haptics, setHaptics] = useState(hapticsEnabled())
+  const [canAddHome, setCanAddHome] = useState(canAddToHomeScreen())
   const [theme, setThemeState] = useState<ThemePref>(getTheme())
   const [shade, setShadeState] = useState<DarkShade>(getDarkShade())
   const [limit, setLimit] = useState('')
@@ -127,15 +93,15 @@ export function SettingsScreen({
     }
   }, [])
 
-  // Load/refresh when this tab becomes active. The screen stays mounted across
-  // tab switches, so this is a lazy first load + background refresh that keeps
-  // the current data on screen (no blank flash on every switch).
+  // Load/refresh when the sheet opens. It stays mounted across opens, so this is
+  // a lazy first load + background refresh that keeps the current data on screen
+  // (no blank flash on every open).
   useEffect(() => {
-    if (active) load()
-  }, [active, load])
+    if (open) load()
+  }, [open, load])
 
   // Re-load when the app returns to the foreground (suspended WebView / stale data).
-  useForegroundRefetch(active, load)
+  useForegroundRefetch(open, load)
 
   const toggleNotify = (v: boolean) => {
     setNotify(v)
@@ -206,23 +172,9 @@ export function SettingsScreen({
   const devCount = profile?.devices_count ?? 0
 
   return (
-    <div className="animate-fade min-h-screen pb-10">
-      <PageHeader
-        title={t('settings.title')}
-        onMenu={onMenu}
-        action={
-          <button
-            onClick={() => setAboutOpen(true)}
-            aria-label={t('settings.about')}
-            className="-mr-1 grid h-11 w-11 place-items-center rounded-full text-muted active:bg-surface-sunken"
-          >
-            <Info size={22} />
-          </button>
-        }
-      />
-
-      <div className="px-4">
-        {/* Account — profile, billing, usage, devices, limit, reset (Claude style:
+    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('account.title')}>
+      <div>
+        {/* Account — profile, usage, devices, limit, reset (Claude style:
             the profile is a single row, not a big card; all in one group) */}
         <Section header={t('settings.account')}>
           <Cell
@@ -230,12 +182,6 @@ export function SettingsScreen({
             after={<ChevronRight size={20} className="text-faint" />}
             title={t('settings.profile')}
             onClick={() => profile && setProfileOpen(true)}
-          />
-          <Cell
-            before={<Dollar size={20} />}
-            after={<ValueChevron value={profile ? subLabel(profile, t, lang).text : ''} />}
-            title={t('sub.status')}
-            onClick={() => profile && setSubscriptionOpen(true)}
           />
           <Cell
             before={<ChartLine size={20} />}
@@ -267,17 +213,32 @@ export function SettingsScreen({
           />
         </Section>
 
-        {/* App — notifications + appearance, near the bottom */}
+        {/* App — add-to-home + notifications + haptics, then appearance */}
         <Section header={t('settings.appearance')}>
+          {/* Add to home screen — an ACTION (no chevron), placed above notifications */}
+          {canAddHome && (
+            <Cell
+              before={<Phone size={20} />}
+              title={t('about.addHome')}
+              onClick={() => {
+                addToHomeScreen()
+                setCanAddHome(false)
+              }}
+            />
+          )}
           <Cell
             before={<Bell size={20} />}
             title={t('settings.notifyTitle')}
             after={<Switch checked={notify_} onChange={toggleNotify} />}
           />
+          <Cell
+            before={<Vibrate size={20} />}
+            title={t('settings.haptics')}
+            after={<Switch checked={haptics} onChange={toggleHaptics} />}
+          />
           <div className="border-b border-border px-4 py-3.5">
             <div className="mb-2 text-[13px] text-muted">{t('settings.language')}</div>
-            <Segmented
-              block
+            <Dropdown
               value={lang}
               onChange={(v) => {
                 setLang(v)
@@ -290,83 +251,68 @@ export function SettingsScreen({
               ]}
             />
           </div>
-          <div className="border-b border-border px-4 py-3.5">
-            <div className="mb-2.5 text-[13px] text-muted">{t('settings.theme')}</div>
-            <div className="flex gap-2.5">
+          <div
+            className={
+              'flex items-center justify-between px-4 py-3.5' +
+              (theme === 'dark' || (theme === 'system' && isDarkActive())
+                ? ' border-b border-border'
+                : '')
+            }
+          >
+            <span className="text-[15px] text-ink">{t('settings.theme')}</span>
+            <div className="flex items-center gap-1.5">
               {(
                 [
-                  ['light', t('settings.themeLight')],
-                  ['dark', t('settings.themeDark')],
-                  ['system', t('settings.themeSystem')],
+                  ['system', Monitor, t('settings.themeSystem')],
+                  ['light', Sun, t('settings.themeLight')],
+                  ['dark', Moon, t('settings.themeDark')],
                 ] as const
-              ).map(([val, label]) => (
+              ).map(([val, Icon, label]) => (
                 <button
                   key={val}
                   onClick={() => changeTheme(val)}
-                  className="flex flex-1 flex-col items-center gap-1.5"
+                  aria-label={label}
+                  title={label}
+                  className={
+                    'grid h-9 w-9 place-items-center rounded-2xl border transition-colors ' +
+                    (theme === val
+                      ? 'border-white/20 bg-accent/70 text-white backdrop-blur-md backdrop-saturate-150'
+                      : 'border-border text-muted active:bg-surface-sunken')
+                  }
                 >
-                  <div
-                    className={
-                      'w-full overflow-hidden rounded-xl border-2 transition-colors ' +
-                      (theme === val ? 'border-accent' : 'border-border')
-                    }
-                  >
-                    <ThemePreview kind={val} />
-                  </div>
-                  <span
-                    className={
-                      'text-[12.5px] ' + (theme === val ? 'font-medium text-ink' : 'text-muted')
-                    }
-                  >
-                    {label}
-                  </span>
+                  <Icon size={18} />
                 </button>
               ))}
             </div>
           </div>
-          {/* Dark-theme shade: warm (default) / true black.
+          {/* Dark-theme shade (warm / black / Fragment) as a dropdown.
               Only shown when dark is actually in effect (hidden in light). */}
+          {/* Dark-theme shade (warm / black / Fragment). Only when dark is in effect;
+              it's the last row then, so no bottom divider. */}
           {(theme === 'dark' || (theme === 'system' && isDarkActive())) && (
-          <div className="border-b border-border px-4 py-3.5">
-            <div className="mb-2.5 text-[13px] text-muted">{t('settings.darkShade')}</div>
-            <div className="flex gap-2.5">
-              {(
-                [
-                  ['warm', t('settings.shadeWarm'), '#20201E', '#191917'],
-                  ['black', t('settings.shadeBlack'), '#000000', '#0E0E0E'],
-                  ['fragment', t('settings.shadeFragment'), '#1C1F24', '#2E3A48'],
-                ] as const
-              ).map(([val, label, bg, card]) => (
-                <button
-                  key={val}
-                  onClick={() => changeShade(val)}
-                  className="flex flex-1 flex-col items-center gap-1.5"
-                >
-                  <div
-                    className={
-                      'flex h-12 w-full items-center justify-center overflow-hidden rounded-xl border-2 transition-colors ' +
-                      (shade === val ? 'border-accent' : 'border-border')
-                    }
-                    style={{ background: bg }}
-                  >
-                    <span className="h-5 w-8 rounded-md" style={{ background: card }} />
-                  </div>
-                  <span
-                    className={
-                      'text-[12.5px] ' + (shade === val ? 'font-medium text-ink' : 'text-muted')
-                    }
-                  >
-                    {label}
-                  </span>
-                </button>
-              ))}
+            <div className="px-4 py-3.5">
+              <div className="mb-2 text-[13px] text-muted">{t('settings.darkShade')}</div>
+              <Dropdown
+                value={shade}
+                align="up"
+                onChange={(v) => changeShade(v)}
+                options={[
+                  { value: 'warm', label: t('settings.shadeWarm') },
+                  { value: 'black', label: t('settings.shadeBlack') },
+                  { value: 'fragment', label: t('settings.shadeFragment') },
+                ]}
+              />
             </div>
-          </div>
           )}
+        </Section>
+
+        {/* About — the Sheet header has no action slot, so About lives as a row */}
+        <Section>
           <Cell
-            before={<Vibrate size={20} />}
-            title={t('settings.haptics')}
-            after={<Switch checked={haptics} onChange={toggleHaptics} />}
+            before={<Info size={20} />}
+            after={<ChevronRight size={20} className="text-faint" />}
+            title={t('settings.about')}
+            onClick={() => setAboutOpen(true)}
             last
           />
         </Section>
@@ -386,7 +332,7 @@ export function SettingsScreen({
       <Sheet open={profileOpen} onClose={() => setProfileOpen(false)} title={t('settings.profile')}>
         {profile && (
           <>
-            <ProfileDetails p={profile} />
+            <ProfileDetails p={profile} showWallet />
 
             <Section>
               <Cell
@@ -417,7 +363,7 @@ export function SettingsScreen({
           onChange={(e) => setLimit(e.target.value.replace(/[^0-9]/g, ''))}
           inputMode="numeric"
           placeholder={t('settings.noLimit')}
-          className="mb-4 mt-2 h-[52px] w-full rounded-2xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
+          className="mb-4 mt-2 h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
         />
         <div className="pb-2">
           <Button stretched onClick={saveLimit}>
@@ -426,19 +372,9 @@ export function SettingsScreen({
         </div>
       </Sheet>
 
-      <SubscriptionSheet
-        open={subscriptionOpen}
-        onClose={() => setSubscriptionOpen(false)}
-        profile={profile}
-        onChanged={load}
-      />
-
       <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
 
-      {/* Usage — placeholder for now, to be filled in later */}
-      <Sheet open={usageOpen} onClose={() => setUsageOpen(false)} title={t('settings.usage')}>
-        <div className="py-16 text-center text-[14px] text-muted">{t('settings.usageSoon')}</div>
-      </Sheet>
+      <UsageSheet open={usageOpen} onClose={() => setUsageOpen(false)} />
 
 
       {busy && (
@@ -446,6 +382,6 @@ export function SettingsScreen({
           <Spinner size={30} />
         </div>
       )}
-    </div>
+    </Sheet>
   )
 }

@@ -54,9 +54,13 @@ func Auth(secrets []string, db *sql.DB) func(http.Handler) http.Handler {
 			var err error
 			for _, key := range keys {
 				k := key
+				// Pin the algorithm to HS256: without this the parser accepts any
+				// alg the keyfunc returns a key for. Tokens are always signed HS256
+				// (see handlers.AuthTelegram); rejecting everything else closes the
+				// alg-confusion / "alg:none" class of attacks.
 				token, err = jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 					return k, nil
-				})
+				}, jwt.WithValidMethods([]string{"HS256"}))
 				if err == nil && token.Valid {
 					break
 				}

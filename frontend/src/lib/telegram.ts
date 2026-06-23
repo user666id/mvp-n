@@ -20,6 +20,17 @@ interface TgWebApp {
     notificationOccurred: (type: NotifyType) => void
     selectionChanged: () => void
   }
+  BackButton?: {
+    show: () => void
+    hide: () => void
+    onClick: (cb: () => void) => void
+    offClick?: (cb: () => void) => void
+  }
+  addToHomeScreen?: () => void
+  checkHomeScreenStatus?: (cb: (status: string) => void) => void
+  exitFullscreen?: () => void
+  safeAreaInset?: { top: number; bottom: number; left: number; right: number }
+  contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number }
 }
 
 export const tg: TgWebApp | undefined = (window as any).Telegram?.WebApp
@@ -89,6 +100,12 @@ function applyScheme() {
   if (dark) root.dataset.shade = shade
   else delete root.dataset.shade
   const canvas = dark ? DARK_CANVAS[shade] : CANVAS_LIGHT
+  // Match the real page background to the selected shade. index.html's first-paint
+  // style hardcodes one dark canvas, so under short content the body showed the
+  // wrong shade (e.g. warm beneath the black theme — a visible seam). Inline style
+  // on html/body overrides that stylesheet rule.
+  root.style.backgroundColor = canvas
+  if (document.body) document.body.style.backgroundColor = canvas
   try {
     tg?.setHeaderColor?.(canvas)
     tg?.setBackgroundColor?.(canvas)
@@ -111,10 +128,32 @@ export function initTelegram() {
   )
 
   if (!tg) return
-  tg.ready()
+  // ready() is deferred to signalReady() (called once React has mounted) so
+  // Telegram keeps its own BotFather loading screen up through the whole load —
+  // no blank flash, and no separate in-app splash needed.
   tg.expand()
+  // Defensive: an earlier build offered fullscreen (since removed — it covered the
+  // app header and broke tab nav). Exit it on boot so anyone left stuck in
+  // fullscreen by a cached old bundle is recovered. No-op when not fullscreen.
+  try {
+    tg.exitFullscreen?.()
+  } catch {}
   // Re-apply on Telegram theme change — only matters while pref is 'system'.
   tg.onEvent?.('themeChanged', applyScheme)
+  // Publish Telegram's safe-area insets as CSS vars + keep them current (used for
+  // notch-safe top padding).
+  applySafeArea()
+  tg.onEvent?.('safeAreaChanged', applySafeArea)
+  tg.onEvent?.('contentSafeAreaChanged', applySafeArea)
+}
+
+/** Tell Telegram the Mini App is ready — call once React has mounted, so the
+ *  BotFather loading screen stays visible through the entire load (the app has
+ *  no in-app splash of its own). */
+export function signalReady() {
+  try {
+    tg?.ready()
+  } catch {}
 }
 
 /** User can mute haptics in Settings; default on. */
@@ -165,19 +204,108 @@ export function openInvoice(url: string, cb: (status: string) => void) {
 
 /** Open an external link — via the Telegram client when available. */
 export function openLink(url: string) {
-  try {
-    const w = tg as any
-    const isHttp = /^https?:\/\//i.test(url)
-    // Custom-scheme deeplinks (happ://, v2raytun://, …) — hand to the OS so it
-    // opens the target app. Telegram's openLink only handles http(s).
-    if (!isHttp) {
-      window.location.href = url
-      return
-    }
-    if (url.includes('t.me') && w?.openTelegramLink) w.openTelegramLink(url)
-    else if (w?.openLink) w.openLink(url)
-    else window.open(url, '_blank')
-  } catch {
-    window.open(url, '_blank')
+  const isHttp = /^https?:\/\//i.test(url)
+  // Custom-scheme deeplinks (happ://, v2raytun://, …) open the target APP, not a
+  // website — hand straight to the OS, no prompt. Telegram's openLink only does http(s).
+  if (!isHttp) {
+    window.location.href = url
+    return
   }
+  const open = () => {
+    try {
+      const w = tg as any
+      if (url.includes('t.me') && w?.openTelegramLink) w.openTelegramLink(url)
+      else if (w?.openLink) w.openLink(url)
+      else window.open(url, '_blank')
+    } catch {
+      window.open(url, '_blank')
+    }
+  }
+  // Warn before leaving the app for a THIRD-PARTY website (launcher download sites,
+  // GitHub, …). Our own pages (mvp-n.net) and Telegram links open without a prompt.
+  let host = ''
+  try {
+    host = new URL(url).hostname
+  } catch {}
+  const trusted =
+    /(^|\.)mvp-n\.net$/i.test(host) || /(^|\.)t\.me$/i.test(host) || /(^|\.)telegram\.org$/i.test(host)
+  if (trusted) {
+    open()
+    return
+  }
+  const ru = (localStorage.getItem('mvpn_lang') ?? 'ru') === 'ru'
+  const msg = ru
+    ? `Вы покидаете приложение и открываете внешний сайт:\n${host}\n\nПродолжить?`
+    : `You're leaving the app to open an external site:\n${host}\n\nContinue?`
+  confirmDialog(msg).then((ok) => {
+    if (ok) open()
+  })
+}
+
+// ── Native BackButton ────────────────────────────────────────────────────────
+// Telegram's top-left back button, shared across nested sheets via a handler
+// stack: the top-most open sheet owns the back action; closing it falls back to
+// the sheet beneath, and the button hides when the last sheet closes. One
+// dispatcher is registered with Telegram and always invokes the current top.
+// No-op outside Telegram (the in-app ‹ button still works there).
+const backStack: Array<() => void> = []
+let backWired = false
+
+export function pushBackHandler(fn: () => void) {
+  backStack.push(fn)
+  const bb = tg?.BackButton
+  if (!bb) return
+  if (!backWired) {
+    bb.onClick(() => backStack[backStack.length - 1]?.())
+    backWired = true
+  }
+  bb.show()
+}
+
+export function popBackHandler(fn: () => void) {
+  const i = backStack.lastIndexOf(fn)
+  if (i >= 0) backStack.splice(i, 1)
+  if (backStack.length === 0) tg?.BackButton?.hide()
+}
+
+/** Offer to add the Mini App to the device home screen (Telegram Mini Apps 2.0).
+ *  No-op where unsupported. */
+export function addToHomeScreen() {
+  try {
+    tg?.addToHomeScreen?.()
+  } catch {}
+}
+
+/** Whether this client supports adding to the home screen (Bot API 8.0+). Gate the
+ *  button on this CAPABILITY, not on the status probe (checkHomeScreenStatus) — the
+ *  probe is flaky across launches and made the button blink in and out. */
+export function canAddToHomeScreen(): boolean {
+  return typeof tg?.addToHomeScreen === 'function'
+}
+
+/** Home-screen status: 'unsupported' | 'unknown' | 'added' | 'missed'.
+ *  Resolves 'unsupported' outside Telegram / on old clients. */
+export function getHomeScreenStatus(): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      if (tg?.checkHomeScreenStatus) tg.checkHomeScreenStatus((s) => resolve(s || 'unknown'))
+      else resolve('unsupported')
+    } catch {
+      resolve('unsupported')
+    }
+  })
+}
+
+// Publishes Telegram's safe-area insets as CSS vars (--tg-safe-top / -bottom) for
+// notch-safe padding. NB: Telegram fullscreen mode was removed — its overlay
+// controls (close / ⋯) sit on top of the app's own header and covered the menu
+// button, breaking tab navigation. Fullscreen targets games/media without a top bar.
+function applySafeArea() {
+  const sa = tg?.safeAreaInset
+  const csa = tg?.contentSafeAreaInset
+  const top = Math.max(sa?.top ?? 0, csa?.top ?? 0)
+  const bottom = Math.max(sa?.bottom ?? 0, csa?.bottom ?? 0)
+  const root = document.documentElement.style
+  root.setProperty('--tg-safe-top', top + 'px')
+  root.setProperty('--tg-safe-bottom', bottom + 'px')
 }

@@ -17,6 +17,54 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '2.0',
+    date: '2026-06-23',
+    groups: [
+      {
+        kind: 'added',
+        items: [
+          {
+            en: 'Usage — see your own traffic by day, right in the app.',
+            ru: '«Использование» — теперь видно ваш трафик по дням прямо в приложении.',
+          },
+          {
+            en: 'Connect your TON wallet right from your profile — tap the avatar, then the wallet chip.',
+            ru: 'Подключение TON-кошелька прямо из профиля — тап по аватару, затем чип кошелька.',
+          },
+        ],
+      },
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'One-tap “Add subscription” now works on desktop too (Windows / macOS / Linux), not just phones.',
+            ru: 'Кнопка «Добавить подписку» теперь работает и на компьютере (Windows / macOS / Linux), а не только на телефонах.',
+          },
+          {
+            en: 'Faster, smoother start — a branded loading screen instead of a blank flash, plus the native back button.',
+            ru: 'Быстрее и плавнее запуск — фирменный экран загрузки вместо пустой вспышки и нативная кнопка «назад».',
+          },
+          {
+            en: 'New navigation — quick bottom tabs (Configs · Subscription) with your account behind the avatar, so everything is one tap away.',
+            ru: 'Новая навигация — быстрые нижние вкладки (Конфиги · Подписка), а аккаунт — по тапу на аватар; до всего один тап.',
+          },
+          {
+            en: 'A fresh iOS-style “liquid glass” look — frosted bars, menus and buttons, rounder cards, and smooth tab animations.',
+            ru: 'Свежий вид в стиле iOS «жидкое стекло» — матовые панели, меню и кнопки, более круглые карточки и плавные анимации вкладок.',
+          },
+          {
+            en: 'Manage a device inline — block, unblock or remove it right in the list, no extra screen.',
+            ru: 'Управление устройством на месте — заблокировать, разблокировать или удалить прямо в списке, без лишнего экрана.',
+          },
+          {
+            en: 'A heads-up before opening an external website (launcher downloads, stores), so you always know where a link leads.',
+            ru: 'Предупреждение перед переходом на внешний сайт (загрузки лаунчеров, сторы) — всегда видно, куда ведёт ссылка.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '1.9',
     date: '2026-06-20',
     groups: [

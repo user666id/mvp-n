@@ -54,7 +54,7 @@ export function KeyEntrySheet({
         onChange={(e) => setKey(e.target.value.toUpperCase())}
         placeholder="XXXX-XXXX"
         autoCapitalize="characters"
-        className="h-[52px] w-full rounded-2xl border border-transparent bg-surface-sunken px-4 text-[16px] tracking-wider text-ink outline-none placeholder:text-faint focus:border-accent"
+        className="h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[16px] tracking-wider text-ink outline-none placeholder:text-faint focus:border-accent"
       />
       {error && <p className="mt-3 text-[14px] text-danger">{error}</p>}
       <div className="mt-5">{primaryBtn}</div>

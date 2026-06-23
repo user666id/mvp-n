@@ -61,14 +61,14 @@ func buildURI(clientUUID, location string, enhanced, gameMode bool) string {
 
 	tags := ""
 	if enhanced {
-		tags += " усиленный"
+		tags += " Enhanced"
 	}
 	if gameMode {
-		tags += " игровой"
+		tags += " Gaming"
 	}
 	// Entry name shown inside the launcher (flag + country + mode). No parentheses:
 	// some clients (AmneziaVPN) don't URL-decode "(" / ")" and show %28/%29.
-	label := url.PathEscape(fmt.Sprintf("🇳🇱 Нидерланды%s", tags))
+	label := url.PathEscape(fmt.Sprintf("🇳🇱 Netherlands%s", tags))
 	_ = location
 	return fmt.Sprintf("vless://%s@%s:%d?%s#%s",
 		clientUUID, serverIP, port, q.Encode(), label)

@@ -140,6 +140,7 @@ func fetchTONTransfers(ctx context.Context, wallet string) []transfer {
 		Events []struct {
 			Actions []struct {
 				Type        string `json:"type"`
+				Status      string `json:"status"` // "ok" | "failed"
 				TonTransfer *struct {
 					Recipient struct {
 						Address string `json:"address"`
@@ -157,7 +158,8 @@ func fetchTONTransfers(ctx context.Context, wallet string) []transfer {
 					} `json:"jetton"`
 				} `json:"JettonTransfer"`
 			} `json:"actions"`
-			EventID string `json:"event_id"`
+			EventID    string `json:"event_id"`
+			InProgress bool   `json:"in_progress"`
 		} `json:"events"`
 	}
 	if json.Unmarshal(body, &resp) != nil {
@@ -165,7 +167,16 @@ func fetchTONTransfers(ctx context.Context, wallet string) []transfer {
 	}
 	var out []transfer
 	for _, ev := range resp.Events {
+		// Only credit finalized events: tonapi marks not-yet-settled events
+		// in_progress, so skip them and let a later poll pick them up once the
+		// transfer is confirmed on-chain (a basic confirmation-depth guard).
+		if ev.InProgress {
+			continue
+		}
 		for i, a := range ev.Actions {
+			if a.Status == "failed" { // ignore reverted / failed transfer actions
+				continue
+			}
 			tx := fmt.Sprintf("%s:%d", ev.EventID, i) // unique per action
 			switch {
 			case a.TonTransfer != nil && sameTONHash(a.TonTransfer.Recipient.Address, wantHash):

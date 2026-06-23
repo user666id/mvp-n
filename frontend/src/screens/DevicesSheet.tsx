@@ -6,7 +6,7 @@ import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
-import { ChevronRight, Ban, Check, Trash } from '../components/icons'
+import { Ban, Trash } from '../components/icons'
 import { DeviceRow, isOSName } from '../components/DeviceRow'
 import { useToast } from '../components/ui/Toast'
 import { confirmDialog } from '../lib/telegram'
@@ -22,9 +22,6 @@ import {
   type Device,
 } from '../api'
 
-/** "{Launcher} {OS}" — e.g. "Happ Windows"; empty when neither is known. */
-const deviceLabel = (d: Device) => [d.client, d.name].filter(Boolean).join(' ')
-
 export function DevicesSheet({
   open,
   onClose,
@@ -38,7 +35,6 @@ export function DevicesSheet({
   const toast = useToast()
   const [devices, setDevices] = useState<Device[] | null>(null)
   const [failed, setFailed] = useState(false)
-  const [actions, setActions] = useState<Device | null>(null)
   const [renaming, setRenaming] = useState<Device | null>(null)
   const [renameVal, setRenameVal] = useState('')
   const [busy, setBusy] = useState(false)
@@ -67,8 +63,24 @@ export function DevicesSheet({
     onChanged?.()
   }
 
+  // Delete a device inline (with a confirm) — no separate actions sheet.
+  const doDelete = async (d: Device) => {
+    if (!(await confirmDialog(t('devices.deleteConfirm')))) return
+    setBusy(true)
+    try {
+      // AmneziaWG "device" is its config → deleting it revokes the peer.
+      if (d.kind === 'awg') await deleteConfig(d.id)
+      else await deleteDevice(d.id)
+      toast(t('devices.deletedToast'))
+      await refresh()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Block is reversible (unblock re-enables instantly, no re-setup) — unlike
+  // delete, which forces reconfiguring the device. Both are inline on the row.
   const doBlock = async (d: Device) => {
-    setActions(null)
     setBusy(true)
     try {
       await blockDevice(d.id)
@@ -80,26 +92,10 @@ export function DevicesSheet({
   }
 
   const doUnblock = async (d: Device) => {
-    setActions(null)
     setBusy(true)
     try {
       await unblockDevice(d.id)
       toast(t('devices.unblockedToast'))
-      await refresh()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const doDelete = async (d: Device) => {
-    setActions(null)
-    if (!(await confirmDialog(t('devices.deleteConfirm')))) return
-    setBusy(true)
-    try {
-      // AmneziaWG "device" is its config → deleting it revokes the peer.
-      if (d.kind === 'awg') await deleteConfig(d.id)
-      else await deleteDevice(d.id)
-      toast(t('devices.deletedToast'))
       await refresh()
     } finally {
       setBusy(false)
@@ -137,7 +133,7 @@ export function DevicesSheet({
   const awgList = (devices ?? []).filter((d) => d.kind === 'awg')
 
   const renderGroup = (list: Device[]) => (
-    <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-surface">
+    <div className="mb-4 overflow-hidden rounded-3xl border border-border bg-surface">
       {list.map((d, i) => {
         const renamed = !isOSName(d.name)
         return (
@@ -151,13 +147,24 @@ export function DevicesSheet({
               setRenaming(d)
             }}
             trailing={
-              <button
-                onClick={() => setActions(d)}
-                className="shrink-0 text-faint active:opacity-60"
-                aria-label={t('devices.actions')}
-              >
-                <ChevronRight size={20} />
-              </button>
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button
+                  onClick={() => (d.is_blocked ? doUnblock(d) : doBlock(d))}
+                  disabled={busy}
+                  className="grid h-9 w-9 place-items-center rounded-full active:bg-surface-sunken disabled:opacity-50"
+                  aria-label={d.is_blocked ? t('devices.unblock') : t('devices.block')}
+                >
+                  <Ban size={18} className={d.is_blocked ? 'text-danger' : 'text-muted'} />
+                </button>
+                <button
+                  onClick={() => doDelete(d)}
+                  disabled={busy}
+                  className="grid h-9 w-9 place-items-center rounded-full text-danger active:bg-danger/10 disabled:opacity-50"
+                  aria-label={t('devices.deleteOne')}
+                >
+                  <Trash size={18} />
+                </button>
+              </div>
             }
           />
         )
@@ -208,43 +215,13 @@ export function DevicesSheet({
         )}
       </Sheet>
 
-      {/* device actions */}
-      <Sheet
-        open={!!actions}
-        onClose={() => setActions(null)}
-        onBack={() => setActions(null)}
-        title={actions ? deviceLabel(actions) || t('common.device') : ''}
-      >
-        {actions && (
-          <>
-            <Section>
-              <Cell
-                before={actions.is_blocked ? <Check size={20} /> : <Ban size={20} />}
-                title={actions.is_blocked ? t('devices.unblock') : t('devices.block')}
-                onClick={() => (actions.is_blocked ? doUnblock(actions) : doBlock(actions))}
-                last
-              />
-            </Section>
-            <Section>
-              <Cell
-                before={<Trash size={20} />}
-                title={t('devices.deleteOne')}
-                onClick={() => doDelete(actions)}
-                destructive
-                last
-              />
-            </Section>
-          </>
-        )}
-      </Sheet>
-
       {/* rename */}
       <Sheet open={!!renaming} onClose={() => setRenaming(null)} onBack={() => setRenaming(null)} title={t('devices.renameTitle')}>
         <input
           value={renameVal}
           onChange={(e) => setRenameVal(e.target.value)}
           placeholder={t('devices.renamePlaceholder')}
-          className="mb-4 h-[52px] w-full rounded-2xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
+          className="mb-4 h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
         />
         <div className="pb-2">
           <Button stretched loading={busy} disabled={!renameVal.trim()} onClick={doRename}>

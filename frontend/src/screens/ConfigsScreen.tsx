@@ -5,13 +5,12 @@ import { Button } from '../components/ui/Button'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
 import { Spinner } from '../components/ui/Spinner'
-import { Layers, Lock, Plus, Globe } from '../components/icons'
+import { Layers, Lock, Plus, Globe, ChevronRight } from '../components/icons'
 import { StatusDot } from '../components/StatusDot'
 import { useToast } from '../components/ui/Toast'
 import { CreateConfigSheet } from './CreateConfigSheet'
 import { ConfigDetailSheet } from './ConfigDetailSheet'
 import { ServerStatsSheet } from './ServerStatsSheet'
-import { SubscribeSheet } from './SubscribeSheet'
 import { KeyEntrySheet } from './KeyEntrySheet'
 import {
   createConfig,
@@ -32,7 +31,17 @@ import { plural } from '../lib/format'
 import { configMeta, configListLabel } from '../lib/configMeta'
 import { fmtSubDate } from '../lib/subscription'
 
-export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu?: () => void }) {
+export function ConfigsScreen({
+  active,
+  onAccount,
+  accountName,
+  onGoSubscription,
+}: {
+  active: boolean
+  onAccount: () => void
+  accountName?: string
+  onGoSubscription: () => void
+}) {
   const { t, lang } = useT()
   const toast = useToast()
   const [configs, setConfigs] = useState<Config[]>([])
@@ -43,7 +52,6 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu?: ()
   const [creating, setCreating] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [statsOpen, setStatsOpen] = useState(false)
-  const [subOpen, setSubOpen] = useState(false)
   const [keyOpen, setKeyOpen] = useState(false)
   const [pending, setPending] = useState<Order[]>([])
 
@@ -139,7 +147,7 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu?: ()
 
   return (
     <div className="animate-fade min-h-screen pb-24">
-      <PageHeader title={t('configs.title')} onMenu={onMenu} />
+      <PageHeader title={t('configs.title')} onAccount={onAccount} accountName={accountName} />
 
       <div className="px-4">
         {loading ? (
@@ -159,7 +167,7 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu?: ()
             <p className="mb-7 mt-2 max-w-[290px] text-[14px] leading-relaxed text-muted">
               {t('pay.pendingHint')}
             </p>
-            <Button stretched variant="secondary" onClick={() => setSubOpen(true)}>
+            <Button stretched variant="secondary" onClick={onGoSubscription}>
               {t('pay.pendingView')}
             </Button>
           </div>
@@ -176,7 +184,7 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu?: ()
             <p className="mb-7 mt-2 max-w-[290px] text-[14px] leading-relaxed text-muted">
               {expired ? t('sub.expiredHint') : t('sub.connectHint')}
             </p>
-            <Button stretched onClick={() => setSubOpen(true)}>
+            <Button stretched onClick={onGoSubscription}>
               {expired ? t('sub.renew') : t('sub.buy')}
             </Button>
             <Button variant="secondary" stretched className="mt-3" onClick={() => setKeyOpen(true)}>
@@ -189,7 +197,10 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu?: ()
                 renew. Key / lifetime users (no paid_until) see "lifetime". */}
             {profile &&
               (profile.paid_until ? (
-                <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3">
+                <button
+                  onClick={onGoSubscription}
+                  className="mb-4 flex w-full items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3 text-left active:bg-surface-sunken"
+                >
                   <div className="min-w-0 flex-1">
                     <div className="text-[14px] font-medium text-ink">
                       {t('sub.activeShort', { d: fmtSubDate(profile.paid_until, lang) })}
@@ -203,15 +214,10 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu?: ()
                       })}
                     </div>
                   </div>
-                  <button
-                    onClick={() => setSubOpen(true)}
-                    className="h-9 shrink-0 rounded-full bg-accent px-4 text-[13.5px] font-medium text-white active:bg-accent-hover"
-                  >
-                    {t('sub.extend')}
-                  </button>
-                </div>
+                  <ChevronRight size={20} className="shrink-0 text-faint" />
+                </button>
               ) : (
-                <div className="mb-4 rounded-2xl border border-border bg-surface px-4 py-3 text-[14px] font-medium text-ink">
+                <div className="mb-4 rounded-3xl border border-border bg-surface px-4 py-3 text-[14px] font-medium text-ink">
                   {t('sub.lifetimeBottom')}
                 </div>
               ))}
@@ -232,9 +238,9 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu?: ()
                   <button
                     key={c.id}
                     onClick={() => setDetailId(c.id)}
-                    className="flex items-center gap-3.5 rounded-2xl border border-border bg-surface px-4 py-4 text-left active:bg-surface-sunken"
+                    className="flex items-center gap-3.5 rounded-3xl border border-border bg-surface px-4 py-4 text-left active:bg-surface-sunken"
                   >
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-surface-sunken text-faint">
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-3xl bg-surface-sunken text-faint">
                       <Globe size={24} />
                     </span>
                     <div className="min-w-0 flex-1">
@@ -271,8 +277,8 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu?: ()
           onClick={() => setCreateOpen(true)}
           aria-label={t('configs.create')}
           className={
-            'fixed right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full bg-accent px-5 text-white shadow-btn active:bg-accent-hover ' +
-            'bottom-[max(20px,env(safe-area-inset-bottom))]'
+            'fixed right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-accent/70 px-5 text-white shadow-btn backdrop-blur-xl backdrop-saturate-150 active:bg-accent/85 ' +
+            'bottom-[calc(92px+env(safe-area-inset-bottom))]'
           }
         >
           <Plus size={20} />
@@ -299,12 +305,6 @@ export function ConfigsScreen({ active, onMenu }: { active: boolean; onMenu?: ()
         open={statsOpen}
         onClose={() => setStatsOpen(false)}
         configId={detailId}
-      />
-      <SubscribeSheet
-        open={subOpen}
-        onClose={() => setSubOpen(false)}
-        onPaid={load}
-        renewing={!!profile?.is_expired}
       />
       <KeyEntrySheet open={keyOpen} onClose={() => setKeyOpen(false)} onActivated={load} />
     </div>

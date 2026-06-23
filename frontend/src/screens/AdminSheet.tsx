@@ -8,7 +8,7 @@ import { ListSkeleton } from '../components/ui/Skeleton'
 import { Spinner } from '../components/ui/Spinner'
 import { Badge } from '../components/ui/Badge'
 import { Avatar } from '../components/ui/Avatar'
-import { Copy, ChevronRight, Ban, Trash, ExternalLink, Refresh, Check } from '../components/icons'
+import { Copy, ChevronRight, Ban, Trash, ExternalLink, Refresh } from '../components/icons'
 import { DeviceRow } from '../components/DeviceRow'
 import { StatusDot } from '../components/StatusDot'
 import { ProfileDetails } from '../components/ProfileDetails'
@@ -31,7 +31,15 @@ import {
 const profileName = (p: AdminProfile) =>
   p.username ? '@' + p.username : p.first_name || ''
 
-export function AdminScreen({ active, onMenu }: { active: boolean; onMenu?: () => void }) {
+export function AdminScreen({
+  active,
+  onAccount,
+  accountName,
+}: {
+  active: boolean
+  onAccount: () => void
+  accountName?: string
+}) {
   const { t, lang } = useT()
   const toast = useToast()
   const [profiles, setProfiles] = useState<AdminProfile[] | null>(null)
@@ -164,10 +172,10 @@ export function AdminScreen({ active, onMenu }: { active: boolean; onMenu?: () =
 
   return (
     <>
-      {/* Admin opens as a top-level tab (hamburger header), like Configs/Settings.
+      {/* Admin opens as a top-level tab (avatar header), like Configs/Subscription.
           Its drill-downs (keys, profiles, …) still open as ‹back› child sheets. */}
-      <div className="animate-fade min-h-screen pb-10">
-        <PageHeader title={t('admin.title')} onMenu={onMenu} />
+      <div className="animate-fade min-h-screen pb-24">
+        <PageHeader title={t('admin.title')} onAccount={onAccount} accountName={accountName} />
         <div className="px-4">
           {/* one column: traffic + profiles + keys + statuses */}
           <Section>
@@ -230,7 +238,7 @@ export function AdminScreen({ active, onMenu }: { active: boolean; onMenu?: () =
                 value={count}
                 onChange={(e) => setCount(e.target.value.replace(/[^0-9]/g, ''))}
                 inputMode="numeric"
-                className="mt-1 h-[44px] w-full rounded-xl border border-transparent bg-surface-sunken px-3 text-[16px] text-ink outline-none focus:border-accent"
+                className="mt-1 h-[44px] w-full rounded-2xl border border-transparent bg-surface-sunken px-3 text-[16px] text-ink outline-none focus:border-accent"
               />
             </div>
             <Button className="h-[44px] flex-1" loading={genBusy} onClick={generate}>
@@ -279,7 +287,7 @@ export function AdminScreen({ active, onMenu }: { active: boolean; onMenu?: () =
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('admin.search')}
-              className="h-[48px] w-full rounded-2xl border border-transparent bg-surface-sunken px-4 text-[15px] text-ink outline-none placeholder:text-faint focus:border-accent"
+              className="h-[48px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[15px] text-ink outline-none placeholder:text-faint focus:border-accent"
             />
           </div>
         )}
@@ -288,7 +296,7 @@ export function AdminScreen({ active, onMenu }: { active: boolean; onMenu?: () =
         ) : shown.length === 0 ? (
           <div className="py-10 text-center text-[14px] text-muted">{t('admin.noMatches')}</div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+          <div className="overflow-hidden rounded-3xl border border-border bg-surface">
             {shown.map((p, i) => {
               const name = profileName(p)
               return (
@@ -397,7 +405,7 @@ function DomainStatusSheet({
               <div className="font-display mb-2 px-3 text-[13px] font-medium uppercase tracking-[0.06em] text-faint">
                 {label}
               </div>
-              <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+              <div className="overflow-hidden rounded-3xl border border-border bg-surface">
                 {group.map((d, i) => {
                   const cls =
                     'flex w-full items-center gap-3 px-4 py-3.5 text-left ' +
@@ -456,7 +464,6 @@ function AdminProfileSheet({
   const toast = useToast()
   const [devices, setDevices] = useState<Device[] | null>(null)
   const [configs, setConfigs] = useState<AdminConfig[] | null>(null)
-  const [actions, setActions] = useState<Device | null>(null)
   const [devicesOpen, setDevicesOpen] = useState(false)
   const [configsOpen, setConfigsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -581,6 +588,7 @@ function AdminProfileSheet({
           before={<Ban size={20} />}
           title={profile.is_blocked ? t('admin.unblockProfile') : t('admin.blockProfile')}
           onClick={block}
+          destructive={profile.is_blocked}
           last
         />
       </Section>
@@ -603,7 +611,7 @@ function AdminProfileSheet({
       onBack={() => setConfigsOpen(false)}
       title={t('admin.configsTitle', { n: configs ? configs.length : profile.configs_count })}
     >
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface">
         {!configs ? (
           <ListSkeleton rows={2} avatar={false} card={false} />
         ) : configs.length === 0 ? (
@@ -636,7 +644,7 @@ function AdminProfileSheet({
           <div className="font-display mb-2 px-3 text-[15px] font-semibold text-ink">{label}</div>
         )
         const renderGroup = (list: Device[]) => (
-          <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-surface">
+          <div className="mb-4 overflow-hidden rounded-3xl border border-border bg-surface">
             {list.map((d, i) => (
               <DeviceRow
                 key={d.id}
@@ -644,13 +652,22 @@ function AdminProfileSheet({
                 index={i}
                 border={i !== list.length - 1}
                 trailing={
-                  <button
-                    onClick={() => setActions(d)}
-                    className="shrink-0 text-faint active:opacity-60"
-                    aria-label={t('devices.actions')}
-                  >
-                    <ChevronRight size={20} />
-                  </button>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    <button
+                      onClick={() => toggleBlockDevice(d)}
+                      className="grid h-9 w-9 place-items-center rounded-full active:bg-surface-sunken"
+                      aria-label={d.is_blocked ? t('devices.unblock') : t('devices.block')}
+                    >
+                      <Ban size={18} className={d.is_blocked ? 'text-danger' : 'text-muted'} />
+                    </button>
+                    <button
+                      onClick={() => delDevice(d)}
+                      className="grid h-9 w-9 place-items-center rounded-full text-danger active:bg-danger/10"
+                      aria-label={t('devices.deleteOne')}
+                    >
+                      <Trash size={18} />
+                    </button>
+                  </div>
                 }
               />
             ))}
@@ -683,43 +700,6 @@ function AdminProfileSheet({
       })()}
     </Sheet>
 
-    {/* device actions — block/unblock + delete (same as the user devices view) */}
-    <Sheet
-      open={!!actions}
-      onClose={() => setActions(null)}
-      onBack={() => setActions(null)}
-      title={actions ? [actions.client, actions.name].filter(Boolean).join(' ') || t('common.device') : ''}
-    >
-      {actions && (
-        <>
-          <Section>
-            <Cell
-              before={actions.is_blocked ? <Check size={20} /> : <Ban size={20} />}
-              title={actions.is_blocked ? t('devices.unblock') : t('devices.block')}
-              onClick={() => {
-                const d = actions
-                setActions(null)
-                toggleBlockDevice(d)
-              }}
-              last
-            />
-          </Section>
-          <Section>
-            <Cell
-              before={<Trash size={20} />}
-              title={t('devices.deleteOne')}
-              onClick={() => {
-                const d = actions
-                setActions(null)
-                delDevice(d)
-              }}
-              destructive
-              last
-            />
-          </Section>
-        </>
-      )}
-    </Sheet>
 
     {busy && (
       <div className="fixed inset-0 z-[55] grid place-items-center bg-black/20">

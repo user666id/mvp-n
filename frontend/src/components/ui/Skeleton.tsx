@@ -33,7 +33,7 @@ export function ListSkeleton({
     </div>
   ))
   return card ? (
-    <div className="overflow-hidden rounded-2xl border border-border bg-surface">{inner}</div>
+    <div className="overflow-hidden rounded-3xl border border-border bg-surface">{inner}</div>
   ) : (
     <>{inner}</>
   )

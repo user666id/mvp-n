@@ -253,7 +253,7 @@ ALTER TABLE devices ADD COLUMN IF NOT EXISTS vpn_email VARCHAR(128);
 -- counter grows (i.e. the device is actually passing data through the VPN).
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS traffic_seen BIGINT;
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS last_active  TIMESTAMPTZ;
--- created_at gives a STABLE order for the "Устройство N" labels: the device you
+-- created_at gives a STABLE order for the "Device N" labels: the device you
 -- added first stays #1, instead of the numbering shuffling by recent activity
 -- (which is what ORDER BY last_seen did). Backfill existing rows from last_seen
 -- so their relative order stays sensible.
@@ -311,6 +311,16 @@ CREATE INDEX IF NOT EXISTS idx_server_metrics_time ON server_metrics(recorded_at
 CREATE TABLE IF NOT EXISTS traffic_daily (
     day   DATE   PRIMARY KEY,
     bytes BIGINT NOT NULL DEFAULT 0
+);
+
+-- Per-user, per-day traffic — powers the user-facing "Usage" chart. Fed by the
+-- same positive deltas as users.traffic_used / traffic_daily, keyed by the user
+-- and the Moscow calendar date.
+CREATE TABLE IF NOT EXISTS user_traffic_daily (
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    day     DATE   NOT NULL,
+    bytes   BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, day)
 );
 
 -- Crypto payment intents. A pending order reserves a UNIQUE amount (base price +

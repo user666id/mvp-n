@@ -1,8 +1,9 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { Sheet } from '../components/ui/Sheet'
+import { PageHeader } from '../components/PageHeader'
 import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
-import { ListSkeleton } from '../components/ui/Skeleton'
+import { ListSkeleton, Skeleton } from '../components/ui/Skeleton'
 import { Badge } from '../components/ui/Badge'
 import { CurrencyIcon } from '../components/CurrencyIcon'
 import { Dollar, Key, Clock, ChevronRight, ExternalLink } from '../components/icons'
@@ -21,20 +22,22 @@ const planLabel = (days: number, t: ReturnType<typeof useT>['t']) =>
     days
   ] || `${days} d`
 
-/** Dedicated "Subscription" pane (opened from Settings). Shows the current
- *  status — lifetime (key), active until a date, expired, or none — the
- *  buy/renew action, and payment history. Keeps the Configs screen clean.
- *  Neutral by design; only an expired subscription is highlighted (red). */
-export function SubscriptionSheet({
-  open,
-  onClose,
+/** Dedicated "Subscription" tab. Shows the current status — lifetime (key),
+ *  active until a date, expired, or none — the buy/renew action, and payment
+ *  history. Keeps the Configs screen clean. Neutral by design; only an expired
+ *  subscription is highlighted (red). */
+export function SubscriptionScreen({
+  active,
   profile,
   onChanged,
+  onAccount,
+  accountName,
 }: {
-  open: boolean
-  onClose: () => void
+  active: boolean
   profile: Profile | null
   onChanged: () => void
+  onAccount: () => void
+  accountName?: string
 }) {
   const { t, lang } = useT()
   const [buyOpen, setBuyOpen] = useState(false)
@@ -45,6 +48,12 @@ export function SubscriptionSheet({
     state === 'active' && profile?.paid_until
       ? Math.max(0, Math.ceil((new Date(profile.paid_until).getTime() - Date.now()) / 86_400_000))
       : 0
+
+  // Refresh the status whenever the tab becomes active.
+  useEffect(() => {
+    if (active) onChanged()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active])
 
   const title =
     state === 'lifetime'
@@ -67,85 +76,96 @@ export function SubscriptionSheet({
   const danger = state === 'expired'
 
   return (
-    <Sheet open={open} onClose={onClose} title={t('sub.status')}>
-      {/* status header — only states that prompt the user (expired / none);
-          active and lifetime show a short line at the bottom instead. */}
-      {state !== 'active' && state !== 'lifetime' && (
-        <div className="px-1 pt-1">
-          <h3
-            className={
-              'font-display text-[21px] font-semibold ' + (danger ? 'text-danger' : 'text-ink')
+    <div className="animate-fade min-h-screen pb-24">
+      <PageHeader title={t('tab.subscription')} onAccount={onAccount} accountName={accountName} />
+      <div className="px-4">
+        {/* status header — only states that prompt the user (expired / none);
+            active and lifetime show a short line at the bottom instead. */}
+        {state !== 'active' && state !== 'lifetime' && (
+          <div className="px-1 pt-1">
+            <h3
+              className={
+                'font-display text-[21px] font-semibold ' + (danger ? 'text-danger' : 'text-ink')
+              }
+            >
+              {title}
+            </h3>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-muted">{hint}</p>
+          </div>
+        )}
+
+        {/* TON wallet at the top — link up-front (one-tap renewals); shows +
+            disconnects once connected. Lazy: TON Connect SDK loads with this pane. */}
+        <div className="mt-4">
+          <Suspense
+            fallback={
+              <div className="flex items-center gap-2.5 rounded-3xl border border-border bg-surface px-4 py-3">
+                <Skeleton className="h-5 w-5 shrink-0 rounded-md" />
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-7 w-[84px] shrink-0 rounded-full" />
+              </div>
             }
           >
-            {title}
-          </h3>
-          <p className="mt-1.5 text-[14px] leading-relaxed text-muted">{hint}</p>
+            <WalletStatus />
+          </Suspense>
         </div>
-      )}
 
-      {/* TON wallet at the top — link up-front (one-tap renewals); shows +
-          disconnects once connected. Lazy: TON Connect SDK loads with this pane. */}
-      <div className="mt-4">
-        <Suspense fallback={null}>
-          <WalletStatus />
-        </Suspense>
-      </div>
-
-      {/* actions as plain grey rows (Claude "Billing" style — not coloured buttons) */}
-      <div className="mt-4">
-        <Section>
-          {state !== 'lifetime' && (
+        {/* actions as plain grey rows (Claude "Billing" style — not coloured buttons) */}
+        <div className="mt-4">
+          <Section>
+            {state !== 'lifetime' && (
+              <Cell
+                before={<Dollar size={20} />}
+                after={<ChevronRight size={20} className="text-faint" />}
+                title={state === 'none' ? t('sub.buy') : t('sub.renew')}
+                onClick={() => setBuyOpen(true)}
+              />
+            )}
+            {state !== 'lifetime' && (
+              <Cell
+                before={<Key size={20} />}
+                after={<ChevronRight size={20} className="text-faint" />}
+                title={t('sub.haveKey')}
+                onClick={() => setKeyOpen(true)}
+              />
+            )}
             <Cell
-              before={<Dollar size={20} />}
+              before={<Clock size={20} />}
               after={<ChevronRight size={20} className="text-faint" />}
-              title={state === 'none' ? t('sub.buy') : t('sub.renew')}
-              onClick={() => setBuyOpen(true)}
+              title={t('sub.history')}
+              onClick={() => setHistoryOpen(true)}
+              last
             />
-          )}
-          {state !== 'lifetime' && (
-            <Cell
-              before={<Key size={20} />}
-              after={<ChevronRight size={20} className="text-faint" />}
-              title={t('sub.haveKey')}
-              onClick={() => setKeyOpen(true)}
-            />
-          )}
-          <Cell
-            before={<Clock size={20} />}
-            after={<ChevronRight size={20} className="text-faint" />}
-            title={t('sub.history')}
-            onClick={() => setHistoryOpen(true)}
-            last
-          />
-        </Section>
+          </Section>
+        </div>
+
+        {/* short status line at the bottom (active + lifetime) */}
+        {state === 'active' && (
+          <p className="mt-5 text-center text-[13px] text-muted">
+            {t('sub.activeShort', { d: fmtSubDate(profile!.paid_until!, lang) })} · {t('sub.daysLeft', { n: daysLeft })}
+          </p>
+        )}
+        {state === 'lifetime' && (
+          <p className="mt-5 text-center text-[13px] text-muted">{t('sub.lifetimeBottom')}</p>
+        )}
+
+        <SubscribeSheet
+          open={buyOpen}
+          onClose={() => setBuyOpen(false)}
+          onPaid={onChanged}
+          renewing={state === 'active' || state === 'expired'}
+        />
+        <KeyEntrySheet
+          open={keyOpen}
+          onClose={() => setKeyOpen(false)}
+          onActivated={() => {
+            setKeyOpen(false)
+            onChanged()
+          }}
+        />
+        <PaymentHistorySheet open={historyOpen} onClose={() => setHistoryOpen(false)} />
       </div>
-
-      {/* short status line at the bottom (active + lifetime) */}
-      {state === 'active' && (
-        <p className="mt-5 text-center text-[13px] text-muted">
-          {t('sub.activeShort', { d: fmtSubDate(profile!.paid_until!, lang) })} · {t('sub.daysLeft', { n: daysLeft })}
-        </p>
-      )}
-      {state === 'lifetime' && (
-        <p className="mt-5 text-center text-[13px] text-muted">{t('sub.lifetimeBottom')}</p>
-      )}
-
-      <SubscribeSheet
-        open={buyOpen}
-        onClose={() => setBuyOpen(false)}
-        onPaid={onChanged}
-        renewing={state === 'active' || state === 'expired'}
-      />
-      <KeyEntrySheet
-        open={keyOpen}
-        onClose={() => setKeyOpen(false)}
-        onActivated={() => {
-          setKeyOpen(false)
-          onChanged()
-        }}
-      />
-      <PaymentHistorySheet open={historyOpen} onClose={() => setHistoryOpen(false)} />
-    </Sheet>
+    </div>
   )
 }
 
@@ -162,14 +182,7 @@ function PaymentHistorySheet({ open, onClose }: { open: boolean; onClose: () => 
       .catch(() => setItems([]))
   }, [open])
 
-  const fmtWhen = (s?: string) =>
-    s
-      ? new Date(s).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-        })
-      : ''
+  const fmtWhen = (s?: string) => (s ? fmtSubDate(s, lang) : '')
   const assetLabel = (a: string) => (a === 'TON' ? 'GRAM' : 'USDT')
 
   return (
@@ -179,7 +192,7 @@ function PaymentHistorySheet({ open, onClose }: { open: boolean; onClose: () => 
       ) : items.length === 0 ? (
         <div className="py-14 text-center text-[14px] text-muted">{t('sub.historyEmpty')}</div>
       ) : (
-        <div className="animate-fade overflow-hidden rounded-2xl border border-border bg-surface">
+        <div className="animate-fade overflow-hidden rounded-3xl border border-border bg-surface">
           {items.map((o, i) => {
             const paid = o.status !== 'expired'
             const txUrl = paid ? txExplorerUrl(o.asset, o.tx_hash) : ''

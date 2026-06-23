@@ -17,7 +17,7 @@ export function Section({
       {header && (
         <div className="px-3 pb-2 text-[13px] font-semibold text-faint">{header}</div>
       )}
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface">
         {children}
       </div>
       {footer && <div className="px-3 pt-2 text-[13px] leading-snug text-muted">{footer}</div>}
@@ -36,7 +36,7 @@ export function Card({
   return (
     <div
       className={
-        'rounded-2xl border border-border bg-surface p-4 ' + className
+        'rounded-3xl border border-border bg-surface p-4 ' + className
       }
     >
       {children}

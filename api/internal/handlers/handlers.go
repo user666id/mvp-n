@@ -56,6 +56,15 @@ func (h *Handler) writeOK(w http.ResponseWriter, data any) {
 }
 
 func (h *Handler) writeError(w http.ResponseWriter, code int, errorCode, message string) {
+	// On server faults (5xx) the message is almost always a raw error string
+	// (DB/driver/internal) that can leak schema or implementation detail. Log the
+	// real message server-side and return a generic one; the errorCode is kept so
+	// clients can still branch on the failure class. 4xx messages are client-input
+	// feedback (bad JSON, invalid initData) and pass through unchanged.
+	if code >= 500 {
+		log.Printf("[error] %d %s: %s", code, errorCode, message)
+		message = "internal server error"
+	}
 	h.writeJSON(w, code, Response{Status: false, StatusCode: code, ErrorCode: errorCode, Message: message})
 }
 

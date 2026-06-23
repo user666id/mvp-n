@@ -52,7 +52,7 @@ export function configMeta(c: ConfigLike, t: Tfn): ConfigMeta {
 }
 
 /** Main-screen list card — mode-forward and glanceable:
- *  "VLESS · Усиленный" (mode is empty for AmneziaWG → just "AmneziaWG"). */
+ *  "VLESS · Enhanced" (mode is empty for AmneziaWG → just "AmneziaWG"). */
 export function configListLabel(m: ConfigMeta): string {
   return [m.protocol, m.mode].filter(Boolean).join(' · ')
 }

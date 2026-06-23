@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { ToastProvider } from './components/ui/Toast'
-import { Drawer, type Tab } from './components/Drawer'
+import { BottomTabs, type Tab } from './components/BottomTabs'
 import { AuthScreen } from './screens/AuthScreen'
 import { ConfigsScreen } from './screens/ConfigsScreen'
-import { SettingsScreen } from './screens/SettingsScreen'
+import { SubscriptionScreen } from './screens/SubscriptionScreen'
+import { AccountSheet } from './screens/SettingsScreen'
 import { AdminScreen } from './screens/AdminSheet'
 import { Spinner } from './components/ui/Spinner'
-import { ApiError, authTelegram, clearToken, getProfile, getToken, setLanguage } from './api'
-import { notify } from './lib/telegram'
+import { ApiError, authTelegram, clearToken, getProfile, getToken, setLanguage, type Profile } from './api'
+import { notify, signalReady } from './lib/telegram'
 import { useT } from './lib/i18n'
 
 type Phase = 'auth' | 'loading' | 'main' | 'error'
@@ -18,8 +19,11 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('configs')
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [profile, setProfile] = useState<Profile | null>(null)
+
+  const refreshProfile = () => getProfile().then(setProfile).catch(() => {})
 
   const handleLogin = async () => {
     setBusy(true)
@@ -38,9 +42,12 @@ export default function App() {
   }
 
   // Auto-login only RETURNING users (a saved token). First-time users still see
-  // the welcome screen with the "Войти через Telegram" button, then the key
+  // the welcome screen with the "Sign in with Telegram" button, then the key
   // screen — so the login step is never silently skipped.
   useEffect(() => {
+    // React has mounted → tell Telegram we're ready so it dismisses its own
+    // BotFather loading screen (there's no separate in-app splash anymore).
+    signalReady()
     if (getToken()) {
       setPhase('loading')
       handleLogin()
@@ -56,10 +63,19 @@ export default function App() {
     if (phase !== 'main') return
     const saved = localStorage.getItem('mvpn_lang')
     if (saved === 'en' || saved === 'ru') setLanguage(saved).catch(() => {})
-    // Surface the admin entry in the menu for admins (best-effort; a failed
-    // profile fetch just hides it).
+    // Warm the heavy TON Connect chunk on idle, so the wallet capsule in the
+    // payment pane appears instantly instead of popping in after a chunk fetch
+    // when the user opens it. Idle → never competes with first paint.
+    const warmWallet = () => void import('./screens/WalletStatus')
+    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(warmWallet)
+    else setTimeout(warmWallet, 1500)
+    // Surface the admin tab for admins, and seed the avatar/account data
+    // (best-effort; a failed profile fetch just hides the admin tab).
     getProfile()
-      .then((p) => setIsAdmin(!!p.is_admin))
+      .then((p) => {
+        setIsAdmin(!!p.is_admin)
+        setProfile(p)
+      })
       .catch(() => {})
   }, [phase])
 
@@ -67,6 +83,8 @@ export default function App() {
     clearToken()
     setTab('configs')
     setIsAdmin(false)
+    setAccountOpen(false)
+    setProfile(null)
     setError(null)
     setPhase('auth')
   }
@@ -85,26 +103,36 @@ export default function App() {
               doesn't unmount + reload a screen from a blank skeleton every time.
               Each screen refreshes itself in the background when it becomes active. */}
           <div className={tab === 'configs' ? '' : 'hidden'}>
-            <ConfigsScreen active={tab === 'configs'} onMenu={() => setDrawerOpen(true)} />
+            <ConfigsScreen
+              active={tab === 'configs'}
+              onAccount={() => setAccountOpen(true)}
+              accountName={profile?.first_name ?? undefined}
+              onGoSubscription={() => setTab('subscription')}
+            />
           </div>
-          <div className={tab === 'settings' ? '' : 'hidden'}>
-            <SettingsScreen
-              active={tab === 'settings'}
-              onLogout={handleLogout}
-              onMenu={() => setDrawerOpen(true)}
+          <div className={tab === 'subscription' ? '' : 'hidden'}>
+            <SubscriptionScreen
+              active={tab === 'subscription'}
+              profile={profile}
+              onChanged={refreshProfile}
+              onAccount={() => setAccountOpen(true)}
+              accountName={profile?.first_name ?? undefined}
             />
           </div>
           {isAdmin && (
             <div className={tab === 'admin' ? '' : 'hidden'}>
-              <AdminScreen active={tab === 'admin'} onMenu={() => setDrawerOpen(true)} />
+              <AdminScreen
+                active={tab === 'admin'}
+                onAccount={() => setAccountOpen(true)}
+                accountName={profile?.first_name ?? undefined}
+              />
             </div>
           )}
-          <Drawer
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            active={tab}
-            onSelect={setTab}
-            isAdmin={isAdmin}
+          <BottomTabs active={tab} onSelect={setTab} isAdmin={isAdmin} />
+          <AccountSheet
+            open={accountOpen}
+            onClose={() => setAccountOpen(false)}
+            onLogout={handleLogout}
           />
         </>
       )}

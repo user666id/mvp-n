@@ -3,6 +3,9 @@ import { Wallet } from '../components/icons'
 import { useT } from '../lib/i18n'
 
 const MANIFEST = 'https://app.mvp-n.net/v2/tonconnect-manifest.json'
+// Return to the Mini App after the wallet (Tonkeeper etc.) finishes — without this
+// the user is left in the wallet app and connect/pay looks like it "hung".
+const TWA_RETURN_URL = 'https://t.me/mvp_n_net_bot?startapp'
 
 function WalletInner() {
   const { t } = useT()
@@ -13,12 +16,12 @@ function WalletInner() {
     // Not connected → same capsule, with a Connect action (link up-front so
     // renewals are one tap).
     return (
-      <div className="flex items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3">
+      <div className="flex items-center gap-2.5 rounded-3xl border border-border bg-surface px-4 py-3">
         <Wallet size={20} className="text-muted" />
         <div className="min-w-0 flex-1 text-[15px] text-ink">{t('settings.walletNotConnected')}</div>
         <button
           onClick={() => tonConnectUI.openModal()}
-          className="shrink-0 rounded-full bg-accent px-3.5 py-1.5 text-[13px] font-medium text-white active:bg-accent-hover"
+          className="shrink-0 rounded-full border border-white/20 bg-accent/70 px-3.5 py-1.5 text-[13px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
         >
           {t('settings.walletConnect')}
         </button>
@@ -28,7 +31,7 @@ function WalletInner() {
 
   const short = address.slice(0, 4) + '…' + address.slice(-4)
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3">
+    <div className="flex items-center gap-2.5 rounded-3xl border border-border bg-surface px-4 py-3">
       <Wallet size={20} className="text-success" />
       <div className="min-w-0 flex-1">
         <div className="text-[15px] text-ink">{t('settings.walletConnected')}</div>
@@ -50,7 +53,10 @@ function WalletInner() {
  *  linked, renewals reuse it without reconnecting. */
 export default function WalletStatus() {
   return (
-    <TonConnectUIProvider manifestUrl={MANIFEST}>
+    <TonConnectUIProvider
+      manifestUrl={MANIFEST}
+      actionsConfiguration={{ twaReturnUrl: TWA_RETURN_URL }}
+    >
       <WalletInner />
     </TonConnectUIProvider>
   )

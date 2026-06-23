@@ -17,7 +17,7 @@ func (h *Handler) PublicStatus(w http.ResponseWriter, r *http.Request) {
 			"servers": []map[string]any{
 				{
 					"id":         "nl-1",
-					"name":       "Нидерланды",
+					"name":       "Netherlands",
 					"online":     true,
 					"hostname":   metrics.Hostname(),
 					"uptime_sec": int(uptime.Seconds()),

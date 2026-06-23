@@ -1,5 +1,5 @@
 [Unit]
-Description=mvp-n pull-based auto-deploy (fetch origin/main, rebuild changed services)
+Description=mvp-n pull-based auto-deploy (fetch origin/release, rebuild changed services)
 After=network-online.target docker.service
 Wants=network-online.target
 

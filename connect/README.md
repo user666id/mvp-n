@@ -20,7 +20,7 @@ Support-URL:              https://t.me/mvp_n_net_bot
 Subscription-Userinfo:    upload=180000000000; download=162000000000; total=0; expire=0
 Content-Type:             text/plain
 
-vless://uuid@89.x.x.x:43000/?type=tcp&security=reality&...#🇳🇱 Нидерланды
+vless://uuid@89.x.x.x:43000/?type=tcp&security=reality&...#🇳🇱 Netherlands
 ```
 
 ---

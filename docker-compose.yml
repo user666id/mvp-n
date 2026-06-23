@@ -149,6 +149,9 @@ services:
       API_INTERNAL_URL: http://api:8081
       # bot's own internal token, falling back to the legacy shared one.
       ADMIN_TOKEN:      ${INTERNAL_TOKEN_BOT:-${CONNECT_ADMIN_TOKEN:-}}
+      # Optional: ping this chat id if a Stars charge can't be credited after
+      # retries (charged-but-unactivated buyer). Unset → no admin ping.
+      ADMIN_ALERT_CHAT_ID: ${ADMIN_ALERT_CHAT_ID:-}
     deploy:
       resources:
         limits:

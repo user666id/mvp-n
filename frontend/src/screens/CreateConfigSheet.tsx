@@ -22,7 +22,7 @@ export function CreateConfigSheet({
 }) {
   const { t } = useT()
   const [protocol, setProtocol] = useState<Protocol>('vless')
-  const [enhanced, setEnhanced] = useState(false) // default = Обычный; user opts into Усиленный/Игровой
+  const [enhanced, setEnhanced] = useState(false) // default = Normal; user opts into Enhanced/Gaming
   const [game, setGame] = useState(false)
 
   const protocols: {
@@ -51,7 +51,7 @@ export function CreateConfigSheet({
       <div className="mb-2 px-1 pt-1 text-[13px] font-semibold text-faint">
         {t('create.location')}
       </div>
-      <div className="mb-3 flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3.5">
+      <div className="mb-3 flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3.5">
         <Globe size={20} className="text-faint" />
         <span className="flex flex-1 items-center gap-2">
           <span className="text-[22px]">🇳🇱</span>
@@ -73,7 +73,7 @@ export function CreateConfigSheet({
                 setProtocol(p.id)
               }}
               className={
-                'flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors ' +
+                'flex items-center gap-3 rounded-3xl border px-4 py-3.5 text-left transition-colors ' +
                 (sel ? 'border-accent bg-surface' : 'border-border bg-surface active:bg-surface-sunken')
               }
             >

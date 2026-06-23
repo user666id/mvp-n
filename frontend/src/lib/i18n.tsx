@@ -31,6 +31,9 @@ const dict = {
   // ── tabs ─────────────────────────────────────────────────────────────────
   'tab.configs': { en: 'Configs', ru: 'Конфиги' },
   'tab.settings': { en: 'Settings', ru: 'Настройки' },
+  'tab.subscription': { en: 'Subscription', ru: 'Подписка' },
+  'tab.admin': { en: 'Admin', ru: 'Админ' },
+  'account.title': { en: 'Account', ru: 'Аккаунт' },
 
   // ── auth / key ─────────────────────────────────────────────────────────────
   'auth.welcome': {
@@ -191,7 +194,7 @@ const dict = {
   'admin.noConfigs': { en: 'No configs', ru: 'Нет конфигов' },
   'admin.search': { en: 'Search', ru: 'Поиск' },
   'admin.noMatches': { en: 'Nothing found', ru: 'Ничего не найдено' },
-  'admin.resetSub': { en: 'Reset everything', ru: 'Сбросить всё' },
+  'admin.resetSub': { en: 'Reset configs', ru: 'Сбросить конфиги' },
   'admin.resetSubConfirm': {
     en: 'Reset this user? All configs and devices are deleted; traffic is kept.',
     ru: 'Сбросить пользователя? Все конфиги и устройства удалятся, трафик сохранится.',
@@ -394,9 +397,10 @@ const dict = {
 
   // ── about ──────────────────────────────────────────────────────────────────
   'about.title': { en: 'About', ru: 'О сервисе' },
+  'about.addHome': { en: 'Add to home screen', ru: 'Добавить на главный экран' },
   'about.tagline': {
-    en: 'Secure and anonymous access.',
-    ru: 'Безопасный и анонимный доступ.',
+    en: 'Private, anonymous, encrypted internet access — open source.',
+    ru: 'Приватный, анонимный и зашифрованный доступ в интернет — опенсорс.',
   },
   'about.links': { en: 'Useful links', ru: 'Полезные ссылки' },
   'about.bot': { en: 'Telegram bot', ru: 'Telegram-бот' },

@@ -285,7 +285,7 @@ var (
 )
 
 // parseUA extracts client/OS/device info from a User-Agent header.
-// Handles common VPN-client UA formats; unknowns fall back to "Неизвестное устройство".
+// Handles common VPN-client UA formats; unknowns fall back to "Unknown device".
 //
 // Examples:
 //
@@ -479,7 +479,8 @@ func (s *server) handleAdminCreate(w http.ResponseWriter, r *http.Request) {
 		ON CONFLICT (short_id) DO UPDATE SET vless_uri = EXCLUDED.vless_uri
 	`, req.UserID, req.ShortID, req.VlessURI, req.Location)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		log.Printf("[admin] config upsert: %v", err)
+		http.Error(w, "internal error", 500)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -494,7 +495,8 @@ func (s *server) handleAdminDelete(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	_, err := s.db.Exec(`UPDATE vpn_configs SET is_active = false WHERE short_id = $1`, id)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		log.Printf("[admin] config delete: %v", err)
+		http.Error(w, "internal error", 500)
 		return
 	}
 	w.Write([]byte(`{"status":true}`))

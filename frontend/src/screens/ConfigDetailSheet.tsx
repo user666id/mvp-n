@@ -7,7 +7,7 @@ import { Collapse } from '../components/ui/Collapse'
 import { Switch } from '../components/ui/Switch'
 import { Spinner } from '../components/ui/Spinner'
 import { Qr } from '../components/Qr'
-import { Pencil, Copy, QrCode, ChevronRight, ChevronDown, ExternalLink, Trash } from '../components/icons'
+import { Pencil, Copy, QrCode, ChevronRight, ChevronDown, ExternalLink, Trash, Check } from '../components/icons'
 import { StatusDot } from '../components/StatusDot'
 import { useToast } from '../components/ui/Toast'
 import { copyText } from '../lib/clipboard'
@@ -190,21 +190,21 @@ export function ConfigDetailSheet({
         {/* connection: AmneziaWG .conf or VLESS subscription link */}
         {isAwg ? (
           <div className="mb-5">
-            <div className="mb-2.5 flex items-start gap-2 rounded-2xl border border-border bg-surface-sunken px-3 py-2.5">
+            <div className="mb-2.5 flex items-start gap-2 rounded-3xl border border-border bg-surface-sunken px-3 py-2.5">
               <pre className="no-scrollbar min-w-0 flex-1 overflow-x-auto whitespace-pre font-mono text-[11.5px] leading-snug text-ink">
                 {awgConf}
               </pre>
               <div className="flex shrink-0 flex-col gap-1">
                 <button
                   onClick={() => setShowQr(true)}
-                  className="grid h-9 w-9 place-items-center rounded-xl text-ink active:bg-border"
+                  className="grid h-9 w-9 place-items-center rounded-2xl text-ink active:bg-border"
                   aria-label={t('detail.qr')}
                 >
                   <QrCode size={20} />
                 </button>
                 <button
                   onClick={() => copy(awgConf, t('detail.confCopied'))}
-                  className="grid h-9 w-9 place-items-center rounded-xl text-ink active:bg-border"
+                  className="grid h-9 w-9 place-items-center rounded-2xl text-ink active:bg-border"
                   aria-label={t('common.copy')}
                 >
                   <Copy size={20} />
@@ -215,18 +215,18 @@ export function ConfigDetailSheet({
           </div>
         ) : (
           <div className="mb-5">
-            <div className="mb-2.5 flex items-center gap-2 rounded-2xl border border-border bg-surface-sunken px-3 py-2.5">
+            <div className="mb-2.5 flex items-center gap-2 rounded-3xl border border-border bg-surface-sunken px-3 py-2.5">
               <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-ink">{link}</span>
               <button
                 onClick={() => setShowQr(true)}
-                className="grid h-9 w-9 place-items-center rounded-xl text-ink active:bg-border"
+                className="grid h-9 w-9 place-items-center rounded-2xl text-ink active:bg-border"
                 aria-label={t('detail.qr')}
               >
                 <QrCode size={20} />
               </button>
               <button
                 onClick={() => copy(link, t('detail.linkCopied'))}
-                className="grid h-9 w-9 place-items-center rounded-xl text-ink active:bg-border"
+                className="grid h-9 w-9 place-items-center rounded-2xl text-ink active:bg-border"
                 aria-label={t('detail.copyLink')}
               >
                 <Copy size={20} />
@@ -285,7 +285,7 @@ export function ConfigDetailSheet({
         {/* server status → stats (reflects the real server_online flag) */}
         <button
           onClick={onOpenStats}
-          className="mb-5 flex w-full items-center gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3 text-left active:bg-surface-sunken"
+          className="mb-5 flex w-full items-center gap-2.5 rounded-3xl border border-border bg-surface px-4 py-3 text-left active:bg-surface-sunken"
         >
           <StatusDot ok={config.server_online} className="h-2 w-2" />
           <span className={'text-[15px] font-medium ' + (config.server_online ? 'text-success' : 'text-danger')}>
@@ -317,13 +317,13 @@ export function ConfigDetailSheet({
         <div className="relative mb-3">
           <button
             onClick={() => setOsOpen((o) => !o)}
-            className="flex h-11 w-full items-center justify-between rounded-2xl border border-border bg-surface px-4 text-left active:bg-surface-sunken"
+            className="flex h-11 w-full items-center justify-between rounded-3xl border border-border bg-surface px-4 text-left active:bg-surface-sunken"
           >
             <span className="text-[15px] font-medium text-ink">{OS_OPTS.find((o) => o.key === os)?.label}</span>
             <ChevronDown size={18} className={'text-muted transition-transform ' + (osOpen ? 'rotate-180' : '')} />
           </button>
           {osOpen && (
-            <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl border border-border bg-surface shadow-sheet">
+            <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-3xl border border-border bg-surface/85 shadow-sheet backdrop-blur-xl backdrop-saturate-150">
               {OS_OPTS.map((o) => (
                 <button
                   key={o.key}
@@ -333,11 +333,12 @@ export function ConfigDetailSheet({
                     setOsOpen(false)
                   }}
                   className={
-                    'flex h-11 w-full items-center px-4 text-left text-[15px] ' +
+                    'flex h-11 w-full items-center justify-between px-4 text-left text-[15px] ' +
                     (os === o.key ? 'bg-surface-sunken font-medium text-ink' : 'text-muted active:bg-surface-sunken')
                   }
                 >
-                  {o.label}
+                  <span>{o.label}</span>
+                  {os === o.key && <Check size={16} className="text-accent" />}
                 </button>
               ))}
             </div>
@@ -365,7 +366,7 @@ export function ConfigDetailSheet({
           const stores = app.stores[os] ?? []
           const isMobile = os === 'ios' || os === 'android'
           return (
-            <div className="rounded-2xl border border-border bg-surface px-4 py-4 text-[13px] leading-relaxed text-muted">
+            <div className="rounded-3xl border border-border bg-surface px-4 py-4 text-[13px] leading-relaxed text-muted">
               <p className="font-semibold text-ink">{t('detail.step1Title')}</p>
               <p className="mt-1">{t(isMobile ? 'detail.step1Body' : 'detail.step1BodyDesktop')}</p>
               <div className="mb-4 mt-2.5 flex flex-col gap-2">
@@ -373,7 +374,7 @@ export function ConfigDetailSheet({
                   <button
                     key={s.label}
                     onClick={() => openLink(s.href)}
-                    className="inline-flex h-9 items-center justify-center gap-1 rounded-full border border-accent/30 text-[13.5px] font-medium text-accent active:bg-accent-soft"
+                    className="inline-flex h-9 items-center justify-center gap-1 rounded-full bg-surface-sunken text-[13.5px] font-medium text-accent active:bg-border"
                   >
                     {s.label}
                     <ExternalLink size={13} />
@@ -381,26 +382,25 @@ export function ConfigDetailSheet({
                 ))}
               </div>
               <p className="font-semibold text-ink">{t('detail.step2Title')}</p>
-              <p className="mt-1">{t(isMobile ? 'detail.step2Body' : 'detail.step2BodyDesktop')}</p>
-              {isMobile ? (
-                <Button
-                  stretched
-                  className="mb-4 mt-2.5"
-                  onClick={() => {
-                    openLink(importPage(app.id, link, lang))
-                    setShowApps(false)
-                  }}
-                >
-                  {t('detail.addSub')}
-                </Button>
-              ) : (
-                <button
-                  onClick={() => copy(link, t('detail.linkCopied'))}
-                  className="mb-4 mt-2.5 inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-full bg-accent text-[14px] font-medium text-white active:bg-accent-hover"
-                >
-                  <Copy size={15} /> {t('detail.copyLink')}
-                </button>
-              )}
+              <p className="mt-1">{t('detail.step2Body')}</p>
+              {/* Add-subscription (deep-link) is offered on EVERY OS — Happ / v2RayTun
+                  register their URL schemes on desktop too — with copy-link as a fallback. */}
+              <Button
+                stretched
+                className="mt-2.5"
+                onClick={() => {
+                  openLink(importPage(app.id, link, lang))
+                  setShowApps(false)
+                }}
+              >
+                {t('detail.addSub')}
+              </Button>
+              <button
+                onClick={() => copy(link, t('detail.linkCopied'))}
+                className="mb-4 mt-2 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-surface-sunken text-[13.5px] font-medium text-accent active:bg-border"
+              >
+                <Copy size={15} /> {t('detail.copyLink')}
+              </button>
               <p className="font-semibold text-ink">{t('detail.step3Title')}</p>
               <p className="mt-1">{t('detail.step3Body')}</p>
             </div>
@@ -426,13 +426,13 @@ export function ConfigDetailSheet({
         <p className="mb-3 px-1 text-[14px] leading-snug text-muted">
           {t('detail.rawHint')}
         </p>
-        <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface-sunken px-3 py-2.5">
+        <div className="flex items-center gap-2 rounded-3xl border border-border bg-surface-sunken px-3 py-2.5">
           <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-ink">
             {config.vless_uri}
           </span>
           <button
             onClick={() => copy(config.vless_uri, t('detail.copied'))}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-ink active:bg-border"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl text-ink active:bg-border"
             aria-label={t('common.copy')}
           >
             <Copy size={20} />
@@ -449,7 +449,7 @@ export function ConfigDetailSheet({
           value={renameVal}
           onChange={(e) => setRenameVal(e.target.value)}
           placeholder={t('detail.namePlaceholder')}
-          className="mb-4 mt-2 h-[52px] w-full rounded-2xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
+          className="mb-4 mt-2 h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
         />
         <div className="pb-2">
           <Button stretched loading={busy} disabled={!renameVal.trim()} onClick={doRename}>

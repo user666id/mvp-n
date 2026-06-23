@@ -69,7 +69,7 @@ export function ChartTooltip({
 }) {
   return (
     <div
-      className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap rounded-xl border border-border bg-surface px-2.5 py-1.5 text-center shadow-pop"
+      className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap rounded-2xl border border-border bg-surface px-2.5 py-1.5 text-center shadow-pop"
       style={{ left: Math.min(Math.max(x, 52), W - 52), top: CHART_PAD.t }}
     >
       <div className="text-[11px] text-muted">{top}</div>

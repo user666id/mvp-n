@@ -43,7 +43,7 @@ export function TrafficSheet({
   }, [open])
 
   // Start the chart at the first day with traffic — don't pad the start with
-  // empty days from before tracking began ("считай со старта, не с нуля").
+  // empty days from before tracking began ("count from the start, not from zero").
   const chart = (() => {
     if (!days) return []
     const first = days.findIndex((d) => d.bytes > 0)

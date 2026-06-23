@@ -45,6 +45,29 @@ updates:
       bot-npm:
         patterns: ['*']
         update-types: [minor, patch]
+  # ── Docker base images (Dockerfile FROM) ──
+  - package-ecosystem: docker
+    directory: /api
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directory: /connect
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directory: /awg-server
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directory: /bot
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  # docker-compose.yml at the root — tracks the pinned images we don't build
+  # (postgres, postgres-backup-local).
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
   # ── CI actions themselves ──
   - package-ecosystem: github-actions
     directory: /
