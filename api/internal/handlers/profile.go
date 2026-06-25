@@ -373,10 +373,34 @@ func (h *Handler) resetUserSubscription(ctx context.Context, uid int64) {
 	_, _ = h.DB.ExecContext(ctx, `DELETE FROM vpn_configs WHERE user_id = $1`, uid)
 }
 
-// ResetSubscriptionLink wipes the current user's account (see resetUserSubscription).
+// resetUserSessions disconnects every device — drops their per-device VLESS users
+// from xray and deletes the device rows — but KEEPS the config(s), so the
+// subscription link stays valid and each device reconnects (re-provisions a fresh
+// key) on its next refresh. The in-app "reset sessions" (vs resetUserSubscription,
+// which also wipes configs).
+func (h *Handler) resetUserSessions(ctx context.Context, uid int64) {
+	if rows, err := h.DB.QueryContext(ctx,
+		`SELECT COALESCE(vpn_email, '') FROM devices WHERE user_id = $1`, uid); err == nil {
+		var emails []string
+		for rows.Next() {
+			var e string
+			if rows.Scan(&e) == nil && e != "" {
+				emails = append(emails, e)
+			}
+		}
+		rows.Close()
+		for _, e := range emails {
+			_ = h.Xray.RemoveUser(ctx, e)
+		}
+	}
+	_, _ = h.DB.ExecContext(ctx, `DELETE FROM devices WHERE user_id = $1`, uid)
+}
+
+// ResetSubscriptionLink disconnects all the user's devices (sessions); the config
+// is kept and each device reconnects on its next subscription refresh.
 func (h *Handler) ResetSubscriptionLink(w http.ResponseWriter, r *http.Request) {
 	uid, _ := middleware.UserID(r.Context())
-	h.resetUserSubscription(r.Context(), uid)
+	h.resetUserSessions(r.Context(), uid)
 	h.writeJSON(w, 200, Response{Status: true, StatusCode: 200})
 }
 
@@ -461,7 +485,7 @@ func (h *Handler) UserLang(w http.ResponseWriter, r *http.Request) {
 //     so the VLESS user immediately stops working in xray.
 //  2. DELETE FROM users — CASCADE removes vpn_configs and devices.
 //     access_keys.used_by is SET NULL.
-//  3. connect.mvp-n.net/to/:id will return 404 after the row is gone
+//  3. connect1.mvp-n.net/to/:id will return 404 after the row is gone
 //     → launcher displays the subscription as broken/removed.
 //
 // The admin (TG ID in ADMIN_TG_IDS) cannot delete itself.

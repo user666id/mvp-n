@@ -23,11 +23,11 @@
 }
 
 .dark {
-  /* Claude-matched dark: warm grey page, slightly darker cards. */
-  --c-canvas: 32 32 30; /* #20201E — page background */
-  --c-surface: 25 25 23; /* #191917 — cards / capsules */
-  --c-surface-sunken: 35 35 33; /* #232321 — inputs / sunken */
-  --c-border: 46 46 44; /* #2E2E2C — dividers */
+  /* Standard dark (default shade) — iOS-style: dark page, lighter cards. */
+  --c-canvas: 28 28 28; /* #1C1C1C — page background */
+  --c-surface: 44 44 46; /* #2C2C2E — cards / capsules */
+  --c-surface-sunken: 58 58 60; /* #3A3A3C — inputs / sunken */
+  --c-border: 56 56 58; /* #38383A — dividers */
   --c-ink: 247 247 245; /* #F7F7F5 — text */
   --c-muted: 159 159 157; /* #9F9F9D — icons & headings */
   --c-faint: 130 130 128; /* #828280 — faint hints */
@@ -42,29 +42,13 @@
 }
 
 /* Dark-theme shade override (data-shade set by applyScheme). Only the greys
-   change — text/accent stay. 'warm' is the base .dark above. */
+   change — text/accent stay. The default "Standard" shade is the base .dark
+   above (its internal id stays 'warm' for back-compat with saved prefs). */
 .dark[data-shade='black'] {
   --c-canvas: 0 0 0; /* #000000 — true OLED black */
   --c-surface: 14 14 14; /* #0E0E0E */
   --c-surface-sunken: 22 22 22; /* #161616 */
   --c-border: 34 34 34; /* #222222 */
-}
-
-/* Fragment — an opt-in blue dark theme. Unlike warm/black (greys only) this also
-   swaps the accent clay → Fragment blue, so actions/links read blue here. */
-.dark[data-shade='fragment'] {
-  --c-canvas: 28 31 36; /* #1C1F24 — page background */
-  --c-surface: 35 42 51; /* #232A33 — cards */
-  --c-surface-sunken: 46 58 72; /* #2E3A48 — capsules / selectors */
-  --c-border: 56 68 82; /* #384452 — dividers */
-  --c-ink: 252 251 252; /* #FCFBFC — white text */
-  --c-muted: 116 126 137; /* #747E89 — grey text */
-  --c-faint: 96 106 117; /* #606A75 — fainter grey */
-  --c-accent: 37 137 219; /* #2589DB — buttons */
-  --c-accent-hover: 96 166 226; /* #60A6E2 — lighter (links/hover) */
-  --c-accent-soft: 30 47 64; /* #1E2F40 — soft blue fill */
-  --c-success: 86 179 130; /* keep status green legible on slate */
-  --c-danger: 226 96 96;
 }
 
 * {

@@ -44,10 +44,20 @@ export const Copy = ({ size, className, strokeWidth }: P) => (
     <rect width="13" height="13" x="9" y="9" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
   </svg>
 )
+export const Code = ({ size, className, strokeWidth }: P) => (
+  <svg {...base(size, strokeWidth)} className={className}>
+    <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+  </svg>
+)
 export const ExternalLink = ({ size, className, strokeWidth }: P) => (
   <svg {...base(size, strokeWidth)} className={className}>
     <path d="M15 3h6v6" /><path d="M10 14 21 3" />
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+  </svg>
+)
+export const Download = ({ size, className, strokeWidth }: P) => (
+  <svg {...base(size, strokeWidth)} className={className}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" />
   </svg>
 )
 export const Github = ({ size, className, strokeWidth }: P) => (
@@ -137,6 +147,36 @@ export const Phone = ({ size, className, strokeWidth }: P) => (
 export const Monitor = ({ size, className, strokeWidth }: P) => (
   <svg {...base(size, strokeWidth)} className={className}>
     <rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" />
+  </svg>
+)
+export const Apple = ({ size, className, strokeWidth }: P) => (
+  <svg {...base(size, strokeWidth)} className={className}>
+    <path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z" />
+    <path d="M10 2c1 .5 2 2 2 5" />
+  </svg>
+)
+export const Windows = ({ size, className, strokeWidth }: P) => (
+  <svg {...base(size, strokeWidth)} className={className}>
+    <rect x="3" y="3" width="7.5" height="7.5" rx="1" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1" />
+    <rect x="3" y="13.5" width="7.5" height="7.5" rx="1" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1" />
+  </svg>
+)
+export const Laptop = ({ size, className, strokeWidth }: P) => (
+  <svg {...base(size, strokeWidth)} className={className}>
+    <rect x="4" y="5" width="16" height="11" rx="1.5" /><path d="M2 20h20" />
+  </svg>
+)
+export const Android = ({ size, className, strokeWidth }: P) => (
+  <svg {...base(size, strokeWidth)} className={className}>
+    <path d="m8.5 7-1.5-2.5" /><path d="m15.5 7 1.5-2.5" />
+    <path d="M5 13a7 7 0 0 1 14 0v6H5z" />
+    <circle cx="9.5" cy="12" r=".75" fill="currentColor" stroke="none" />
+    <circle cx="14.5" cy="12" r=".75" fill="currentColor" stroke="none" />
+  </svg>
+)
+export const Terminal = ({ size, className, strokeWidth }: P) => (
+  <svg {...base(size, strokeWidth)} className={className}>
+    <polyline points="4 17 10 11 4 5" /><line x1="12" x2="20" y1="19" y2="19" />
   </svg>
 )
 export const Sun = ({ size, className, strokeWidth }: P) => (

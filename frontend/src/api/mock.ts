@@ -301,9 +301,9 @@ export async function mockRequest(
   }
   if (path === '/admin/domains' && m === 'GET') {
     return [
-      { name: 'gw.mvp-n.net', kind: 'web', ok: true, status: 200, ms: 42 },
+      { name: 'cdn.mvp-n.net', kind: 'web', ok: true, status: 200, ms: 42 },
       { name: 'app.mvp-n.net', kind: 'web', ok: true, status: 301, ms: 35 },
-      { name: 'connect.mvp-n.net', kind: 'web', ok: true, status: 200, ms: 51 },
+      { name: 'connect1.mvp-n.net', kind: 'web', ok: true, status: 200, ms: 51 },
       { name: 'VLESS Vision · 43000', kind: 'vpn', ok: true, status: 0, ms: 3 },
       { name: 'VLESS XHTTP · 43001', kind: 'vpn', ok: true, status: 0, ms: 4 },
       { name: 'AmneziaWG · 51820', kind: 'vpn', ok: true, status: 0, ms: 6 },

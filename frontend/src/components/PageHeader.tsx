@@ -1,11 +1,14 @@
-import type { ReactNode } from 'react'
-import { Menu } from './icons'
+import { useState, type ReactNode } from 'react'
+import { Menu, ChevronRight } from './icons'
 import { Avatar } from './ui/Avatar'
+import { WalletPill } from './WalletPill'
+import { WalletSheet } from './WalletSheet'
 
 /**
- * Large editorial page title. Left slot is either the account avatar (variant A:
- * `onAccount` opens the Account sheet) or a ‹hamburger› (`onMenu`, legacy drawer);
- * right slot is an optional `action`.
+ * App header bar: account avatar pill on the left (`onAccount` opens the Account
+ * sheet) or a ‹hamburger› (`onMenu`), the absolutely-centred title (so it stays
+ * screen-centred regardless of the side pills' widths), and the wallet capsule
+ * on the right.
  */
 export function PageHeader({
   title,
@@ -20,13 +23,20 @@ export function PageHeader({
   onAccount?: () => void
   accountName?: string
 }) {
+  const [walletOpen, setWalletOpen] = useState(false)
   return (
-    <header className="sticky top-0 z-20 bg-canvas/72 px-3 pb-2 pt-[max(10px,env(safe-area-inset-top),var(--tg-safe-top,0px))] backdrop-blur-xl backdrop-saturate-150">
-      <div className="flex min-h-[44px] items-center">
-        <div className="flex w-11 justify-start">
+    <>
+    <header aria-label={title} className="sticky top-0 z-20 border-b border-white/10 bg-canvas/72 px-4 pb-6 pt-[max(10px,env(safe-area-inset-top),var(--tg-safe-top,0px))] backdrop-blur-xl backdrop-saturate-150">
+      <div className="relative flex min-h-[44px] items-center">
+        <div className="flex justify-start">
           {onAccount ? (
-            <button onClick={onAccount} aria-label="Account" className="rounded-full active:opacity-70">
-              <Avatar name={accountName} size={34} />
+            <button
+              onClick={onAccount}
+              aria-label="Account"
+              className="flex items-center gap-1 rounded-full bg-surface-sunken p-1 pr-2 active:opacity-80"
+            >
+              <Avatar name={accountName} size={30} />
+              <ChevronRight size={14} className="text-faint" />
             </button>
           ) : onMenu ? (
             <button
@@ -38,11 +48,14 @@ export function PageHeader({
             </button>
           ) : null}
         </div>
-        <h1 className="font-display flex-1 truncate text-center text-[17px] font-semibold text-ink">
-          {title}
-        </h1>
-        <div className="flex w-11 justify-end">{action}</div>
+        <div className="flex-1" />
+        <div className="flex items-center justify-end gap-2">
+          {action}
+          <WalletPill onOpen={() => setWalletOpen(true)} />
+        </div>
       </div>
     </header>
+    <WalletSheet open={walletOpen} onClose={() => setWalletOpen(false)} />
+    </>
   )
 }

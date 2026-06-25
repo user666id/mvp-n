@@ -10,7 +10,7 @@ What is implemented and running in production. Plans — [ROADMAP.md](./ROADMAP.
   - `:43000` — VLESS + REALITY + Vision, TCP (Normal; Gaming — the same inbound without Vision-flow);
   - `:43001` — VLESS + REALITY + XHTTP (Reinforced, masquerading as HTTPS, `mode=packet-up`).
 - One UUID is registered in both inbounds — mode switching is instant.
-- REALITY `dest=www.microsoft.com:443`, SNI in the URI is empty.
+- REALITY `dest=www.cloudflare.com:443`, SNI in the URI is empty.
 - gRPC management API on `:10085`, bound to the docker bridge (not on the public interface) + UFW deny from outside (AddUser / RemoveUser / GetStats).
 
 ### AmneziaWG
@@ -79,7 +79,7 @@ What is implemented and running in production. Plans — [ROADMAP.md](./ROADMAP.
 VPN:  client → IP :43000 (TCP+Vision) / :43001 (XHTTP) / :51820 (AmneziaWG UDP)
             → xray / awg on the host → internet
 
-Sub:  Happ / v2RayTun → connect.mvp-n.net/to/{id} → connect → api :8081 → VLESS-URI / .conf
+Sub:  Happ / v2RayTun → connect1.mvp-n.net/to/{id} → connect → api :8081 → VLESS-URI / .conf
 
-App:  Telegram → app.mvp-n.net/v2/ (React) → gw.mvp-n.net (api :8081) → JWT → API
+App:  Telegram → app.mvp-n.net/v2/ (React) → cdn.mvp-n.net (api :8081) → JWT → API
 ```

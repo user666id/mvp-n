@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TonConnectUIProvider, useTonConnectUI, useTonAddress } from '@tonconnect/ui-react'
+import { useTonConnectUI, useTonAddress } from '@tonconnect/ui-react'
 import { Address, beginCell, toNano } from '@ton/core'
 import { Button } from '../components/ui/Button'
 import { useT } from '../lib/i18n'
@@ -7,10 +7,6 @@ import type { Order } from '../api'
 
 // Note: Buffer (needed by @ton/core) is polyfilled globally at app boot in main.tsx,
 // before this lazy chunk loads.
-const MANIFEST = 'https://app.mvp-n.net/v2/tonconnect-manifest.json'
-// After signing in an external wallet (Tonkeeper etc.) return straight to our Mini
-// App instead of leaving the user stranded in the wallet — opens the Main Mini App.
-const TWA_RETURN_URL = 'https://t.me/mvp_n_net_bot?startapp'
 // Official Tether USD₮ jetton master on TON (symbol USD₮, 6 decimals).
 const USDT_MASTER = 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'
 const JETTON_TRANSFER_OP = 0x0f8a7ea5
@@ -120,15 +116,8 @@ function PayInner({ asset, makeOrder, onConfirmed, onCancel, label, variant, cla
   )
 }
 
-/** Default export so it can be React.lazy()-imported — the ONLY module pulling in
- *  @tonconnect/ui + @ton/core, so they land in a lazy chunk off the initial load. */
+/** Uses the app-wide TonConnectUIProvider (mounted in App). Still default-exported
+ *  + lazy so @ton/core stays off the initial load. */
 export default function WalletPay(props: Props) {
-  return (
-    <TonConnectUIProvider
-      manifestUrl={MANIFEST}
-      actionsConfiguration={{ twaReturnUrl: TWA_RETURN_URL }}
-    >
-      <PayInner {...props} />
-    </TonConnectUIProvider>
-  )
+  return <PayInner {...props} />
 }

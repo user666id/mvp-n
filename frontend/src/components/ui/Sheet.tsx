@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronLeft } from '../icons'
+import { ChevronLeft, ChevronRight } from '../icons'
+import { Avatar } from './Avatar'
+import { WalletPill } from '../WalletPill'
+import { WalletSheet } from '../WalletSheet'
 import { useT } from '../../lib/i18n'
+import { useHeaderCtx } from '../../lib/headerCtx'
 import { inTelegram, pushBackHandler, popBackHandler } from '../../lib/telegram'
 
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
@@ -53,6 +57,9 @@ export function Sheet({
   title,
   children,
   footer,
+  anim = 'push',
+  pills = true,
+  avatarBack = false,
 }: {
   open: boolean
   onClose: () => void
@@ -64,8 +71,19 @@ export function Sheet({
    *  action). The body scrolls above it. Used by the beta layout system so every
    *  sheet's main action lives in the same place. */
   footer?: React.ReactNode
+  /** Open animation: 'push' (slide in from the side — drill-down, back exits right)
+   *  or 'center' (scale + fade pop — for action/detail sheets like Настроить). */
+  anim?: 'push' | 'center'
+  /** When true, render the account-avatar + wallet pills in the header (via
+   *  HeaderCtx) so the profile/wallet persist on drill-down sheets. */
+  pills?: boolean
+  /** When true (the Account sheet), the avatar pill acts as back/close — tapping
+   *  it returns instead of re-opening the account — and shows a ‹ chevron. */
+  avatarBack?: boolean
 }) {
   const { t } = useT()
+  const { accountName, onAccount } = useHeaderCtx()
+  const [walletOpen, setWalletOpen] = useState(false)
 
   // Mount-delay so the sheet can play an EXIT slide before unmounting (smooth,
   // Claude-style). `mounted` keeps it in the DOM; `shown` drives the transform.
@@ -120,15 +138,41 @@ export function Sheet({
       role="dialog"
       aria-modal="true"
       style={{
-        transform: shown ? 'translateX(0)' : 'translateX(100%)',
-        transition: `transform ${DUR}ms ${EASE}`,
+        opacity: anim === 'center' ? (shown ? 1 : 0) : 1,
+        transform:
+          anim === 'center' ? (shown ? 'scale(1)' : 'scale(0.94)') : shown ? 'translateX(0)' : 'translateX(100%)',
+        transition: `opacity ${DUR}ms ${EASE}, transform ${DUR}ms ${EASE}`,
       }}
     >
-      <div className="flex items-center px-3 pb-3 pt-[max(12px,env(safe-area-inset-top),var(--tg-safe-top,0px))]">
+      <div className="flex items-center border-b border-white/10 px-4 pb-6 pt-[max(12px,env(safe-area-inset-top),var(--tg-safe-top,0px))]">
         {/* Inside Telegram the native BackButton (wired below) shows a ‹ back in the
             client header — don't duplicate it. Keep the title centred with a spacer.
             Outside Telegram (browser) our in-sheet ‹ is the only back, so keep it. */}
-        {inTelegram ? (
+        {pills && onAccount ? (
+          <div className="flex shrink-0 items-center gap-1">
+            {!inTelegram && (
+              <button
+                onClick={onBack ?? onClose}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink active:bg-surface-sunken"
+                aria-label={t('common.back')}
+              >
+                <ChevronLeft size={24} />
+              </button>
+            )}
+            <button
+              onClick={avatarBack ? (onBack ?? onClose) : onAccount}
+              aria-label="Account"
+              className="flex items-center gap-1 rounded-full bg-surface-sunken p-1 pr-2 active:opacity-80"
+            >
+              <Avatar name={accountName} size={30} />
+              {avatarBack ? (
+                <ChevronLeft size={14} className="text-faint" />
+              ) : (
+                <ChevronRight size={14} className="text-faint" />
+              )}
+            </button>
+          </div>
+        ) : inTelegram ? (
           <span className="w-11 shrink-0" />
         ) : (
           <button
@@ -139,24 +183,28 @@ export function Sheet({
             <ChevronLeft size={26} />
           </button>
         )}
-        <h2 className="font-display flex-1 truncate px-2 text-center text-[17px] font-semibold text-ink">
-          {title}
-        </h2>
-        <span className="w-11 shrink-0" />
+        <h2 className="sr-only">{title}</h2>
+        <div className="flex-1" />
+        {pills ? (
+          <WalletPill onOpen={() => setWalletOpen(true)} />
+        ) : (
+          <span className="w-11 shrink-0" />
+        )}
       </div>
       <div
         className={
-          'no-scrollbar animate-fade flex-1 overflow-y-auto px-4 ' +
+          'no-scrollbar animate-fade flex-1 overflow-y-auto px-4 pt-4 ' +
           (footer ? 'pb-4' : 'pb-[max(20px,env(safe-area-inset-bottom))]')
         }
       >
         {children}
       </div>
       {footer && (
-        <div className="border-t border-border bg-canvas px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
+        <div className="border-t border-white/10 bg-canvas/80 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur-xl backdrop-saturate-150">
           {footer}
         </div>
       )}
+      {pills && <WalletSheet open={walletOpen} onClose={() => setWalletOpen(false)} />}
     </div>,
     document.body,
   )

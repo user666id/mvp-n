@@ -6,8 +6,8 @@ internal HTTPS server on `127.0.0.1:8443`.
 
 > **VPN does NOT go through nginx.** Clients connect straight to xray on the host
 > — `:43000` (REALITY+Vision/TCP) and `:43001` (REALITY+XHTTP). The port is baked
-> into the subscription URI (`api buildURI()`). The legacy `default → :2443`
-> mapping in the stream config has no listener today.
+> into the subscription URI (`api buildURI()`). The stream's `default → :43000`
+> mapping forwards any stray/probe SNI to the xray REALITY inbound.
 
 ---
 
@@ -30,7 +30,7 @@ The main `/etc/nginx/nginx.conf` pulls the stream layer in with
                                   │
                      nginx stream + ssl_preread (SNI)
                                   │
-            api / app / connect.mvp-n.net  ──►  nginx http 127.0.0.1:8443
+            api / app / connect1.mvp-n.net  ──►  nginx http 127.0.0.1:8443
                                                  (Cloudflare Origin Cert)
                                                    │      │        │
                                                  api    static    connect
@@ -70,24 +70,24 @@ sudo nginx -t && sudo systemctl reload nginx
 
 | SNI in ClientHello | Forwarded to | Served by |
 |--------------------|--------------|-----------|
-| `gw.mvp-n.net` | `127.0.0.1:8443` | Go API (`:8081`) |
+| `cdn.mvp-n.net` | `127.0.0.1:8443` | Go API (`:8081`) |
 | `app.mvp-n.net` | `127.0.0.1:8443` | Mini App static (`/v2/`) |
-| `connect.mvp-n.net` | `127.0.0.1:8443` | Go connect (`:3000`) + `/api/` → API |
-| _other / `www.microsoft.com`_ | `127.0.0.1:2443` | xray REALITY inbound |
+| `connect1.mvp-n.net` | `127.0.0.1:8443` | Go connect (`:3000`) + `/api/` → API |
+| _other / `www.cloudflare.com`_ | `127.0.0.1:43000` | xray REALITY inbound |
 
 ## HTTP vhosts (`127.0.0.1:8443`)
 
 | Host | Path | Upstream |
 |------|------|----------|
-| `gw.mvp-n.net` | `/` | `127.0.0.1:8081` (CORS for `app.mvp-n.net`) |
-| `connect.mvp-n.net` | `/api/` | `127.0.0.1:8081` (rewrite, CORS) |
-| `connect.mvp-n.net` | `/` | `127.0.0.1:3000` |
+| `cdn.mvp-n.net` | `/` | `127.0.0.1:8081` (CORS for `app.mvp-n.net`) |
+| `connect1.mvp-n.net` | `/api/` | `127.0.0.1:8081` (rewrite, CORS) |
+| `connect1.mvp-n.net` | `/` | `127.0.0.1:3000` |
 | `app.mvp-n.net` | `/v2/` | static `/var/www/mini-app-f7` |
 
 ---
 
 ## DNS / Cloudflare
 
-`api` / `app` / `connect.mvp-n.net` are **proxied** (orange) — DDoS protection,
+`api` / `app` / `connect1.mvp-n.net` are **proxied** (orange) — DDoS protection,
 origin IP hidden. VPN connects directly to the server IP on `:43000`/`:43001`
-(REALITY masks the handshake as `www.microsoft.com`; no DNS record needed).
+(REALITY masks the handshake as `www.cloudflare.com`; no DNS record needed).

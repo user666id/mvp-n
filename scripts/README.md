@@ -53,7 +53,7 @@ Detects the CPU level (v1–v4), installs the XanMod kernel, enables BBRv3 in `s
 ### `install/xray.sh`
 Installs Xray-core; generates a UUID, x25519 keypair, and short_id; writes
 `/usr/local/etc/xray/config.json` with two REALITY inbounds (`:43000` Vision/TCP,
-`:43001` XHTTP, dest `www.microsoft.com`); installs logrotate; saves the keys to
+`:43001` XHTTP, dest `www.cloudflare.com`); installs logrotate; saves the keys to
 `/etc/mvpn/credentials.json` (read by the Go api to build the VLESS link).
 
 ### `install/amneziawg.sh`

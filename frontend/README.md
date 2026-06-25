@@ -26,8 +26,8 @@ npm run preview  # serve the production build
 ## Env (build-time)
 | Var | Default | Purpose |
 |-----|---------|---------|
-| `VITE_API_BASE` | `https://gw.mvp-n.net` | REST API base (direct API subdomain) |
-| `VITE_SUB_BASE` | `https://connect.mvp-n.net/to/` | subscription link base |
+| `VITE_API_BASE` | `https://cdn.mvp-n.net` | REST API base (direct API subdomain) |
+| `VITE_SUB_BASE` | `https://connect1.mvp-n.net/to/` | subscription link base |
 | `VITE_MOCK` | unset | `1` → use the in-memory mock backend (dev/preview only) |
 
 ## Deploy

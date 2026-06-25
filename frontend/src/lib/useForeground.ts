@@ -19,3 +19,20 @@ export function useForegroundRefetch(enabled: boolean, fn: () => void) {
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [enabled])
 }
+
+/**
+ * The single refresh logic shared by every tab: run `fn` when the tab becomes
+ * active, when `revalidate` changes (e.g. the Account sheet closed and may have
+ * mutated data), and when the Mini App returns to the foreground. One call
+ * replaces each screen's bespoke active-effect + foreground hook so all screens
+ * load and refresh identically.
+ */
+export function useActiveRefresh(active: boolean, revalidate: number | undefined, fn: () => void) {
+  const fnRef = useRef(fn)
+  fnRef.current = fn
+  useEffect(() => {
+    if (active) fnRef.current()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, revalidate])
+  useForegroundRefetch(active, fn)
+}

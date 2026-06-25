@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"regexp"
@@ -165,6 +166,7 @@ func (s *server) handleSubscription(w http.ResponseWriter, r *http.Request) {
 		expire = paidUntil.Time.Unix()
 	}
 	userInfo := fmt.Sprintf("upload=0; download=%d; total=0; expire=%d", used, expire)
+	expired := paidUntil.Valid && paidUntil.Time.Before(time.Now())
 
 	info, uid := deviceIdentity(r)
 
@@ -189,6 +191,14 @@ func (s *server) handleSubscription(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// Fallback path — API didn't provision; still track the device.
 			go s.recordDeviceVisit(userID, r)
+		}
+		// Expired subscription → relabel the node "Подписка истекла" (drops the
+		// flag) so the lapsed state is obvious in the launcher; the past `expire`
+		// above already marks it expired and the key won't authorise until renewed.
+		if expired {
+			if i := strings.LastIndex(uri, "#"); i >= 0 {
+				uri = uri[:i+1] + url.PathEscape("Подписка истекла")
+			}
 		}
 	}
 

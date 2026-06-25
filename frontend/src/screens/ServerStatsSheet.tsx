@@ -135,7 +135,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
       <div className="mb-2 px-1 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
         {title}
       </div>
-      <div className="rounded-3xl border border-border bg-surface p-3">{children}</div>
+      <div className="rounded-3xl border border-border bg-surface p-4">{children}</div>
     </div>
   )
 }

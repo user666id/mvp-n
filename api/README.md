@@ -3,7 +3,7 @@
 > The project's central service. The Mini App, bot, and subscriptions all work through it;
 > it also provisions users into xray (gRPC) and AmneziaWG (HTTP to awg-server).
 
-**Port:** `8081` · **Language:** Go 1.26 · **Public address:** `https://gw.mvp-n.net`
+**Port:** `8081` · **Language:** Go 1.26 · **Public address:** `https://cdn.mvp-n.net`
 
 ---
 

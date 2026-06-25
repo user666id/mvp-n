@@ -18,14 +18,30 @@
       media="print"
       onload="this.media='all'"
     />
-    <!-- No-flash background only. The loading screen is Telegram's own (set in
-         BotFather) and stays up until the app calls ready() once React mounts —
-         so there's no separate in-app splash. We just set the canvas colour from
-         the OS scheme here to avoid a white flash before index.css / the theme. -->
+    <!-- No-flash background. Telegram's BotFather loading screen stays up until
+         ready() is called (once React mounts). To avoid a white/cream flash before
+         the theme applies, set the canvas to the SAVED app theme synchronously here
+         (not just the OS scheme) — mirrors applyScheme() in telegram.ts. -->
     <style>
-      html, body { margin: 0; background: #faf9f5; }
-      @media (prefers-color-scheme: dark) { html, body { background: #20201e; } }
+      html, body { margin: 0; }
+      html { background: #1c1c1c; }
     </style>
+    <script>
+      (function () {
+        try {
+          var pref = localStorage.getItem('mvpn_theme') // 'light' | 'dark' | null(system)
+          var tgDark = (((window.Telegram || {}).WebApp || {}).colorScheme === 'dark')
+          var osDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+          var dark = pref === 'dark' || (pref !== 'light' && (tgDark || osDark))
+          var bg = '#faf9f5'
+          if (dark) {
+            var shade = localStorage.getItem('mvpn_dark_shade')
+            bg = shade === 'black' ? '#000000' : '#1c1c1c'
+          }
+          document.documentElement.style.background = bg
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

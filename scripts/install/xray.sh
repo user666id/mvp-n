@@ -93,9 +93,9 @@ cat > /usr/local/etc/xray/config.json <<EOF
         "security": "reality",
         "realitySettings": {
           "show": false,
-          "dest": "www.microsoft.com:443",
+          "dest": "www.cloudflare.com:443",
           "xver": 0,
-          "serverNames": ["www.microsoft.com", ""],
+          "serverNames": ["www.cloudflare.com", ""],
           "privateKey": "$PRIVATE_KEY",
           "shortIds": ["$SHORT_ID"]
         },
@@ -118,9 +118,9 @@ cat > /usr/local/etc/xray/config.json <<EOF
         "security": "reality",
         "realitySettings": {
           "show": false,
-          "dest": "www.microsoft.com:443",
+          "dest": "www.cloudflare.com:443",
           "xver": 0,
-          "serverNames": ["www.microsoft.com", ""],
+          "serverNames": ["www.cloudflare.com", ""],
           "privateKey": "$PRIVATE_KEY",
           "shortIds": ["$SHORT_ID"]
         },
@@ -172,7 +172,7 @@ cat > /etc/mvpn/credentials.json <<EOF
     "public_key":  "$PUBLIC_KEY",
     "short_id":    "$SHORT_ID",
     "ports":       { "vision": 43000, "xhttp": 43001, "api": 10085 },
-    "dest":        "www.microsoft.com"
+    "dest":        "www.cloudflare.com"
   },
   "server_ip": "$SERVER_IP"
 }
@@ -195,7 +195,7 @@ EOF
 systemctl enable xray
 systemctl restart xray
 
-VLESS_URI="vless://${UUID}@${SERVER_IP}:43000/?type=tcp&security=reality&pbk=${PUBLIC_KEY}&fp=chrome&sid=${SHORT_ID}&sni=www.microsoft.com&spx=%2F&flow=xtls-rprx-vision#mvp-n"
+VLESS_URI="vless://${UUID}@${SERVER_IP}:43000/?type=tcp&security=reality&pbk=${PUBLIC_KEY}&fp=chrome&sid=${SHORT_ID}&sni=www.cloudflare.com&spx=%2F&flow=xtls-rprx-vision#mvp-n"
 
 log "Xray-core installed."
 log "Inbounds:   :43000 (REALITY+Vision/TCP), :43001 (REALITY+XHTTP /mvpn), :10085 (api)"

@@ -115,9 +115,9 @@ Docker services (`docker-compose.yml`): `postgres` (5432), `api` (8081),
 
 | Domain | Purpose | Cloudflare |
 |-------|-----------|------------|
-| `gw.mvp-n.net` | REST API (→ :8081) | proxied |
+| `cdn.mvp-n.net` | REST API (→ :8081) | proxied |
 | `app.mvp-n.net` | Mini App | proxied |
-| `connect.mvp-n.net` | Subscriptions `/to/:id` | proxied |
+| `connect1.mvp-n.net` | Subscriptions `/to/:id` | proxied |
 
 VPN traffic does not use a domain — the client connects via IP:port.
 

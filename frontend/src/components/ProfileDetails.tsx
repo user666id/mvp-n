@@ -8,6 +8,7 @@ import { openLink } from '../lib/telegram'
 import { padId, formatBytes } from '../lib/format'
 import { useT } from '../lib/i18n'
 import { subLabel } from '../lib/subscription'
+import { WalletSkeleton } from './WalletSkeleton'
 
 /** Common subset both the user `Profile` and admin `AdminProfile` satisfy. */
 export interface ProfileDetailsData {
@@ -84,7 +85,7 @@ export function ProfileDetails({ p, showWallet }: { p: ProfileDetailsData; showW
       {/* Wallet capsule — only on the user's OWN profile (admin view omits it).
           The same capsule as on the Subscription screen; connects in place. */}
       {showWallet && (
-        <Suspense fallback={<div className="mb-5 h-[60px] animate-pulse rounded-3xl bg-surface-sunken" />}>
+        <Suspense fallback={<div className="mb-5"><WalletSkeleton /></div>}>
           <div className="mb-5">
             <WalletStatus />
           </div>

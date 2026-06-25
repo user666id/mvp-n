@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown, Check } from '../icons'
 
 /** A compact select shown as a row: current value + chevron, tapping reveals an
@@ -12,7 +12,7 @@ export function Dropdown<T extends string>({
   align = 'down',
 }: {
   value: T
-  options: { value: T; label: string }[]
+  options: { value: T; label: string; icon?: ReactNode }[]
   onChange: (v: T) => void
   align?: 'down' | 'up'
 }) {
@@ -38,13 +38,16 @@ export function Dropdown<T extends string>({
         onClick={() => setOpen((o) => !o)}
         className="flex h-11 w-full items-center justify-between rounded-3xl border border-border bg-surface px-4 text-left active:bg-surface-sunken"
       >
-        <span className="text-[15px] font-medium text-ink">{current?.label}</span>
+        <span className="flex items-center gap-2.5 text-[15px] font-medium text-ink">
+          {current?.icon}
+          {current?.label}
+        </span>
         <ChevronDown size={18} className={'text-muted transition-transform ' + (open ? 'rotate-180' : '')} />
       </button>
       {open && (
         <div
           className={
-            'absolute left-0 right-0 z-30 overflow-hidden rounded-3xl border border-border bg-surface/85 shadow-sheet backdrop-blur-xl backdrop-saturate-150 ' +
+            'absolute left-0 right-0 z-30 overflow-hidden rounded-3xl border border-white/10 bg-surface/85 shadow-sheet backdrop-blur-xl backdrop-saturate-150 ' +
             (align === 'up' ? 'bottom-[calc(100%+6px)]' : 'top-[calc(100%+6px)]')
           }
         >
@@ -63,7 +66,10 @@ export function Dropdown<T extends string>({
                   : 'text-muted active:bg-surface-sunken')
               }
             >
-              <span>{o.label}</span>
+              <span className="flex items-center gap-2.5">
+                {o.icon}
+                {o.label}
+              </span>
               {o.value === value && <Check size={16} className="text-accent" />}
             </button>
           ))}

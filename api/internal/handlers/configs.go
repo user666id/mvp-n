@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
@@ -121,10 +122,61 @@ func loadConfig(db *sql.DB, id string, userID int64) (*configRow, error) {
 	return &c, nil
 }
 
+// ensureUserConfig auto-creates the user's single default VLESS config when they
+// are an active (paid) subscriber and have none yet — the "config comes with the
+// subscription" model (no manual create). Idempotent and a no-op once a config
+// exists; a FOR UPDATE lock serialises concurrent calls so a user never gets two.
+func (h *Handler) ensureUserConfig(ctx context.Context, uid int64) {
+	var isActive bool
+	var internalID int
+	var paidUntil sql.NullTime
+	if err := h.DB.QueryRowContext(ctx,
+		`SELECT is_active, internal_id, paid_until FROM users WHERE id = $1 AND deleted_at IS NULL`, uid,
+	).Scan(&isActive, &internalID, &paidUntil); err != nil {
+		return
+	}
+	if !isActive || !subscriptionActive(paidUntil, time.Now()) {
+		return // not an active paying user → no auto-config
+	}
+	tx, err := h.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `SELECT 1 FROM users WHERE id = $1 FOR UPDATE`, uid); err != nil {
+		return
+	}
+	var n int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM vpn_configs WHERE user_id = $1 AND is_active = true`, uid).Scan(&n); err != nil || n > 0 {
+		return // already has a config (or the check failed)
+	}
+	clientUUID := uuid.New().String()
+	shortID := genShortID()
+	// Default to Enhanced (XHTTP/:43001) — more DPI/throttle-resistant for RU.
+	vlessURI := buildURI(clientUUID, "netherlands", true, false)
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO vpn_configs (user_id, short_id, name, protocol, vless_uri, location, client_uuid, enhanced, game_mode, is_active)
+		VALUES ($1, $2, '', 'vless', $3, 'netherlands', $4::uuid, true, false, true)`,
+		uid, shortID, vlessURI, clientUUID,
+	); err != nil {
+		log.Printf("[ensureConfig] insert failed: %v", err)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		return
+	}
+	// Register the base key after commit (reconcileXray re-adds it if this misses).
+	if err := h.Xray.AddUser(ctx, xray.EmailFor(internalID, shortID), clientUUID, "xtls-rprx-vision"); err != nil {
+		log.Printf("[ensureConfig] xray AddUser failed (cron will register): %v", err)
+	}
+}
+
 // ── GET /configs ─────────────────────────────────────────────────────────────
 
 func (h *Handler) ListConfigs(w http.ResponseWriter, r *http.Request) {
 	uid, _ := middleware.UserID(r.Context())
+	h.ensureUserConfig(r.Context(), uid) // "config comes with the subscription"
 	rows, err := h.DB.QueryContext(r.Context(), `
 		SELECT id, short_id, COALESCE(name, ''), protocol, location, client_uuid,
 		       enhanced, game_mode, is_active, COALESCE(awg_conf, ''), COALESCE(awg_client_id, '')

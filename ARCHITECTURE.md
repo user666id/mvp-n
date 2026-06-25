@@ -32,14 +32,14 @@ nginx in `stream` mode reads the SNI from the ClientHello **without decrypting i
 
 | SNI | Destination |
 |-----|-----------|
-| `gw` / `app` / `connect.mvp-n.net` | internal nginx http `:8443` → api / static / connect |
-| anything else (`www.microsoft.com` etc.) | `127.0.0.1:2443` — a stub with no listener (probe into the void) |
+| `cdn` / `app` / `connect1.mvp-n.net` | internal nginx http `:8443` → api / static / connect |
+| anything else (`www.cloudflare.com` etc.) | `127.0.0.1:43000` — xray REALITY inbound |
 
 The web domains are behind Cloudflare (proxied); their TLS is terminated by the
 internal http server on `:8443` using the Cloudflare Origin Cert. **VPN traffic does
 not go through `:443`/nginx** — clients connect directly to xray
-`:43000`/`:43001`; `default → :2443` in the stream config currently has no listener
-(unwanted SNI hits a closed port). For details, see
+`:43000`/`:43001`; `default → :43000` in the stream config forwards any stray SNI to
+the xray REALITY inbound. For details, see
 [`nginx/README.md`](./nginx/README.md).
 
 ---

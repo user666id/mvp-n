@@ -8,7 +8,7 @@
 ## Basics
 
 ```
-Base URL:  https://gw.mvp-n.net
+Base URL:  https://cdn.mvp-n.net
 Auth:      Authorization: Bearer <JWT>        (JWT issued by POST /auth/token)
 Internal:  X-Internal-Token: <per-service>    (for /internal/*; constant-time)
 

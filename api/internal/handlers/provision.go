@@ -26,8 +26,10 @@ type ProvisionRequest struct {
 // Each (config, device-name, launcher) gets its own xray UUID. Deleting the
 // device removes that xray user → the device stops working; re-adding the
 // subscription link provisions a fresh UUID. Internal-only: authenticated with
-// the shared ADMIN_TOKEN. On any xray failure it falls back to the config's
-// own UUID so the device keeps working.
+// the shared ADMIN_TOKEN. On any xray AddUser failure it falls back to the config's
+// own UUID so the device keeps working IMMEDIATELY (no waiting for the reconcile
+// cron). Device-block is removed from the UI, so the old "shared key → blocking one
+// hits all" risk no longer applies — instant connectivity wins.
 func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
 	if !h.validInternalToken(r, h.Config.ConnectInternalToken) {
 		h.writeError(w, 401, "UNAUTHORIZED", "")
@@ -48,12 +50,13 @@ func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
 		clientUUID  sql.NullString
 		deviceLimit int
 		paidUntil   sql.NullTime
+		userBlocked bool
 	)
 	err := h.DB.QueryRowContext(r.Context(), `
-		SELECT vc.user_id, u.internal_id, vc.location, vc.enhanced, vc.game_mode, vc.client_uuid, u.device_limit, u.paid_until
+		SELECT vc.user_id, u.internal_id, vc.location, vc.enhanced, vc.game_mode, vc.client_uuid, u.device_limit, u.paid_until, u.is_blocked
 		FROM vpn_configs vc JOIN users u ON u.id = vc.user_id
 		WHERE vc.short_id = $1 AND vc.is_active = true`, req.ShortID).
-		Scan(&userID, &internalID, &location, &enhanced, &gameMode, &clientUUID, &deviceLimit, &paidUntil)
+		Scan(&userID, &internalID, &location, &enhanced, &gameMode, &clientUUID, &deviceLimit, &paidUntil, &userBlocked)
 	if err != nil {
 		h.writeError(w, 404, "NOT_FOUND", "config not found")
 		return
@@ -63,6 +66,11 @@ func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
 	// (account & configs are kept; renewing paid_until restores access).
 	if paidUntil.Valid && !paidUntil.Time.After(time.Now()) {
 		h.writeError(w, 403, "SUBSCRIPTION_EXPIRED", "subscription expired")
+		return
+	}
+	// A blocked account loses VPN access entirely — not just the app login.
+	if userBlocked {
+		h.writeError(w, 403, "BLOCKED", "account blocked")
 		return
 	}
 
@@ -179,6 +187,10 @@ func (h *Handler) ProvisionDevice(w http.ResponseWriter, r *http.Request) {
 			flow = ""
 		}
 		if err := h.Xray.AddUser(r.Context(), emailStr, uuidStr, flow); err != nil {
+			// Fall back to the config's own UUID so the device connects IMMEDIATELY
+			// (it's already registered in xray) instead of waiting ~5 min for the
+			// reconcile cron. Device-block is gone from the UI, so the old "shared key"
+			// risk (block one → hit all) no longer applies.
 			log.Printf("[provision] AddUser failed, falling back to config uuid: %v", err)
 			uuidStr, emailStr = clientUUID.String, ""
 		}

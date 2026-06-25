@@ -33,8 +33,6 @@ export function isMobileDevice(name: string): boolean {
   )
 }
 
-export const deviceLabel = (name: string) => name.trim() || 'Unknown device'
-
 /** Bytes → human string: "0 B", "512 MB", "3.4 GB" (units localized). */
 export function formatBytes(bytes: number, lang: Lang = 'en'): string {
   const units = lang === 'ru' ? ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'] : ['B', 'KB', 'MB', 'GB', 'TB']

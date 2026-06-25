@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
+import { BottomSheet } from '../components/ui/BottomSheet'
 import { Button } from '../components/ui/Button'
 import { Spinner } from '../components/ui/Spinner'
 import { Qr } from '../components/Qr'
@@ -35,12 +36,16 @@ export function SubscribeSheet({
   onClose,
   onPaid,
   renewing = false,
+  inline = false,
 }: {
   open: boolean
   onClose: () => void
   onPaid: () => void
   /** true = the user already had a subscription (renew), false = first purchase. */
   renewing?: boolean
+  /** Render in-screen (Оплата tab) instead of a modal sheet. The pay/done steps
+   *  replace the plan list, with a "back to plans" affordance. */
+  inline?: boolean
 }) {
   const { t } = useT()
   const toast = useToast()
@@ -133,6 +138,8 @@ export function SubscribeSheet({
   const cur = assets.find((a) => a.id === asset)
   const label = cur?.label ?? asset
   const network = cur?.network ?? 'TON'
+  // "Продлить" when an active sub is being extended, else "Купить" (none / expired).
+  const buyLabel = renewing ? t('sub.extend') : t('pay.buy')
   const isStars = asset === 'STARS'
   const isUsdt = asset.startsWith('USDT_')
   // TON-network assets can pay via TON Connect (native GRAM or USD₮ jetton);
@@ -181,8 +188,8 @@ export function SubscribeSheet({
     }
   }
   const chipCls = (on: boolean) =>
-    'flex w-full items-center gap-2 rounded-3xl border px-3 py-3 text-left transition-colors ' +
-    (on ? 'border-accent bg-accent/[0.08]' : 'border-border bg-surface active:bg-surface-sunken')
+    'flex w-full items-center gap-2 rounded-3xl border bg-surface px-3 py-3 text-left transition-colors ' +
+    (on ? 'border-accent' : 'border-border active:bg-surface-sunken')
 
   const startPay = async () => {
     setBusy(true)
@@ -266,18 +273,68 @@ export function SubscribeSheet({
       ? `ton://transfer/${order.address}?amount=${Math.round(parseFloat(order.amount) * 1e9)}`
       : order?.address ?? ''
 
-  return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      onBack={
-        step !== 'select'
-          ? () => setStep('select') // the step→select effect refreshes the pending list
-          : undefined
-      }
-      title={t('pay.title')}
-    >
-      {step === 'select' && (
+  // Inline mode (in the Оплата tab) resets to the plan list instead of closing.
+  const finish = inline ? () => setStep('select') : onClose
+
+  // Pay (QR + exact amount) and done views — shown in a BottomSheet window over
+  // the plan list when inline (the Оплата tab), or inline in the Sheet otherwise.
+  const payDoneView = (
+    <>
+      {step === 'pay' && order && (
+        <div className="flex flex-col items-center text-center">
+          <p className="mb-3 max-w-[300px] text-[14px] leading-relaxed text-muted">
+            {t('pay.sendExactly')} <span className="font-semibold text-ink">{order.amount} {label}</span>{' '}
+            ({t('pay.network')} {network})
+          </p>
+          <Qr value={qrValue} size={196} />
+
+          <button
+            onClick={() => copy(order.amount)}
+            className="mt-4 flex w-full items-center justify-between rounded-3xl border border-border bg-surface px-4 py-3 text-left"
+          >
+            <span className="text-[12px] text-faint">{t('pay.amount')}</span>
+            <span className="flex items-center gap-2 text-[15px] font-semibold text-ink">
+              {order.amount} {label} <Copy size={16} className="text-faint" />
+            </span>
+          </button>
+          <button
+            onClick={() => copy(order.address)}
+            className="mt-2 flex w-full items-center gap-2 rounded-3xl border border-border bg-surface px-4 py-3 text-left"
+          >
+            <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-ink">{order.address}</span>
+            <Copy size={16} className="shrink-0 text-faint" />
+          </button>
+
+          <div className="mt-5 flex items-center gap-2 text-[13px] text-muted">
+            <Spinner size={16} /> {t('pay.waiting')}
+          </div>
+          <p className="mt-2 px-2 text-[12px] leading-snug text-faint">{t('pay.exactHint')}</p>
+          <p className="mt-3 rounded-2xl bg-surface-sunken px-3 py-2.5 text-[12px] leading-snug text-muted">
+            {t('pay.autoHint')}
+          </p>
+        </div>
+      )}
+
+      {step === 'done' && (
+        <div className="flex flex-col items-center py-10 text-center">
+          <span className="grid h-16 w-16 place-items-center rounded-full bg-success/15 text-success">
+            <Check size={32} strokeWidth={2.5} />
+          </span>
+          <h3 className="font-display mt-4 text-[20px] font-semibold text-ink">{t('pay.done')}</h3>
+          <p className="mt-1 text-[14px] text-muted">
+            {renewing ? t('pay.doneRenewed') : t('pay.doneActivated')}
+          </p>
+          <Button onClick={finish} stretched className="mt-6">
+            {t('common.close')}
+          </Button>
+        </div>
+      )}
+    </>
+  )
+
+  const content = (
+    <>
+      {(inline || step === 'select') && (
         <>
           {pending.length > 0 && (
             <div className="mb-5">
@@ -301,7 +358,7 @@ export function SubscribeSheet({
                     </div>
                     <button
                       onClick={() => resume(o)}
-                      className="shrink-0 rounded-full border border-white/20 bg-accent/70 px-3.5 py-1.5 text-[13px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
+                      className="shrink-0 rounded-full border border-white/20 bg-accent/80 px-3.5 py-1.5 text-[13px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
                     >
                       {t('pay.resumeBtn')}
                     </button>
@@ -330,10 +387,8 @@ export function SubscribeSheet({
                   key={p.days}
                   onClick={() => setDays(p.days)}
                   className={
-                    'flex items-center gap-3 rounded-3xl border px-4 py-3.5 text-left transition-colors ' +
-                    (selected
-                      ? 'border-accent bg-accent/[0.08]'
-                      : 'border-border bg-surface active:bg-surface-sunken')
+                    'flex items-center gap-3 rounded-3xl border bg-surface px-4 py-3.5 text-left transition-colors ' +
+                    (selected ? 'border-accent' : 'border-border active:bg-surface-sunken')
                   }
                 >
                   <span
@@ -393,7 +448,7 @@ export function SubscribeSheet({
                       {usdtMenuOpen && usdts.length > 1 && (
                         <>
                           <div className="fixed inset-0 z-30" onClick={() => setUsdtMenuOpen(false)} />
-                          <div className="absolute left-1/2 top-[calc(100%+8px)] z-40 w-[200px] -translate-x-1/2 rounded-3xl border border-border bg-surface/85 p-1.5 shadow-sheet backdrop-blur-xl backdrop-saturate-150">
+                          <div className="absolute left-1/2 top-[calc(100%+8px)] z-40 w-[200px] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/10 bg-surface/85 shadow-sheet backdrop-blur-xl backdrop-saturate-150">
                             {usdts.map((u) => (
                               <button
                                 key={u.id}
@@ -403,13 +458,15 @@ export function SubscribeSheet({
                                   setUsdtMenuOpen(false)
                                 }}
                                 className={
-                                  'flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left transition-colors ' +
-                                  (asset === u.id ? 'bg-surface-sunken' : 'active:bg-surface-sunken')
+                                  'flex h-11 w-full items-center gap-2.5 px-4 text-left text-[15px] transition-colors ' +
+                                  (asset === u.id
+                                    ? 'bg-surface-sunken font-medium text-ink'
+                                    : 'text-muted active:bg-surface-sunken')
                                 }
                               >
-                                <CurrencyIcon asset={u.id} size={24} />
+                                <CurrencyIcon asset={u.id} size={22} />
                                 <span className="flex items-baseline gap-1.5">
-                                  <span className="text-[15px] font-medium text-ink">USDT</span>
+                                  <span className="font-medium">USDT</span>
                                   <span className="text-[12px] uppercase tracking-wide text-muted">{u.network}</span>
                                 </span>
                                 {asset === u.id && <Check size={16} className="ml-auto text-accent" />}
@@ -449,11 +506,11 @@ export function SubscribeSheet({
               {!asset ? (
                 // No method picked yet → dim, disabled Buy (lights up on select).
                 <Button disabled stretched>
-                  {t('pay.buy')}
+                  {buyLabel}
                 </Button>
               ) : isStars ? (
                 <Button onClick={payStars} loading={busy} stretched>
-                  {t('pay.buy')}
+                  {buyLabel}
                 </Button>
               ) : isTonNet ? (
                 <>
@@ -478,12 +535,12 @@ export function SubscribeSheet({
                   </Suspense>
                   {/* Manual payment (QR + exact amount) — de-emphasized ghost link. */}
                   <Button variant="ghost" onClick={startPay} loading={busy} stretched className="mt-1">
-                    {t('pay.buy')}
+                    {buyLabel}
                   </Button>
                 </>
               ) : (
                 <Button onClick={startPay} loading={busy} stretched>
-                  {t('pay.buy')}
+                  {buyLabel}
                 </Button>
               )}
             </div>
@@ -491,55 +548,27 @@ export function SubscribeSheet({
         </>
       )}
 
-      {step === 'pay' && order && (
-        <div className="flex flex-col items-center text-center">
-          <p className="mb-3 max-w-[300px] text-[14px] leading-relaxed text-muted">
-            {t('pay.sendExactly')} <span className="font-semibold text-ink">{order.amount} {label}</span>{' '}
-            ({t('pay.network')} {network})
-          </p>
-          <Qr value={qrValue} size={196} />
+      {!inline && payDoneView}
+    </>
+  )
 
-          <button
-            onClick={() => copy(order.amount)}
-            className="mt-4 flex w-full items-center justify-between rounded-3xl border border-border bg-surface px-4 py-3 text-left"
-          >
-            <span className="text-[12px] text-faint">{t('pay.amount')}</span>
-            <span className="flex items-center gap-2 text-[15px] font-semibold text-ink">
-              {order.amount} {label} <Copy size={16} className="text-faint" />
-            </span>
-          </button>
-          <button
-            onClick={() => copy(order.address)}
-            className="mt-2 flex w-full items-center gap-2 rounded-3xl border border-border bg-surface px-4 py-3 text-left"
-          >
-            <span className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-ink">{order.address}</span>
-            <Copy size={16} className="shrink-0 text-faint" />
-          </button>
-
-          <div className="mt-5 flex items-center gap-2 text-[13px] text-muted">
-            <Spinner size={16} /> {t('pay.waiting')}
-          </div>
-          <p className="mt-2 px-2 text-[12px] leading-snug text-faint">{t('pay.exactHint')}</p>
-          <p className="mt-3 rounded-2xl bg-surface-sunken px-3 py-2.5 text-[12px] leading-snug text-muted">
-            {t('pay.autoHint')}
-          </p>
-        </div>
-      )}
-
-      {step === 'done' && (
-        <div className="flex flex-col items-center py-10 text-center">
-          <span className="grid h-16 w-16 place-items-center rounded-full bg-success/15 text-success">
-            <Check size={32} strokeWidth={2.5} />
-          </span>
-          <h3 className="font-display mt-4 text-[20px] font-semibold text-ink">{t('pay.done')}</h3>
-          <p className="mt-1 text-[14px] text-muted">
-            {renewing ? t('pay.doneRenewed') : t('pay.doneActivated')}
-          </p>
-          <Button onClick={onClose} stretched className="mt-6">
-            {t('common.close')}
-          </Button>
-        </div>
-      )}
+  if (inline)
+    return (
+      <div className="animate-fade">
+        {content}
+        <BottomSheet open={step !== 'select'} onClose={() => setStep('select')} title={t('pay.title')}>
+          {payDoneView}
+        </BottomSheet>
+      </div>
+    )
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      onBack={step !== 'select' ? () => setStep('select') : undefined}
+      title={t('pay.title')}
+    >
+      {content}
     </Sheet>
   )
 }

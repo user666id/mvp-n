@@ -223,7 +223,6 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
         onBack={() => setLicensesOpen(false)}
         title={t('about.licenses')}
       >
-        <p className="mb-4 px-1 text-[13px] leading-relaxed text-muted">{t('about.licensesHint')}</p>
         {licenseGroups.map((grp) => (
           <Section key={grp.header} header={t(grp.header)}>
             {grp.items.map((l, i) => (

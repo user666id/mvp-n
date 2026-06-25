@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useForegroundRefetch } from '../lib/useForeground'
+import { useActiveRefresh } from '../lib/useForeground'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
 import { Spinner } from '../components/ui/Spinner'
-import { Layers, Lock, Plus, Globe, ChevronRight } from '../components/icons'
+import { Layers, Lock, Globe } from '../components/icons'
 import { StatusDot } from '../components/StatusDot'
 import { useToast } from '../components/ui/Toast'
-import { CreateConfigSheet } from './CreateConfigSheet'
 import { ConfigDetailSheet } from './ConfigDetailSheet'
 import { ServerStatsSheet } from './ServerStatsSheet'
 import { KeyEntrySheet } from './KeyEntrySheet'
 import {
-  createConfig,
   deleteConfig,
   getConfigs,
   getProfile,
@@ -23,12 +21,9 @@ import {
   type Config,
   type Order,
   type Profile,
-  type Protocol,
 } from '../api'
 import { notify } from '../lib/telegram'
 import { useT } from '../lib/i18n'
-import { plural } from '../lib/format'
-import { configMeta, configListLabel } from '../lib/configMeta'
 import { fmtSubDate } from '../lib/subscription'
 
 export function ConfigsScreen({
@@ -36,11 +31,13 @@ export function ConfigsScreen({
   onAccount,
   accountName,
   onGoSubscription,
+  revalidate,
 }: {
   active: boolean
   onAccount: () => void
   accountName?: string
   onGoSubscription: () => void
+  revalidate?: number
 }) {
   const { t, lang } = useT()
   const toast = useToast()
@@ -48,8 +45,6 @@ export function ConfigsScreen({
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
-  const [createOpen, setCreateOpen] = useState(false)
-  const [creating, setCreating] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [statsOpen, setStatsOpen] = useState(false)
   const [keyOpen, setKeyOpen] = useState(false)
@@ -75,15 +70,9 @@ export function ConfigsScreen({
     }
   }, [])
 
-  // Refresh whenever this tab becomes active. The screen stays mounted across
-  // tab switches (App toggles visibility), so this is a background refresh that
-  // keeps the existing list on screen — no blank skeleton on every switch.
-  useEffect(() => {
-    if (active) load()
-  }, [active, load])
-
-  // Re-load when the app returns to the foreground (suspended WebView / stale data).
-  useForegroundRefetch(active, load)
+  // Refresh on tab-active, on revalidate (Account sheet closed), and on app
+  // foreground — one shared hook so every screen loads/refreshes identically.
+  useActiveRefresh(active, revalidate, load)
 
   // While a payment is pending, poll so access flips on automatically once the
   // on-chain check credits it (cron runs ~every minute) — no manual refresh.
@@ -99,31 +88,14 @@ export function ConfigsScreen({
   // that says so — a transient profile-fetch failure (null) keeps the normal UI
   // rather than falsely locking out a paid user.
   const hasAccess = profile ? profile.is_active && !expired : true
-  const handleCreate = async (opts: {
-    protocol: Protocol
-    enhanced: boolean
-    game_mode: boolean
-  }) => {
-    setCreating(true)
-    try {
-      const c = await createConfig(opts)
-      setConfigs((prev) => [c, ...prev])
-      setCreateOpen(false)
-      notify('success')
-      toast(t('configs.created'))
-    } catch {
-      notify('error')
-      toast(t('configs.createFailed'))
-    } finally {
-      setCreating(false)
-    }
-  }
-
   const handleToggle = async (key: 'enhanced' | 'game_mode', val: boolean) => {
     if (!detailId) return
-    setConfigs((prev) => prev.map((c) => (c.id === detailId ? { ...c, [key]: val } : c)))
+    // Picking a mode (Standard/Enhanced) also clears game_mode — the detail Mode
+    // switcher only exposes those two, so a config is never left hidden-"gaming".
+    const patch = key === 'enhanced' ? { enhanced: val, game_mode: false } : { [key]: val }
+    setConfigs((prev) => prev.map((c) => (c.id === detailId ? { ...c, ...patch } : c)))
     try {
-      const updated = await updateSettings(detailId, { [key]: val })
+      const updated = await updateSettings(detailId, patch)
       setConfigs((prev) => prev.map((c) => (c.id === detailId ? updated : c)))
     } catch {
       toast(t('common.saveFailed'))
@@ -149,7 +121,7 @@ export function ConfigsScreen({
     <div className="animate-fade min-h-screen pb-24">
       <PageHeader title={t('configs.title')} onAccount={onAccount} accountName={accountName} />
 
-      <div className="px-4">
+      <div className="px-4 pt-4">
         {loading ? (
           <ListSkeleton rows={2} />
         ) : failed && !profile && configs.length === 0 ? (
@@ -171,7 +143,7 @@ export function ConfigsScreen({
               {t('pay.pendingView')}
             </Button>
           </div>
-        ) : !hasAccess ? (
+        ) : !hasAccess && !expired ? (
           /* ── Not activated / expired: prominent activate block in place of the
                 configs list. Buy a subscription OR enter an access key. ── */
           <div className="flex flex-col items-center px-6 pt-[13vh] text-center">
@@ -187,7 +159,7 @@ export function ConfigsScreen({
             <Button stretched onClick={onGoSubscription}>
               {expired ? t('sub.renew') : t('sub.buy')}
             </Button>
-            <Button variant="secondary" stretched className="mt-3" onClick={() => setKeyOpen(true)}>
+            <Button stretched className="mt-3" onClick={() => setKeyOpen(true)}>
               {t('sub.haveKey')}
             </Button>
           </div>
@@ -196,12 +168,22 @@ export function ConfigsScreen({
             {/* Subscription strip — expiry + days left at a glance, with a quick
                 renew. Key / lifetime users (no paid_until) see "lifetime". */}
             {profile &&
-              (profile.paid_until ? (
-                <button
-                  onClick={onGoSubscription}
-                  className="mb-4 flex w-full items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3 text-left active:bg-surface-sunken"
-                >
-                  <div className="min-w-0 flex-1">
+              (expired ? (
+                <div className="mb-4 flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3">
+                  <button onClick={onGoSubscription} className="min-w-0 flex-1 text-left active:opacity-70">
+                    <div className="text-[14px] font-medium text-danger">{t('sub.expired')}</div>
+                    <div className="mt-0.5 text-[12.5px] text-muted">{t('sub.expiredShort')}</div>
+                  </button>
+                  <button
+                    onClick={onGoSubscription}
+                    className="shrink-0 rounded-full border border-white/20 bg-accent/80 px-4 py-1.5 text-[13px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
+                  >
+                    {t('pay.buy')}
+                  </button>
+                </div>
+              ) : profile.paid_until ? (
+                <div className="mb-4 flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3">
+                  <button onClick={onGoSubscription} className="min-w-0 flex-1 text-left active:opacity-70">
                     <div className="text-[14px] font-medium text-ink">
                       {t('sub.activeShort', { d: fmtSubDate(profile.paid_until, lang) })}
                     </div>
@@ -213,9 +195,14 @@ export function ConfigsScreen({
                         ),
                       })}
                     </div>
-                  </div>
-                  <ChevronRight size={20} className="shrink-0 text-faint" />
-                </button>
+                  </button>
+                  <button
+                    onClick={onGoSubscription}
+                    className="shrink-0 rounded-full border border-white/20 bg-accent/80 px-4 py-1.5 text-[13px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
+                  >
+                    {t('sub.extend')}
+                  </button>
+                </div>
               ) : (
                 <div className="mb-4 rounded-3xl border border-border bg-surface px-4 py-3 text-[14px] font-medium text-ink">
                   {t('sub.lifetimeBottom')}
@@ -227,71 +214,47 @@ export function ConfigsScreen({
                 <p className="mb-6 mt-4 max-w-[260px] text-[15px] leading-relaxed text-muted">
                   {t('configs.empty')}
                 </p>
-                <Button onClick={() => setCreateOpen(true)}>
-                  <Plus size={20} /> {t('configs.create')}
-                </Button>
+                <Button onClick={onGoSubscription}>{t('sub.buy')}</Button>
               </div>
             ) : (
               <>
             <div className="flex flex-col gap-2.5">
               {configs.map((c) => (
-                  <button
+                  <div
                     key={c.id}
-                    onClick={() => setDetailId(c.id)}
-                    className="flex items-center gap-3.5 rounded-3xl border border-border bg-surface px-4 py-4 text-left active:bg-surface-sunken"
+                    className="overflow-hidden rounded-3xl border border-border bg-surface"
                   >
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-3xl bg-surface-sunken text-faint">
-                      <Globe size={24} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 font-display text-[18px] font-semibold leading-tight text-ink">
-                        <span className="text-[17px] leading-none">🇳🇱</span>
-                        <span className="truncate">{c.name || t('configs.country')}</span>
-                      </div>
-                      <div className="mt-0.5 text-[12px] text-faint">
-                        {configListLabel(configMeta(c, t))}
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1.5 text-[13px]">
-                        <span className={'inline-flex items-center gap-1.5 font-medium ' + (c.server_online ? 'text-success' : 'text-danger')}>
-                          <StatusDot ok={c.server_online} className="h-1.5 w-1.5" />
-                          {c.server_online ? t('server.online') : t('server.offline')}
-                        </span>
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-surface-sunken text-faint">
+                        <Globe size={22} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-display text-[16px] font-semibold leading-tight text-ink">
+                          {t('detail.title')}
+                        </div>
+                        <div className="mt-0.5">
+                          <span className={'inline-flex items-center gap-2 text-[15px] font-medium ' + (c.server_online ? 'text-success' : 'text-danger')}>
+                            <StatusDot ok={c.server_online} className="h-2 w-2" />
+                            {c.server_online ? t('server.online') : t('server.offline')}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </button>
+                    <div className="px-4 pb-4">
+                      <Button stretched onClick={() => setDetailId(c.id)}>
+                        {t('configs.configure')}
+                      </Button>
+                    </div>
+                  </div>
                 ),
               )}
             </div>
-                <div className="py-4 text-center text-[13px] text-faint">
-                  {t('configs.count', { n: configs.length, u: configCountUnit(configs.length, lang) })}
-                </div>
               </>
             )}
           </div>
         )}
       </div>
 
-      {/* Floating pill action (Claude "New project" pattern) */}
-      {hasAccess && configs.length > 0 && (
-        <button
-          onClick={() => setCreateOpen(true)}
-          aria-label={t('configs.create')}
-          className={
-            'fixed right-4 z-30 inline-flex h-12 items-center gap-2 rounded-full border border-white/20 bg-accent/70 px-5 text-white shadow-btn backdrop-blur-xl backdrop-saturate-150 active:bg-accent/85 ' +
-            'bottom-[calc(92px+env(safe-area-inset-bottom))]'
-          }
-        >
-          <Plus size={20} />
-          <span className="text-[15px] font-medium">{t('configs.create')}</span>
-        </button>
-      )}
-
-      <CreateConfigSheet
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreate={handleCreate}
-        busy={creating}
-      />
       <ConfigDetailSheet
         config={detail}
         open={!!detail}
@@ -309,9 +272,4 @@ export function ConfigsScreen({
       <KeyEntrySheet open={keyOpen} onClose={() => setKeyOpen(false)} onActivated={load} />
     </div>
   )
-}
-
-function configCountUnit(n: number, lang: 'en' | 'ru') {
-  if (lang === 'ru') return plural(n, 'конфиг', 'конфига', 'конфигов')
-  return n === 1 ? 'config' : 'configs'
 }

@@ -167,7 +167,7 @@ func (s *Scheduler) reconcileXray(ctx context.Context) error {
 	// Skip users whose paid subscription expired (NULL paid_until = no time limit).
 	if rows, err := s.db.QueryContext(ctx,
 		`SELECT d.vpn_email, d.vpn_uuid FROM devices d JOIN users u ON u.id = d.user_id
-		 WHERE d.is_blocked = false AND COALESCE(d.vpn_uuid, '') <> '' AND COALESCE(d.vpn_email, '') <> ''
+		 WHERE d.is_blocked = false AND u.is_blocked = false AND COALESCE(d.vpn_uuid, '') <> '' AND COALESCE(d.vpn_email, '') <> ''
 		   AND (u.paid_until IS NULL OR u.paid_until > NOW())`); err == nil {
 		for rows.Next() {
 			var email, uid string
@@ -184,7 +184,7 @@ func (s *Scheduler) reconcileXray(ctx context.Context) error {
 	if rows, err := s.db.QueryContext(ctx,
 		`SELECT c.short_id, c.client_uuid::text, u.internal_id
 		 FROM vpn_configs c JOIN users u ON u.id = c.user_id
-		 WHERE c.is_active = true AND c.protocol = 'vless' AND c.client_uuid IS NOT NULL`); err == nil {
+		 WHERE c.is_active = true AND c.protocol = 'vless' AND c.client_uuid IS NOT NULL AND u.is_blocked = false`); err == nil {
 		for rows.Next() {
 			var shortID, cuid string
 			var internalID int
@@ -419,12 +419,14 @@ func (s *Scheduler) cleanupDeletedUsers(ctx context.Context) error {
 }
 
 // cleanupDevices removes devices that haven't refreshed their subscription in
-// 7 days (the launcher refreshes every ~12h while running; a deleted
-// subscription or a long-off device stops doing so) and revokes each one's
-// per-device xray user so it can't reconnect.
+// 30 days (the launcher refreshes every ~12h while running; a long-off device
+// stops doing so) and revokes each one's per-device xray user so it can't
+// reconnect. Blocked devices are KEPT — a deliberate block must never cascade
+// into data loss (a frozen-last_seen blocked device is what silently deleted
+// users' devices before).
 func (s *Scheduler) cleanupDevices(ctx context.Context) error {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT COALESCE(vpn_email, '') FROM devices WHERE last_seen < NOW() - INTERVAL '7 days'`)
+		`SELECT COALESCE(vpn_email, '') FROM devices WHERE last_seen < NOW() - INTERVAL '30 days' AND is_blocked = false`)
 	if err != nil {
 		return err
 	}
@@ -442,7 +444,7 @@ func (s *Scheduler) cleanupDevices(ctx context.Context) error {
 		}
 	}
 	res, err := s.db.ExecContext(ctx,
-		`DELETE FROM devices WHERE last_seen < NOW() - INTERVAL '7 days'`)
+		`DELETE FROM devices WHERE last_seen < NOW() - INTERVAL '30 days' AND is_blocked = false`)
 	if err != nil {
 		return err
 	}

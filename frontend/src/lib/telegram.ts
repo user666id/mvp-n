@@ -7,6 +7,7 @@ type NotifyType = 'success' | 'error' | 'warning'
 interface TgWebApp {
   initData: string
   colorScheme: 'light' | 'dark'
+  platform?: string
   ready: () => void
   expand: () => void
   setHeaderColor?: (color: string) => void
@@ -29,6 +30,7 @@ interface TgWebApp {
   addToHomeScreen?: () => void
   checkHomeScreenStatus?: (cb: (status: string) => void) => void
   exitFullscreen?: () => void
+  isVersionAtLeast?: (version: string) => boolean
   safeAreaInset?: { top: number; bottom: number; left: number; right: number }
   contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number }
 }
@@ -42,14 +44,13 @@ const CANVAS_LIGHT = '#faf9f5'
 // Per-shade dark page colour (kept in sync with the .dark[data-shade] CSS so the
 // Telegram header/background match the in-app canvas exactly).
 const DARK_CANVAS: Record<DarkShade, string> = {
-  warm: '#20201e',
+  warm: '#1c1c1c',
   black: '#000000',
-  fragment: '#1c1f24',
 }
 
 export type ThemePref = 'system' | 'light' | 'dark'
-/** Sub-choice for the dark theme: warm (default), true black, or Fragment blue. */
-export type DarkShade = 'warm' | 'black' | 'fragment'
+/** Sub-choice for the dark theme: warm (default) or true black. */
+export type DarkShade = 'warm' | 'black'
 
 /** User's theme choice; 'system' (default) follows the Telegram theme. */
 export function getTheme(): ThemePref {
@@ -66,7 +67,7 @@ export function setTheme(p: ThemePref) {
  *  A legacy 'neutral' value (removed) falls back to 'warm'. */
 export function getDarkShade(): DarkShade {
   const v = localStorage.getItem('mvpn_dark_shade')
-  return v === 'black' ? 'black' : v === 'fragment' ? 'fragment' : 'warm'
+  return v === 'black' ? 'black' : 'warm'
 }
 
 export function setDarkShade(s: DarkShade) {
@@ -135,9 +136,13 @@ export function initTelegram() {
   // Defensive: an earlier build offered fullscreen (since removed — it covered the
   // app header and broke tab nav). Exit it on boot so anyone left stuck in
   // fullscreen by a cached old bundle is recovered. No-op when not fullscreen.
-  try {
-    tg.exitFullscreen?.()
-  } catch {}
+  // Gate on 8.0+ — that's when fullscreen exists; on older clients the call only
+  // makes Telegram's SDK log an "unsupported in version 6.0" console error.
+  if (tg.isVersionAtLeast?.('8.0')) {
+    try {
+      tg.exitFullscreen?.()
+    } catch {}
+  }
   // Re-apply on Telegram theme change — only matters while pref is 'system'.
   tg.onEvent?.('themeChanged', applyScheme)
   // Publish Telegram's safe-area insets as CSS vars + keep them current (used for
@@ -281,19 +286,6 @@ export function addToHomeScreen() {
  *  probe is flaky across launches and made the button blink in and out. */
 export function canAddToHomeScreen(): boolean {
   return typeof tg?.addToHomeScreen === 'function'
-}
-
-/** Home-screen status: 'unsupported' | 'unknown' | 'added' | 'missed'.
- *  Resolves 'unsupported' outside Telegram / on old clients. */
-export function getHomeScreenStatus(): Promise<string> {
-  return new Promise((resolve) => {
-    try {
-      if (tg?.checkHomeScreenStatus) tg.checkHomeScreenStatus((s) => resolve(s || 'unknown'))
-      else resolve('unsupported')
-    } catch {
-      resolve('unsupported')
-    }
-  })
 }
 
 // Publishes Telegram's safe-area insets as CSS vars (--tg-safe-top / -bottom) for

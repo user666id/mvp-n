@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/user666id/vpn-project/api/internal/xray"
 )
 
 // AdminDomains checks reachability of the public web domains AND the VPN entry
@@ -90,9 +92,9 @@ func (h *Handler) AdminDomains(w http.ResponseWriter, r *http.Request) {
 
 	xh := h.Config.XrayAPIHost // host xray runs on (host.docker.internal in compose)
 	jobs := []func() dom{
-		func() dom { return httpCheck("gw.mvp-n.net", "web", "https://gw.mvp-n.net/health") },
+		func() dom { return httpCheck("cdn.mvp-n.net", "web", "https://cdn.mvp-n.net/health") },
 		func() dom { return httpCheck("app.mvp-n.net", "web", "https://app.mvp-n.net/") },
-		func() dom { return httpCheck("connect.mvp-n.net", "web", "https://connect.mvp-n.net/health") },
+		func() dom { return httpCheck("connect1.mvp-n.net", "web", "https://connect1.mvp-n.net/health") },
 		func() dom { return httpCheck("legal.mvp-n.net/terms", "web", "https://legal.mvp-n.net/terms") },
 		func() dom { return httpCheck("legal.mvp-n.net/privacy", "web", "https://legal.mvp-n.net/privacy") },
 		func() dom { return tcpCheck("VLESS Vision · 43000", "vpn", xh+":43000") },
@@ -241,13 +243,79 @@ func (h *Handler) AdminBlockProfile(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, 403, "ADMIN_PROTECTED", "cannot block admin")
 		return
 	}
-	_, err = h.DB.ExecContext(r.Context(),
-		`UPDATE users SET is_blocked = NOT is_blocked WHERE id = $1 OR internal_id = $1`, id)
+	// Toggle the flag and read back the real user id + the NEW state, so we can
+	// also revoke (blocked) or restore (unblocked) the user's VPN in xray — a
+	// block must cut the tunnel, not only the app login.
+	var uid int64
+	var blocked bool
+	err = h.DB.QueryRowContext(r.Context(),
+		`UPDATE users SET is_blocked = NOT is_blocked WHERE id = $1 OR internal_id = $1 RETURNING id, is_blocked`,
+		id).Scan(&uid, &blocked)
 	if err != nil {
 		h.writeError(w, 500, "DB_ERROR", err.Error())
 		return
 	}
+	h.setUserVPNBlocked(r.Context(), uid, blocked)
 	h.writeJSON(w, 200, Response{Status: true, StatusCode: 200})
+}
+
+// setUserVPNBlocked revokes (blocked=true) or restores (blocked=false) ALL of a
+// user's xray access — per-device keys and config base keys — WITHOUT touching
+// the DB rows, so an unblock fully restores the previous keys. reconcileXray also
+// skips blocked users, so the cut survives an xray restart. Best-effort.
+func (h *Handler) setUserVPNBlocked(ctx context.Context, userID int64, blocked bool) {
+	if h.Xray == nil || userID == 0 {
+		return
+	}
+	if blocked {
+		if rows, err := h.DB.QueryContext(ctx,
+			`SELECT COALESCE(vpn_email, '') FROM devices WHERE user_id = $1 AND COALESCE(vpn_email, '') <> ''`, userID); err == nil {
+			for rows.Next() {
+				var e string
+				if rows.Scan(&e) == nil && e != "" {
+					_ = h.Xray.RemoveUser(ctx, e)
+				}
+			}
+			rows.Close()
+		}
+		if rows, err := h.DB.QueryContext(ctx,
+			`SELECT u.internal_id, c.short_id FROM vpn_configs c JOIN users u ON u.id = c.user_id
+			 WHERE c.user_id = $1 AND c.is_active = true AND c.protocol = 'vless'`, userID); err == nil {
+			for rows.Next() {
+				var iid int
+				var sid string
+				if rows.Scan(&iid, &sid) == nil {
+					_ = h.Xray.RemoveUser(ctx, xray.EmailFor(iid, sid))
+				}
+			}
+			rows.Close()
+		}
+		return
+	}
+	// Unblocked → re-add everything (mirrors reconcileXray for this one user).
+	if rows, err := h.DB.QueryContext(ctx,
+		`SELECT vpn_email, vpn_uuid FROM devices
+		 WHERE user_id = $1 AND COALESCE(vpn_uuid, '') <> '' AND COALESCE(vpn_email, '') <> ''`, userID); err == nil {
+		for rows.Next() {
+			var e, u string
+			if rows.Scan(&e, &u) == nil {
+				_ = h.Xray.AddUser(ctx, e, u, "xtls-rprx-vision")
+			}
+		}
+		rows.Close()
+	}
+	if rows, err := h.DB.QueryContext(ctx,
+		`SELECT u.internal_id, c.short_id, c.client_uuid::text FROM vpn_configs c JOIN users u ON u.id = c.user_id
+		 WHERE c.user_id = $1 AND c.is_active = true AND c.protocol = 'vless' AND c.client_uuid IS NOT NULL`, userID); err == nil {
+		for rows.Next() {
+			var iid int
+			var sid, cuid string
+			if rows.Scan(&iid, &sid, &cuid) == nil {
+				_ = h.Xray.AddUser(ctx, xray.EmailFor(iid, sid), cuid, "xtls-rprx-vision")
+			}
+		}
+		rows.Close()
+	}
 }
 
 // AdminDeleteProfile — full purge of a user account (xray + DB cascade).

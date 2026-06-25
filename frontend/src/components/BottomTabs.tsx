@@ -1,4 +1,4 @@
-import { Layers, Dollar, ShieldCheck } from './icons'
+import { Globe, Dollar, ShieldCheck } from './icons'
 import { useT, type TKey } from '../lib/i18n'
 import { selection } from '../lib/telegram'
 
@@ -7,8 +7,8 @@ import { selection } from '../lib/telegram'
  *  like the search button beside Telegram's own tab bar. */
 export type Tab = 'configs' | 'subscription' | 'admin'
 
-const MAIN: { id: Tab; key: TKey; Icon: typeof Layers }[] = [
-  { id: 'configs', key: 'tab.configs', Icon: Layers },
+const MAIN: { id: Tab; key: TKey; Icon: typeof Globe }[] = [
+  { id: 'configs', key: 'tab.configs', Icon: Globe },
   { id: 'subscription', key: 'tab.subscription', Icon: Dollar },
 ]
 

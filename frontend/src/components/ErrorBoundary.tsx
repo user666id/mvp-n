@@ -49,7 +49,7 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
         </p>
         <button
           onClick={() => location.reload()}
-          className="inline-flex h-[44px] items-center justify-center rounded-full border border-white/20 bg-accent/70 px-6 text-[15px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
+          className="inline-flex h-[44px] items-center justify-center rounded-full border border-white/20 bg-accent/80 px-6 text-[15px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
         >
           {ru ? 'Перезагрузить' : 'Reload'}
         </button>

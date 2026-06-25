@@ -10,8 +10,15 @@ import { Spinner } from './components/ui/Spinner'
 import { ApiError, authTelegram, clearToken, getProfile, getToken, setLanguage, type Profile } from './api'
 import { notify, signalReady } from './lib/telegram'
 import { useT } from './lib/i18n'
+import { TonConnectUIProvider } from '@tonconnect/ui-react'
+import { HeaderCtx } from './lib/headerCtx'
 
 type Phase = 'auth' | 'loading' | 'main' | 'error'
+
+// App-wide TON Connect — the header wallet capsule and the payment panes share
+// one provider so the wallet connection is global (was per-pane + lazy before).
+const TON_MANIFEST = 'https://app.mvp-n.net/v2/tonconnect-manifest.json'
+const TON_TWA_RETURN = 'https://t.me/mvp_n_net_bot?startapp'
 
 export default function App() {
   const { t } = useT()
@@ -20,6 +27,9 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('configs')
   const [accountOpen, setAccountOpen] = useState(false)
+  // Bumped when the Account sheet closes, so the screen behind it re-fetches
+  // (e.g. after a reset that wiped configs) instead of showing stale data.
+  const [revalidate, setRevalidate] = useState(0)
   const [isAdmin, setIsAdmin] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
 
@@ -90,6 +100,7 @@ export default function App() {
   }
 
   return (
+    <TonConnectUIProvider manifestUrl={TON_MANIFEST} actionsConfiguration={{ twaReturnUrl: TON_TWA_RETURN }}>
     <ToastProvider>
       {phase === 'auth' && <AuthScreen onLogin={handleLogin} busy={busy} error={error} />}
       {phase === 'loading' && (
@@ -98,7 +109,7 @@ export default function App() {
         </div>
       )}
       {phase === 'main' && (
-        <>
+        <HeaderCtx.Provider value={{ accountName: profile?.first_name ?? undefined, onAccount: () => setAccountOpen(true) }}>
           {/* Keep all tabs MOUNTED and just toggle visibility, so switching tabs
               doesn't unmount + reload a screen from a blank skeleton every time.
               Each screen refreshes itself in the background when it becomes active. */}
@@ -108,6 +119,7 @@ export default function App() {
               onAccount={() => setAccountOpen(true)}
               accountName={profile?.first_name ?? undefined}
               onGoSubscription={() => setTab('subscription')}
+              revalidate={revalidate}
             />
           </div>
           <div className={tab === 'subscription' ? '' : 'hidden'}>
@@ -117,6 +129,7 @@ export default function App() {
               onChanged={refreshProfile}
               onAccount={() => setAccountOpen(true)}
               accountName={profile?.first_name ?? undefined}
+              revalidate={revalidate}
             />
           </div>
           {isAdmin && (
@@ -125,17 +138,22 @@ export default function App() {
                 active={tab === 'admin'}
                 onAccount={() => setAccountOpen(true)}
                 accountName={profile?.first_name ?? undefined}
+                revalidate={revalidate}
               />
             </div>
           )}
           <BottomTabs active={tab} onSelect={setTab} isAdmin={isAdmin} />
           <AccountSheet
             open={accountOpen}
-            onClose={() => setAccountOpen(false)}
+            onClose={() => {
+              setAccountOpen(false)
+              setRevalidate((v) => v + 1)
+            }}
             onLogout={handleLogout}
           />
-        </>
+        </HeaderCtx.Provider>
       )}
     </ToastProvider>
+    </TonConnectUIProvider>
   )
 }

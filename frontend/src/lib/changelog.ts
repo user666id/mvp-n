@@ -17,6 +17,62 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '2.1',
+    date: '2026-06-25',
+    groups: [
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'Redesigned config screen — a globe + country header with the full protocol spec, a one-tap “Add to app”, and the subscription link, QR, formats and settings gathered into one tidy card.',
+            ru: 'Переработан экран конфига — шапка с глобусом и страной и полной спецификацией протокола, «Установить в приложение» в один тап, а ссылка, QR, форматы и настройки собраны в одну аккуратную карточку.',
+          },
+          {
+            en: 'Rebuilt install guide — pick your OS and app by icon, with a clear 1·2·3 (install → add → connect).',
+            ru: 'Переделан экран установки — выбор ОС и приложения иконками и понятные шаги 1·2·3 (установить → добавить → подключить).',
+          },
+          {
+            en: 'New Payment screen — pick the plan and payment method right there; key activation and payment history moved into your profile. A config now comes with your subscription (one per account).',
+            ru: 'Новый экран «Оплата» — выбор тарифа и способа оплаты прямо на экране; активация ключа и история платежей переехали в профиль. Конфиг теперь создаётся вместе с подпиской (один на аккаунт).',
+          },
+          {
+            en: 'Refreshed dark theme (Standard) — lighter cards on a darker page for a cleaner, more native look.',
+            ru: 'Обновлённая тёмная тема («Стандарт») — светлее карточки на более тёмном фоне, чище и роднее.',
+          },
+          {
+            en: 'Wallet moved to a capsule in the header on every screen — tap to connect, copy, or disconnect.',
+            ru: 'Кошелёк переехал в капсулу в шапке на всех экранах — тап, чтобы подключить, скопировать или отключить.',
+          },
+          {
+            en: 'New configs are created in Enhanced mode by default — they connect right away.',
+            ru: 'Новые конфиги создаются в усиленном режиме по умолчанию — сразу подключаются.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        items: [
+          {
+            en: 'More reliable devices — blocking or deleting one no longer affects the others, and active devices don’t disappear on their own.',
+            ru: 'Надёжнее устройства — блокировка или удаление одного больше не влияет на остальные, а активные устройства не пропадают сами.',
+          },
+          {
+            en: 'Everything loads and refreshes the same way — screens update instantly after an action and on returning to the app, with no late-loading wallet.',
+            ru: 'Единые загрузка и обновление — экраны обновляются сразу после действия и при возврате в приложение, а кошелёк больше не подгружается с задержкой.',
+          },
+          {
+            en: 'No white flash on launch — the app opens straight into your theme.',
+            ru: 'Нет белой вспышки при запуске — приложение сразу открывается в вашей теме.',
+          },
+          {
+            en: 'More stable connection.',
+            ru: 'Стабильнее подключение.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '2.0',
     date: '2026-06-23',
     groups: [
@@ -25,11 +81,11 @@ export const RELEASES: ReleaseNote[] = [
         items: [
           {
             en: 'Usage — see your own traffic by day, right in the app.',
-            ru: '«Использование» — теперь видно ваш трафик по дням прямо в приложении.',
+            ru: '«Использование» — ваш трафик по дням прямо в приложении.',
           },
           {
-            en: 'Connect your TON wallet right from your profile — tap the avatar, then the wallet chip.',
-            ru: 'Подключение TON-кошелька прямо из профиля — тап по аватару, затем чип кошелька.',
+            en: 'Connect a TON wallet from your profile — tap the avatar, then the wallet.',
+            ru: 'Подключение TON-кошелька прямо из профиля — тап по аватару, затем кошелёк.',
           },
         ],
       },
@@ -37,28 +93,20 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'changed',
         items: [
           {
-            en: 'One-tap “Add subscription” now works on desktop too (Windows / macOS / Linux), not just phones.',
-            ru: 'Кнопка «Добавить подписку» теперь работает и на компьютере (Windows / macOS / Linux), а не только на телефонах.',
+            en: 'A fresh iOS-style “liquid glass” look — frosted bars and buttons, rounder cards, smooth animations.',
+            ru: 'Свежий вид в стиле iOS «жидкое стекло» — матовые панели и кнопки, круглее карточки, плавные анимации.',
           },
           {
-            en: 'Faster, smoother start — a branded loading screen instead of a blank flash, plus the native back button.',
-            ru: 'Быстрее и плавнее запуск — фирменный экран загрузки вместо пустой вспышки и нативная кнопка «назад».',
+            en: 'New navigation — bottom tabs (Configs · Subscription), with your account behind the avatar.',
+            ru: 'Новая навигация — нижние вкладки (Конфиги · Подписка), а аккаунт — по тапу на аватар.',
           },
           {
-            en: 'New navigation — quick bottom tabs (Configs · Subscription) with your account behind the avatar, so everything is one tap away.',
-            ru: 'Новая навигация — быстрые нижние вкладки (Конфиги · Подписка), а аккаунт — по тапу на аватар; до всего один тап.',
+            en: 'One-tap “Add subscription” now works on desktop too (Windows / macOS / Linux).',
+            ru: '«Добавить подписку» в один тап теперь работает и на компьютере (Windows / macOS / Linux).',
           },
           {
-            en: 'A fresh iOS-style “liquid glass” look — frosted bars, menus and buttons, rounder cards, and smooth tab animations.',
-            ru: 'Свежий вид в стиле iOS «жидкое стекло» — матовые панели, меню и кнопки, более круглые карточки и плавные анимации вкладок.',
-          },
-          {
-            en: 'Manage a device inline — block, unblock or remove it right in the list, no extra screen.',
-            ru: 'Управление устройством на месте — заблокировать, разблокировать или удалить прямо в списке, без лишнего экрана.',
-          },
-          {
-            en: 'A heads-up before opening an external website (launcher downloads, stores), so you always know where a link leads.',
-            ru: 'Предупреждение перед переходом на внешний сайт (загрузки лаунчеров, сторы) — всегда видно, куда ведёт ссылка.',
+            en: 'Faster, smoother start — a branded loading screen and the native back button.',
+            ru: 'Быстрее и плавнее запуск — фирменный экран загрузки и нативная кнопка «назад».',
           },
         ],
       },
@@ -72,40 +120,24 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'changed',
         items: [
           {
-            en: 'A full visual refresh — one consistent style across the app: green for status, orange for actions, neutral for info, with tidier titles, selectors and cards.',
-            ru: 'Полное обновление вида — единый стиль по всему приложению: зелёный для статусов, оранжевый для действий, нейтральный для информации; аккуратнее заголовки, переключатели и карточки.',
+            en: 'A full visual refresh — one consistent style: green for status, orange for actions, neutral for info.',
+            ru: 'Полное обновление вида — единый стиль: зелёный для статусов, оранжевый для действий, нейтральный для информации.',
           },
           {
-            en: 'Redesigned subscription — plans show their saving up front and prices appear right away in your currency, with official coin icons (GRAM, USDT, Stars).',
-            ru: 'Переработана подписка — у тарифов сразу видна выгода, а цены показываются в выбранной валюте; добавлены официальные значки монет (GRAM, USDT, Stars).',
+            en: 'Redesigned subscription — plans show their saving up front, prices appear in your currency, with official coin icons.',
+            ru: 'Переработана подписка — у тарифов сразу видна выгода, цены показываются в вашей валюте, добавлены официальные значки монет.',
           },
           {
-            en: 'USDT now lets you pick the network — choose TON or TRC20 from a dropdown right on the payment method.',
-            ru: 'У USDT теперь можно выбрать сеть — TON или TRC20 из выпадающего списка прямо на способе оплаты.',
+            en: 'USDT lets you pick the network — TON or TRC20.',
+            ru: 'У USDT можно выбрать сеть — TON или TRC20.',
           },
           {
-            en: 'Cleaner Settings and About — your profile, billing and usage sit in one "Account" group, with less clutter.',
-            ru: 'Чище «Настройки» и «О сервисе» — профиль, оплата и использование в одной группе «Аккаунт», без лишнего.',
+            en: 'The admin panel is now a top-level tab (admins only).',
+            ru: 'Админ-панель теперь обычная вкладка (только для админов).',
           },
           {
-            en: 'Smoother loading — content gently fades in instead of popping.',
-            ru: 'Плавнее загрузка — контент мягко проявляется, а не «выскакивает».',
-          },
-          {
-            en: 'The admin panel is now a top-level tab, like Configs and Settings (admins only).',
-            ru: 'Админ-панель теперь обычная вкладка, как «Конфиги» и «Настройки» (только для админов).',
-          },
-          {
-            en: 'Installing into a VPN app is now guided — pick your phone (iOS / Android) and launcher to get the right App Store (RU / Global) or Google Play link, then one tap adds the subscription.',
-            ru: 'Установка в VPN-приложение теперь с подсказками — выбираешь телефон (iOS / Android) и лаунчер, получаешь нужную ссылку App Store (RU / Global) или Google Play, и одним тапом добавляешь подписку.',
-          },
-          {
-            en: 'Payment history matches the new style — the amount with its coin icon, and the date underneath.',
-            ru: 'История платежей в новом стиле — сумма со значком монеты, а под ней дата.',
-          },
-          {
-            en: 'New "Fragment" dark theme — a blue palette in Settings, alongside Warm and Black.',
-            ru: 'Новая тёмная тема «Fragment» — синяя палитра в настройках, рядом с Тёплой и Чёрной.',
+            en: 'New “Fragment” dark theme — a blue palette, alongside Standard and Black.',
+            ru: 'Новая тёмная тема «Fragment» — синяя палитра, рядом со Стандартной и Чёрной.',
           },
         ],
       },
@@ -113,12 +145,12 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'fixed',
         items: [
           {
-            en: 'The GRAM price is now live and accurate — it tracks the real exchange rate and is fresh from the moment you open the payment screen.',
-            ru: 'Цена в GRAM теперь живая и точная — следует реальному курсу и актуальна сразу при открытии экрана оплаты.',
+            en: 'The GRAM price is now live and accurate — it tracks the real exchange rate.',
+            ru: 'Цена в GRAM теперь живая и точная — по реальному курсу.',
           },
           {
-            en: 'Your VPN app now shows when the subscription ends — the expiry date is passed through to the client.',
-            ru: 'VPN-приложение теперь показывает, когда заканчивается подписка — дата окончания передаётся в клиент.',
+            en: 'Your VPN app now shows when the subscription ends.',
+            ru: 'VPN-приложение теперь показывает, когда заканчивается подписка.',
           },
         ],
       },
@@ -132,8 +164,8 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'added',
         items: [
           {
-            en: 'Pay with Telegram Stars — buy or renew right inside Telegram, no wallet or crypto needed.',
-            ru: 'Оплата в Telegram Stars — купить или продлить прямо в Telegram, без кошелька и крипты.',
+            en: 'Pay with Telegram Stars — buy or renew inside Telegram, no wallet or crypto needed.',
+            ru: 'Оплата в Telegram Stars — покупка и продление прямо в Telegram, без кошелька и крипты.',
           },
           {
             en: 'You can enter an access key when renewing too, not only on first activation.',
@@ -145,41 +177,16 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'changed',
         items: [
           {
-            en: 'Fewer taps to pay — method, plan and the Pay button now live on one screen (the separate confirmation step is gone).',
-            ru: 'Меньше шагов до оплаты — способ, тариф и кнопка оплаты теперь на одном экране (отдельный шаг подтверждения убран).',
+            en: 'Fewer taps to pay — method, plan and the Pay button on one screen.',
+            ru: 'Меньше шагов до оплаты — способ, тариф и кнопка оплаты на одном экране.',
           },
           {
-            en: 'Cheaper long plans — 90 days and 1 year cost less, with a real per-day discount the longer you go.',
-            ru: 'Длинные тарифы дешевле — 90 дней и 1 год стоят меньше, и чем дольше срок, тем выгоднее день.',
+            en: 'Cheaper long plans — 90 days and 1 year cost less per day.',
+            ru: 'Длинные тарифы дешевле — 90 дней и 1 год выгоднее в пересчёте на день.',
           },
           {
-            en: 'The admin panel moved to the main menu (admins only).',
-            ru: 'Панель администратора перенесена в главное меню (только для админов).',
-          },
-          {
-            en: 'Sign-in now asks you to accept the Usage and Privacy policies (with links); the policies were updated for the EU/GDPR.',
-            ru: 'При входе теперь нужно принять Политику использования и конфиденциальности (со ссылками); политики обновлены под ЕС/GDPR.',
-          },
-          {
-            en: 'The app auto-updates to the latest version when you open it — no more stale screens after an update.',
-            ru: 'Приложение само обновляется до последней версии при открытии — больше нет старых экранов после апдейта.',
-          },
-          {
-            en: 'Dark background now has two shades — Warm (default) and Black; the legal and open-app pages follow your theme.',
-            ru: 'У тёмного фона теперь два оттенка — Тёплый (по умолчанию) и Чёрный; страницы политик и открытия приложения следуют теме.',
-          },
-          {
-            en: 'About → Licenses now lists every third-party component.',
-            ru: 'В «О сервисе → Лицензии» теперь весь список сторонних компонентов.',
-          },
-        ],
-      },
-      {
-        kind: 'fixed',
-        items: [
-          {
-            en: 'Paying GRAM from a wallet now opens TON Connect correctly (connect, then pay), same as USDT-TON.',
-            ru: 'Оплата GRAM из кошелька теперь корректно открывает TON Connect (подключение, затем оплата) — как и у USDT-TON.',
+            en: 'The app auto-updates to the latest version when you open it.',
+            ru: 'Приложение само обновляется до последней версии при открытии.',
           },
         ],
       },
@@ -193,8 +200,8 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'added',
         items: [
           {
-            en: 'Pay from your TON wallet via TON Connect (Telegram Wallet, Tonkeeper) — for both GRAM and USDT-TON.',
-            ru: 'Оплата из TON-кошелька через TON Connect (Telegram Wallet, Tonkeeper) — для GRAM и USDT-TON.',
+            en: 'Pay from your TON wallet via TON Connect (Telegram Wallet, Tonkeeper) — GRAM and USDT-TON.',
+            ru: 'Оплата из TON-кошелька через TON Connect (Telegram Wallet, Tonkeeper) — GRAM и USDT-TON.',
           },
         ],
       },
@@ -208,8 +215,8 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'added',
         items: [
           {
-            en: 'A review step before payment — check the plan, currency and amount, then confirm.',
-            ru: 'Шаг подтверждения перед оплатой — проверяете тариф, валюту и сумму, затем подтверждаете.',
+            en: 'Access keys can grant a fixed term (7 / 30 / 90 / 365 days), not only lifetime.',
+            ru: 'Ключи доступа могут давать доступ на срок (7 / 30 / 90 / 365 дней), а не только бессрочно.',
           },
         ],
       },
@@ -217,36 +224,12 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'changed',
         items: [
           {
-            en: 'Settings reorganised — notifications now live under “App”, and subscription is part of “Subscription & connection”.',
-            ru: 'Настройки переустроены — уведомления теперь в разделе «Приложение», а подписка объединена с подключением.',
+            en: 'Source code is now public (AGPL-3.0) — a link to the open mirror is under About.',
+            ru: 'Исходный код теперь открыт (AGPL-3.0) — ссылка на зеркало в «О сервисе».',
           },
           {
-            en: 'The success screen now tells a first purchase apart from a renewal.',
-            ru: 'Экран успешной оплаты теперь различает первую покупку и продление.',
-          },
-          {
-            en: 'Consistent links and clearer icons throughout, plus a confirmation before anything destructive.',
-            ru: 'Единообразные ссылки и понятные значки по всему приложению, а перед опасными действиями — подтверждение.',
-          },
-          {
-            en: 'Rewritten Help section — clearer answers and a step-by-step on how to connect.',
-            ru: 'Переписан раздел «Помощь» — понятнее ответы и пошаговая инструкция, как подключиться.',
-          },
-          {
-            en: 'Access keys can now grant a fixed term (7/30/90/365 days), not only lifetime.',
-            ru: 'Ключи доступа теперь могут давать доступ на срок (7/30/90/365 дней), а не только бессрочно.',
-          },
-          {
-            en: 'Dark theme now has three background shades — Warm, Neutral and Black (Settings → App).',
-            ru: 'У тёмной темы теперь три оттенка фона — Тёплый, Нейтральный и Чёрный (Настройки → Приложение).',
-          },
-          {
-            en: 'Source code is now public — a link to the open mirror was added under About → Useful links.',
-            ru: 'Исходный код теперь открыт — в «О сервисе → Полезные ссылки» добавлена ссылка на публичное зеркало.',
-          },
-          {
-            en: 'Source relicensed to AGPL-3.0, and a Licenses section (third-party attributions) added under About.',
-            ru: 'Код перелицензирован на AGPL-3.0, в «О сервисе» добавлен раздел «Лицензии» (сторонние компоненты).',
+            en: 'Rewritten Help — clearer answers and a step-by-step on how to connect.',
+            ru: 'Переписан раздел «Помощь» — понятнее ответы и пошаговое подключение.',
           },
         ],
       },
@@ -254,12 +237,8 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'fixed',
         items: [
           {
-            en: 'The unfinished-payment list refreshes the moment you step back — no need to re-open the app.',
-            ru: 'Список незавершённых платежей обновляется сразу при возврате — перезаходить больше не нужно.',
-          },
-          {
-            en: 'AmneziaWG traffic is now counted in your usage stats (previously only VLESS was).',
-            ru: 'Трафик AmneziaWG теперь учитывается в статистике (раньше считался только VLESS).',
+            en: 'AmneziaWG traffic is now counted in your usage stats (previously VLESS only).',
+            ru: 'Трафик AmneziaWG теперь учитывается в статистике (раньше только VLESS).',
           },
         ],
       },
@@ -277,25 +256,8 @@ export const RELEASES: ReleaseNote[] = [
             ru: 'Платные подписки — оплата криптой (GRAM или USDT, сети TON / TRC20) или активация по ключу с бессрочным доступом.',
           },
           {
-            en: 'Subscription section with status, renewal and payment history (with transaction links).',
-            ru: 'Раздел «Подписка»: статус, продление и история платежей (со ссылкой на транзакцию).',
-          },
-          {
-            en: 'Legal documents — Usage Policy and Privacy Policy on the web (EN / RU).',
-            ru: 'Юридические документы — «Политика использования» и «Политика конфиденциальности» в вебе (EN / RU).',
-          },
-        ],
-      },
-      {
-        kind: 'changed',
-        items: [
-          {
-            en: 'Cleaner interface — tidied settings and navigation, refined dark theme.',
-            ru: 'Интерфейс стал чище — прибраны настройки и навигация, выверена тёмная тема.',
-          },
-          {
-            en: 'Updated the VPN core and app libraries for security and freshness.',
-            ru: 'Обновлены ядро VPN и библиотеки приложения — безопасность и актуальность.',
+            en: 'Subscription section — status, renewal and payment history.',
+            ru: 'Раздел «Подписка» — статус, продление и история платежей.',
           },
         ],
       },
@@ -303,8 +265,8 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'fixed',
         items: [
           {
-            en: 'Devices and profile no longer get stuck on a flaky connection; an unfinished payment resumes after a reload.',
-            ru: 'Устройства и профиль больше не «зависают» при плохой связи; незавершённая оплата возобновляется после перезагрузки.',
+            en: 'Devices and profile no longer get stuck on a flaky connection.',
+            ru: 'Устройства и профиль больше не «зависают» при плохой связи.',
           },
         ],
       },
@@ -318,25 +280,8 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'added',
         items: [
           {
-            en: 'Server status now shows the server IPv4 and a real availability check.',
-            ru: 'В статусе сервера — IPv4 и индикатор доступности (реальная проверка).',
-          },
-        ],
-      },
-      {
-        kind: 'changed',
-        items: [
-          {
-            en: 'Config details: “Advanced settings” moved above the server status.',
-            ru: 'В детали конфига «Дополнительные настройки» подняты над статусом сервера.',
-          },
-          {
-            en: 'Traffic chart bars now align to the left.',
-            ru: 'Столбики графика трафика выровнены по левому краю.',
-          },
-          {
-            en: 'Hardened security & reliability (strict CSP, scanners, more tests).',
-            ru: 'Усилены безопасность и надёжность (строгий CSP, сканеры, больше тестов).',
+            en: 'Server status now shows the IPv4 and a real availability check.',
+            ru: 'В статусе сервера — IPv4 и реальная проверка доступности.',
           },
         ],
       },
@@ -350,25 +295,8 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'added',
         items: [
           {
-            en: 'Daily traffic chart in the admin panel.',
-            ru: 'График трафика по дням в админ-панели.',
-          },
-          {
-            en: 'Haptic feedback when scrubbing charts.',
-            ru: 'Тактильный отклик на графиках при перетаскивании.',
-          },
-        ],
-      },
-      {
-        kind: 'changed',
-        items: [
-          {
-            en: 'Unified chart style with a drag-to-inspect tooltip.',
-            ru: 'Единый стиль графиков с подсказкой при перетаскивании.',
-          },
-          {
-            en: 'Shorter server-chart labels (CPU / RAM / Network).',
-            ru: 'Подписи серверных графиков укорочены (Процессор / Память / Сеть).',
+            en: 'Daily traffic charts with a drag-to-inspect tooltip.',
+            ru: 'Графики трафика по дням с подсказкой при перетаскивании.',
           },
         ],
       },
@@ -387,15 +315,6 @@ export const RELEASES: ReleaseNote[] = [
           },
         ],
       },
-      {
-        kind: 'changed',
-        items: [
-          {
-            en: 'Hardened security & stability (sign-in brute-force protection, stricter limits).',
-            ru: 'Усилены безопасность и стабильность (защита входа от перебора, строгие лимиты).',
-          },
-        ],
-      },
     ],
   },
   {
@@ -406,12 +325,8 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'added',
         items: [
           {
-            en: 'Settings: profile, connected devices, device limit, language.',
-            ru: 'Настройки: профиль, подключённые устройства, лимит устройств, язык.',
-          },
-          {
-            en: 'Per-device accounting and the admin panel.',
-            ru: 'Учёт по устройствам и админ-панель.',
+            en: 'Settings — profile, connected devices, device limit and language; per-device accounting and the admin panel.',
+            ru: 'Настройки — профиль, устройства, лимит устройств и язык; учёт по устройствам и админ-панель.',
           },
         ],
       },
@@ -425,8 +340,8 @@ export const RELEASES: ReleaseNote[] = [
         kind: 'added',
         items: [
           {
-            en: 'Launch: VLESS + REALITY and AmneziaWG, Mini App and Telegram bot.',
-            ru: 'Запуск: VLESS + REALITY и AmneziaWG, мини-приложение и Telegram-бот.',
+            en: 'Launch — VLESS + REALITY and AmneziaWG, the Mini App and a Telegram bot.',
+            ru: 'Запуск — VLESS + REALITY и AmneziaWG, мини-приложение и Telegram-бот.',
           },
         ],
       },

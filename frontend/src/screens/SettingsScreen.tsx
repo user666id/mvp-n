@@ -10,12 +10,14 @@ import { Spinner } from '../components/ui/Spinner'
 import { useToast } from '../components/ui/Toast'
 import {
   Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, User, ChartLine, Vibrate,
-  Monitor, Sun, Moon,
+  Monitor, Sun, Moon, Key, Clock,
 } from '../components/icons'
 import { ProfileDetails } from '../components/ProfileDetails'
 import { DevicesSheet } from './DevicesSheet'
 import { AboutSheet } from './AboutSheet'
 import { UsageSheet } from './UsageSheet'
+import { KeyEntrySheet } from './KeyEntrySheet'
+import { PaymentHistorySheet } from './PaymentHistorySheet'
 import {
   confirmDialog, notify, hapticsEnabled, getTheme, setTheme, getDarkShade, setDarkShade,
   isDarkActive, addToHomeScreen, canAddToHomeScreen, type ThemePref, type DarkShade,
@@ -62,6 +64,8 @@ export function AccountSheet({
   const [subOpen, setSubOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
+  const [keyOpen, setKeyOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [haptics, setHaptics] = useState(hapticsEnabled())
   const [canAddHome, setCanAddHome] = useState(canAddToHomeScreen())
   const [theme, setThemeState] = useState<ThemePref>(getTheme())
@@ -172,7 +176,7 @@ export function AccountSheet({
   const devCount = profile?.devices_count ?? 0
 
   return (
-    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('account.title')}>
+    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('account.title')} avatarBack>
       <div>
         {/* Account — profile, usage, devices, limit, reset (Claude style:
             the profile is a single row, not a big card; all in one group) */}
@@ -209,6 +213,24 @@ export function AccountSheet({
             before={<Refresh size={20} />}
             title={t('settings.reset')}
             onClick={doReset}
+            destructive
+            last
+          />
+        </Section>
+
+        {/* Subscription — key activation + payment history (moved here from Оплата) */}
+        <Section>
+          <Cell
+            before={<Key size={20} />}
+            after={<ChevronRight size={20} className="text-faint" />}
+            title={t('sub.haveKey')}
+            onClick={() => setKeyOpen(true)}
+          />
+          <Cell
+            before={<Clock size={20} />}
+            after={<ChevronRight size={20} className="text-faint" />}
+            title={t('sub.history')}
+            onClick={() => setHistoryOpen(true)}
             last
           />
         </Section>
@@ -285,10 +307,8 @@ export function AccountSheet({
               ))}
             </div>
           </div>
-          {/* Dark-theme shade (warm / black / Fragment) as a dropdown.
-              Only shown when dark is actually in effect (hidden in light). */}
-          {/* Dark-theme shade (warm / black / Fragment). Only when dark is in effect;
-              it's the last row then, so no bottom divider. */}
+          {/* Dark-theme shade (warm / black) as a dropdown — only when dark is in
+              effect (hidden in light); it's the last row then, so no bottom divider. */}
           {(theme === 'dark' || (theme === 'system' && isDarkActive())) && (
             <div className="px-4 py-3.5">
               <div className="mb-2 text-[13px] text-muted">{t('settings.darkShade')}</div>
@@ -299,7 +319,6 @@ export function AccountSheet({
                 options={[
                   { value: 'warm', label: t('settings.shadeWarm') },
                   { value: 'black', label: t('settings.shadeBlack') },
-                  { value: 'fragment', label: t('settings.shadeFragment') },
                 ]}
               />
             </div>
@@ -376,6 +395,15 @@ export function AccountSheet({
 
       <UsageSheet open={usageOpen} onClose={() => setUsageOpen(false)} />
 
+      <KeyEntrySheet
+        open={keyOpen}
+        onClose={() => setKeyOpen(false)}
+        onActivated={() => {
+          setKeyOpen(false)
+          load()
+        }}
+      />
+      <PaymentHistorySheet open={historyOpen} onClose={() => setHistoryOpen(false)} />
 
       {busy && (
         <div className="fixed inset-0 z-[55] grid place-items-center bg-black/20">

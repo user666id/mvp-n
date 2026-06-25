@@ -68,7 +68,7 @@ sudo systemctl reload nginx
 
 Testing:
 ```bash
-curl -I https://gw.mvp-n.net/health
+curl -I https://cdn.mvp-n.net/health
 # should return HTTP/2 200
 ```
 
@@ -78,7 +78,7 @@ curl -I https://gw.mvp-n.net/health
 
 - ❌ Let's Encrypt — we use the CF Origin Cert instead
 - ❌ Certbot — auto-renewal is not needed (15-year validity)
-- ❌ A certificate for `nl.mvp-n.net` — this is a VPN domain, grey cloud, without CF
+- ❌ A certificate for the VPN — xray REALITY needs no cert (it borrows `www.cloudflare.com`'s TLS handshake); clients connect directly to the IP on `:43000`/`:43001`
 
 ---
 

@@ -7,15 +7,15 @@ export const BOT = '@mvp_n_net_bot'
 /** Public source mirror (sanitised) — shown in About → Useful links. */
 export const GITHUB_URL = 'https://github.com/user666id/mvp-n'
 
-/** REST API base — `gw.mvp-n.net` proxies to the API on :8081. Override with VITE_API_BASE. */
+/** REST API base — `cdn.mvp-n.net` proxies to the API on :8081. Override with VITE_API_BASE. */
 export const API_BASE =
   (import.meta.env.VITE_API_BASE as string | undefined) ??
-  'https://gw.mvp-n.net'
+  'https://cdn.mvp-n.net'
 
 /** Subscription link base — what clients import (Happ / v2RayTun). */
 export const SUB_BASE =
   (import.meta.env.VITE_SUB_BASE as string | undefined) ??
-  'https://connect.mvp-n.net/to/'
+  'https://connect1.mvp-n.net/to/'
 
 /**
  * Mock mode — ONLY when explicitly built with VITE_MOCK=1 (dev/preview).

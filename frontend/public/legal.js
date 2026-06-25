@@ -53,13 +53,12 @@
     },
   }
 
-  // Theme follows the app: ?theme=light|warm|black|fragment (passed by the Mini
+  // Theme follows the app: ?theme=light|warm|black (passed by the Mini
   // App), falling back to the OS colour scheme. Mirrors the in-app palettes.
   var PAL = {
     light: { bg: '#faf9f5', card: '#ffffff', border: '#e6e3d9', ink: '#1f1e1d', muted: '#6b6a65', body: '#44433d', accent: '#d97757', scheme: 'light' },
-    warm: { bg: '#20201e', card: '#191917', border: '#2e2e2c', ink: '#f7f7f5', muted: '#9f9f9d', body: '#cfcec6', accent: '#d97757', scheme: 'dark' },
+    warm: { bg: '#1c1c1c', card: '#2c2c2e', border: '#38383a', ink: '#f7f7f5', muted: '#9f9f9d', body: '#cfcec6', accent: '#d97757', scheme: 'dark' },
     black: { bg: '#000000', card: '#0e0e0e', border: '#222222', ink: '#f7f7f5', muted: '#9f9f9d', body: '#cfcec6', accent: '#d97757', scheme: 'dark' },
-    fragment: { bg: '#1c1f24', card: '#232a33', border: '#384452', ink: '#fcfbfc', muted: '#747e89', body: '#c2c8d0', accent: '#2589db', scheme: 'dark' },
   }
   var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
   var c = PAL[p.get('theme')] || (prefersDark ? PAL.warm : PAL.light)

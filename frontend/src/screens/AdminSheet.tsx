@@ -17,14 +17,14 @@ import { useToast } from '../components/ui/Toast'
 import { copyText } from '../lib/clipboard'
 import { confirmDialog, notify, openLink } from '../lib/telegram'
 import { padId, formatBytes } from '../lib/format'
-import { configMeta, configListLabel } from '../lib/configMeta'
 import { subLabel } from '../lib/subscription'
 import { useT } from '../lib/i18n'
+import { useActiveRefresh } from '../lib/useForeground'
 import {
-  adminBlockProfile, adminBlockProfileDevice, adminCreateKeys, adminDeleteProfile,
-  adminDeleteProfileDevice, adminGetDomains, adminGetProfileConfigs, adminGetProfileDevices,
-  adminListKeys, adminListProfiles, adminResetProfile, adminRevokeKey, adminUnblockProfileDevice,
-  type AccessKeyRow, type AdminConfig, type AdminProfile, type Device, type DomainStatus,
+  adminBlockProfile, adminCreateKeys, adminDeleteProfile,
+  adminDeleteProfileDevice, adminGetDomains, adminGetProfileDevices,
+  adminListKeys, adminListProfiles, adminRevokeKey,
+  type AccessKeyRow, type AdminProfile, type Device, type DomainStatus,
 } from '../api'
 
 /** Display name for a profile: @username, else first name, else empty. */
@@ -35,17 +35,18 @@ export function AdminScreen({
   active,
   onAccount,
   accountName,
+  revalidate,
 }: {
   active: boolean
   onAccount: () => void
   accountName?: string
+  revalidate?: number
 }) {
   const { t, lang } = useT()
   const toast = useToast()
   const [profiles, setProfiles] = useState<AdminProfile[] | null>(null)
   const [trafficToday, setTrafficToday] = useState<number | null>(null)
   const [keys, setKeys] = useState<AccessKeyRow[] | null>(null)
-  const [count, setCount] = useState('1')
   const [keyDays, setKeyDays] = useState(0) // 0 = lifetime; else 7/30/90/365
   const [genBusy, setGenBusy] = useState(false)
   const [sel, setSel] = useState<AdminProfile | null>(null)
@@ -91,18 +92,15 @@ export function AdminScreen({
     }
   }
 
-  useEffect(() => {
-    if (active) {
-      loadProfiles()
-      loadKeys()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active])
+  useActiveRefresh(active, revalidate, () => {
+    loadProfiles()
+    loadKeys()
+  })
 
   const generate = async () => {
     setGenBusy(true)
     try {
-      await adminCreateKeys({ count: Math.max(1, Number(count) || 1), plan_days: keyDays })
+      await adminCreateKeys({ count: 1, plan_days: keyDays })
       notify('success')
       toast(t('admin.keysGenerated'))
       await loadKeys()
@@ -176,7 +174,7 @@ export function AdminScreen({
           Its drill-downs (keys, profiles, …) still open as ‹back› child sheets. */}
       <div className="animate-fade min-h-screen pb-24">
         <PageHeader title={t('admin.title')} onAccount={onAccount} accountName={accountName} />
-        <div className="px-4">
+        <div className="px-4 pt-4">
           {/* one column: traffic + profiles + keys + statuses */}
           <Section>
             <Cell
@@ -231,17 +229,8 @@ export function AdminScreen({
               ))}
             </div>
           </div>
-          <div className="flex items-end gap-2 px-4 py-3.5">
-            <div className="w-20">
-              <label className="text-[12px] text-faint">{t('admin.count')}</label>
-              <input
-                value={count}
-                onChange={(e) => setCount(e.target.value.replace(/[^0-9]/g, ''))}
-                inputMode="numeric"
-                className="mt-1 h-[44px] w-full rounded-2xl border border-transparent bg-surface-sunken px-3 text-[16px] text-ink outline-none focus:border-accent"
-              />
-            </div>
-            <Button className="h-[44px] flex-1" loading={genBusy} onClick={generate}>
+          <div className="px-4 py-3.5">
+            <Button stretched className="h-[44px]" loading={genBusy} onClick={generate}>
               {t('admin.generate')}
             </Button>
           </div>
@@ -314,7 +303,7 @@ export function AdminScreen({
                       <span className="font-mono text-[15px] font-semibold text-ink">
                         {padId(p.internal_id)}
                       </span>
-                      {name && <span className="truncate text-[14px] text-muted">{name}</span>}
+                      {name && <span className="min-w-0 truncate text-[14px] text-muted">{name}</span>}
                       {p.is_admin && <Badge tone="neutral">{t('settings.admin')}</Badge>}
                       {p.is_blocked && <Badge>{t('devices.blockedShort')}</Badge>}
                       {(() => {
@@ -391,7 +380,7 @@ function DomainStatusSheet({
   }, [open])
 
   return (
-    <Sheet open={open} onClose={onClose} onBack={onBack} title={t('admin.domains')}>
+    <Sheet open={open} onClose={onClose} onBack={onBack} title={t('admin.domains')} pills>
       {!items ? (
         <ListSkeleton rows={3} />
       ) : (
@@ -463,9 +452,7 @@ function AdminProfileSheet({
   const { t } = useT()
   const toast = useToast()
   const [devices, setDevices] = useState<Device[] | null>(null)
-  const [configs, setConfigs] = useState<AdminConfig[] | null>(null)
   const [devicesOpen, setDevicesOpen] = useState(false)
-  const [configsOpen, setConfigsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const fallbackName = profile.username
@@ -477,7 +464,6 @@ function AdminProfileSheet({
 
   useEffect(() => {
     loadDevices()
-    adminGetProfileConfigs(profile.id).then(setConfigs).catch(() => setConfigs([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile.id])
 
@@ -486,35 +472,6 @@ function AdminProfileSheet({
     await adminDeleteProfileDevice(profile.id, d.id)
     setDevices((prev) => (prev ?? []).filter((x) => x.id !== d.id))
     toast(t('devices.deletedToast'))
-  }
-
-  const toggleBlockDevice = async (d: Device) => {
-    const block = !d.is_blocked
-    setDevices((prev) => (prev ?? []).map((x) => (x.id === d.id ? { ...x, is_blocked: block } : x)))
-    try {
-      if (block) await adminBlockProfileDevice(profile.id, d.id)
-      else await adminUnblockProfileDevice(profile.id, d.id)
-      toast(block ? t('devices.blockedToast') : t('devices.unblockedToast'))
-    } catch {
-      loadDevices()
-    }
-  }
-
-  const reset = async () => {
-    if (!(await confirmDialog(t('admin.resetSubConfirm')))) return
-    setBusy(true)
-    try {
-      await adminResetProfile(profile.id)
-      notify('success')
-      toast(t('admin.resetDone'))
-      setDevices([])
-      setConfigs([])
-      onChanged()
-    } catch {
-      toast(t('admin.deleteFailed'))
-    } finally {
-      setBusy(false)
-    }
   }
 
   const block = async () => {
@@ -559,16 +516,11 @@ function AdminProfileSheet({
 
   return (
     <>
-    <Sheet open={open} onClose={onClose} onBack={onBack} title={fallbackName}>
+    <Sheet open={open} onClose={onClose} onBack={onBack} title={fallbackName} pills>
       <ProfileDetails p={profile} />
 
       {/* drill-down: configs / devices open their own sheets */}
       <Section>
-        <Cell
-          title={t('admin.configsTitle', { n: configs ? configs.length : profile.configs_count })}
-          after={<ChevronRight size={18} className="text-faint" />}
-          onClick={() => setConfigsOpen(true)}
-        />
         <Cell
           title={t('admin.devicesTitle', { n: devices ? devices.length : profile.devices_count })}
           after={<ChevronRight size={18} className="text-faint" />}
@@ -579,11 +531,6 @@ function AdminProfileSheet({
 
       {/* management actions — same row style as the user's Account sheet */}
       <Section>
-        <Cell
-          before={<Refresh size={20} />}
-          title={t('admin.resetSub')}
-          onClick={reset}
-        />
         <Cell
           before={<Ban size={20} />}
           title={profile.is_blocked ? t('admin.unblockProfile') : t('admin.blockProfile')}
@@ -604,41 +551,8 @@ function AdminProfileSheet({
       </Section>
     </Sheet>
 
-    {/* configs sheet */}
-    <Sheet
-      open={configsOpen}
-      onClose={() => setConfigsOpen(false)}
-      onBack={() => setConfigsOpen(false)}
-      title={t('admin.configsTitle', { n: configs ? configs.length : profile.configs_count })}
-    >
-      <div className="overflow-hidden rounded-3xl border border-border bg-surface">
-        {!configs ? (
-          <ListSkeleton rows={2} avatar={false} card={false} />
-        ) : configs.length === 0 ? (
-          <div className="py-10 text-center text-[14px] text-muted">{t('admin.noConfigs')}</div>
-        ) : (
-          configs.map((c, i) => (
-            <div
-              key={c.id}
-              className={'flex items-center gap-3 px-4 py-3 ' + (i !== configs.length - 1 ? 'border-b border-border' : '')}
-            >
-              <span className="text-[18px]">🇳🇱</span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[15px] font-medium text-ink">
-                  {c.name || t('configs.country')}
-                </div>
-                <div className="truncate text-[12.5px] text-muted">
-                  {configListLabel(configMeta(c, t))}
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </Sheet>
-
     {/* devices sheet — same layout as the user "Connected devices" */}
-    <Sheet open={devicesOpen} onClose={() => setDevicesOpen(false)} onBack={() => setDevicesOpen(false)} title={t('devices.title')}>
+    <Sheet open={devicesOpen} onClose={() => setDevicesOpen(false)} onBack={() => setDevicesOpen(false)} title={t('devices.title')} pills>
       {(() => {
         const groupHeader = (label: string) => (
           <div className="font-display mb-2 px-3 text-[15px] font-semibold text-ink">{label}</div>
@@ -652,22 +566,13 @@ function AdminProfileSheet({
                 index={i}
                 border={i !== list.length - 1}
                 trailing={
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    <button
-                      onClick={() => toggleBlockDevice(d)}
-                      className="grid h-9 w-9 place-items-center rounded-full active:bg-surface-sunken"
-                      aria-label={d.is_blocked ? t('devices.unblock') : t('devices.block')}
-                    >
-                      <Ban size={18} className={d.is_blocked ? 'text-danger' : 'text-muted'} />
-                    </button>
-                    <button
-                      onClick={() => delDevice(d)}
-                      className="grid h-9 w-9 place-items-center rounded-full text-danger active:bg-danger/10"
-                      aria-label={t('devices.deleteOne')}
-                    >
-                      <Trash size={18} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => delDevice(d)}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-danger active:bg-danger/10"
+                    aria-label={t('devices.deleteOne')}
+                  >
+                    <Trash size={18} />
+                  </button>
                 }
               />
             ))}

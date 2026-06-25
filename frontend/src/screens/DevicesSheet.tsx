@@ -6,14 +6,12 @@ import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
-import { Ban, Trash } from '../components/icons'
+import { Trash } from '../components/icons'
 import { DeviceRow, isOSName } from '../components/DeviceRow'
 import { useToast } from '../components/ui/Toast'
 import { confirmDialog } from '../lib/telegram'
 import { useT } from '../lib/i18n'
 import {
-  blockDevice,
-  unblockDevice,
   deleteDevice,
   deleteConfig,
   getDevices,
@@ -78,30 +76,6 @@ export function DevicesSheet({
     }
   }
 
-  // Block is reversible (unblock re-enables instantly, no re-setup) — unlike
-  // delete, which forces reconfiguring the device. Both are inline on the row.
-  const doBlock = async (d: Device) => {
-    setBusy(true)
-    try {
-      await blockDevice(d.id)
-      toast(t('devices.blockedToast'))
-      await refresh()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const doUnblock = async (d: Device) => {
-    setBusy(true)
-    try {
-      await unblockDevice(d.id)
-      toast(t('devices.unblockedToast'))
-      await refresh()
-    } finally {
-      setBusy(false)
-    }
-  }
-
   const doRename = async () => {
     if (!renaming) return
     const name = renameVal.trim()
@@ -147,24 +121,14 @@ export function DevicesSheet({
               setRenaming(d)
             }}
             trailing={
-              <div className="flex shrink-0 items-center gap-0.5">
-                <button
-                  onClick={() => (d.is_blocked ? doUnblock(d) : doBlock(d))}
-                  disabled={busy}
-                  className="grid h-9 w-9 place-items-center rounded-full active:bg-surface-sunken disabled:opacity-50"
-                  aria-label={d.is_blocked ? t('devices.unblock') : t('devices.block')}
-                >
-                  <Ban size={18} className={d.is_blocked ? 'text-danger' : 'text-muted'} />
-                </button>
-                <button
-                  onClick={() => doDelete(d)}
-                  disabled={busy}
-                  className="grid h-9 w-9 place-items-center rounded-full text-danger active:bg-danger/10 disabled:opacity-50"
-                  aria-label={t('devices.deleteOne')}
-                >
-                  <Trash size={18} />
-                </button>
-              </div>
+              <button
+                onClick={() => doDelete(d)}
+                disabled={busy}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-danger active:bg-danger/10 disabled:opacity-50"
+                aria-label={t('devices.deleteOne')}
+              >
+                <Trash size={18} />
+              </button>
             }
           />
         )

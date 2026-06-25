@@ -3,6 +3,38 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.1.0] — 2026-06-25
+
+The config-detail redesign, a header TON-wallet capsule, default-Enhanced configs,
+differentiated sheet animations, and a dead-code sweep. (User-facing notes for 2.0–2.1
+live in `frontend/src/lib/changelog.ts`.)
+
+### Added
+- **Header wallet capsule** on every screen (`WalletPill` + `WalletSheet`, app-wide
+  `TonConnectUIProvider`). Not connected → tap opens TON Connect directly; connected →
+  green icon + short address, tap → bottom-sheet with copy + red disconnect. Sized to
+  match the account avatar pill.
+
+### Changed
+- **Config detail ("Настроить") rebuilt** (`ConfigDetailSheet`): centred title, the
+  subscription link as its own capsule (orange QR / copy icons), a protocol picker
+  (VLESS active, AmneziaWG / Hysteria locked "Скоро"), Обычный / Усиленный mode, an OS
+  dropdown (iOS / Android / Windows / macOS / Linux), an App Store capsule, a stepped
+  install guide in a capsule, and the QR in a bottom-sheet.
+- **Sheet animations differentiated** (`Sheet` `anim` prop): `push` (drill-down, back
+  exits right) for "›" navigation, `center` (scale + fade) for action sheets like
+  Настроить. Unified the popup menus to one row style.
+- **Wallet colour lore**: neutral = disconnected, green = connected, red = disconnect.
+- **New configs default to Enhanced** (XHTTP / :43001) so they connect immediately
+  (`ensureUserConfig`).
+
+### Removed (cleanup)
+- The **Fragment dark-theme** leftovers (`index.html` bootstrap, `legal.js` and
+  `import.js` palettes / checks).
+- **27 unused i18n keys** orphaned by the redesign (delete-config, other-format,
+  raw-view, install-step labels, the device block-menu, the old Settings tab) and the
+  unused `getHomeScreenStatus()` export.
+
 ## [1.9.0] — 2026-06-20
 
 A full design-system pass, a live GRAM price, admin-as-a-tab, smoother loading,
