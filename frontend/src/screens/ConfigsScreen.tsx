@@ -5,17 +5,22 @@ import { Button } from '../components/ui/Button'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
 import { Spinner } from '../components/ui/Spinner'
-import { Layers, Lock, Globe } from '../components/icons'
+import { Layers, Globe, Phone, ChartLine } from '../components/icons'
+import { Logo } from '../components/Logo'
 import { StatusDot } from '../components/StatusDot'
 import { useToast } from '../components/ui/Toast'
 import { ConfigDetailSheet } from './ConfigDetailSheet'
 import { ServerStatsSheet } from './ServerStatsSheet'
 import { KeyEntrySheet } from './KeyEntrySheet'
+import { DevicesSheet } from './DevicesSheet'
+import { UsageSheet } from './UsageSheet'
 import {
   deleteConfig,
   getConfigs,
   getProfile,
   getPendingOrders,
+  getDevices,
+  getProfileTraffic,
   updateSettings,
   type Config,
   type Order,
@@ -24,6 +29,7 @@ import {
 import { notify } from '../lib/telegram'
 import { useT } from '../lib/i18n'
 import { fmtSubDate } from '../lib/subscription'
+import { formatBytes } from '../lib/format'
 
 export function ConfigsScreen({
   active,
@@ -48,18 +54,28 @@ export function ConfigsScreen({
   const [statsOpen, setStatsOpen] = useState(false)
   const [keyOpen, setKeyOpen] = useState(false)
   const [pending, setPending] = useState<Order[]>([])
+  // Home dashboard widgets (devices + usage). Best-effort: a failed widget fetch
+  // shows "—" and never fails the main configs load.
+  const [devCount, setDevCount] = useState<number | null>(null)
+  const [trafficTotal, setTrafficTotal] = useState<number | null>(null)
+  const [devOpen, setDevOpen] = useState(false)
+  const [usageOpen, setUsageOpen] = useState(false)
 
   const load = useCallback(async () => {
     setFailed(false)
     try {
-      const [cfgs, prof, pend] = await Promise.all([
+      const [cfgs, prof, pend, devs, traffic] = await Promise.all([
         getConfigs(),
         getProfile().catch(() => null),
         getPendingOrders().catch(() => []),
+        getDevices().catch(() => null),
+        getProfileTraffic().catch(() => null),
       ])
       setConfigs(cfgs)
       if (prof) setProfile(prof)
       setPending(pend)
+      if (devs) setDevCount(devs.length)
+      if (traffic) setTrafficTotal(traffic.total)
     } catch {
       // First load with nothing yet → show a Retry (handled in render). A failed
       // background refresh keeps the existing list (gated on no data below).
@@ -139,9 +155,9 @@ export function ConfigsScreen({
         ) : !hasAccess && !expired ? (
           /* ── Not activated / expired: prominent activate block in place of the
                 configs list. Buy a subscription OR enter an access key. ── */
-          <div className="flex flex-col items-center px-6 pt-[13vh] text-center">
-            <span className="grid h-16 w-16 place-items-center rounded-3xl bg-surface-sunken text-faint">
-              <Lock size={30} />
+          <div className="flex flex-col items-center px-6 pt-[12vh] text-center">
+            <span className="grid h-[84px] w-[84px] place-items-center rounded-full bg-surface-sunken ring-1 ring-inset ring-white/10">
+              <Logo size={58} />
             </span>
             <h2 className="font-display mt-5 text-[21px] font-semibold leading-tight text-ink">
               {expired ? t('sub.expired') : t('sub.connectTitle')}
@@ -195,6 +211,42 @@ export function ConfigsScreen({
                   {t('sub.lifetimeBottom')}
                 </div>
               ))}
+            {/* Dashboard widgets — devices + usage at a glance (iOS-widget style);
+                each taps through to its full screen. */}
+            <div className="mb-4 grid grid-cols-2 gap-2.5">
+              <button
+                onClick={() => setDevOpen(true)}
+                className="tap rounded-3xl border border-border bg-surface p-4 text-left active:bg-surface-sunken"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Phone size={16} className="text-faint" />
+                  <span className="text-[12px] font-medium uppercase tracking-[0.06em] text-faint">{t('home.devices')}</span>
+                </div>
+                <div
+                  key={devCount ?? -1}
+                  className="animate-rise mt-2 font-display text-[22px] font-semibold leading-none text-ink"
+                >
+                  {devCount == null ? '—' : profile?.device_limit ? `${devCount} / ${profile.device_limit}` : devCount}
+                </div>
+                <div className="mt-1 text-[12.5px] text-muted">{t('home.devicesSub')}</div>
+              </button>
+              <button
+                onClick={() => setUsageOpen(true)}
+                className="tap rounded-3xl border border-border bg-surface p-4 text-left active:bg-surface-sunken"
+              >
+                <div className="flex items-center gap-1.5">
+                  <ChartLine size={16} className="text-faint" />
+                  <span className="text-[12px] font-medium uppercase tracking-[0.06em] text-faint">{t('home.usage')}</span>
+                </div>
+                <div
+                  key={trafficTotal ?? -1}
+                  className="animate-rise mt-2 font-display text-[22px] font-semibold leading-none text-ink"
+                >
+                  {trafficTotal == null ? '—' : formatBytes(trafficTotal, lang)}
+                </div>
+                <div className="mt-1 text-[12.5px] text-muted">{t('home.usageSub')}</div>
+              </button>
+            </div>
             {configs.length === 0 ? (
               <div className="flex flex-col items-center px-6 pt-[10vh] text-center">
                 <Layers size={40} className="text-faint" />
@@ -256,6 +308,8 @@ export function ConfigsScreen({
         configId={detailId}
       />
       <KeyEntrySheet open={keyOpen} onClose={() => setKeyOpen(false)} onActivated={load} />
+      <DevicesSheet open={devOpen} onClose={() => setDevOpen(false)} onChanged={load} />
+      <UsageSheet open={usageOpen} onClose={() => setUsageOpen(false)} />
     </div>
   )
 }

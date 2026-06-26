@@ -115,7 +115,9 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
     <>
       <Sheet open={open} onClose={onClose} title={t('about.title')}>
         <div className="mb-6 flex flex-col items-center text-center">
-          <Logo size={64} />
+          <span className="grid h-[88px] w-[88px] place-items-center rounded-full bg-surface-sunken ring-1 ring-inset ring-white/10">
+            <Logo size={60} />
+          </span>
           <h2 className="font-display mt-3 text-[22px] font-semibold text-ink">{BRAND}</h2>
           <p className="mt-2 max-w-[300px] text-[14px] leading-relaxed text-muted">{t('about.tagline')}</p>
         </div>

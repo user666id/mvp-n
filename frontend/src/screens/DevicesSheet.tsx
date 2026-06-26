@@ -6,7 +6,7 @@ import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
-import { Trash } from '../components/icons'
+import { Trash, Sliders, ChevronRight } from '../components/icons'
 import { DeviceRow, isOSName } from '../components/DeviceRow'
 import { useToast } from '../components/ui/Toast'
 import { confirmDialog } from '../lib/telegram'
@@ -15,6 +15,8 @@ import {
   deleteDevice,
   deleteConfig,
   getDevices,
+  getProfile,
+  setDeviceLimit,
   renameDevice,
   resetSubscriptionLink,
   type Device,
@@ -36,15 +38,38 @@ export function DevicesSheet({
   const [renaming, setRenaming] = useState<Device | null>(null)
   const [renameVal, setRenameVal] = useState('')
   const [busy, setBusy] = useState(false)
+  // Device limit lives here now (moved off the profile/Settings): the count + cap
+  // are most meaningful right next to the device list.
+  const [limit, setLimit] = useState<number | null>(null)
+  const [limitOpen, setLimitOpen] = useState(false)
+  const [limitVal, setLimitVal] = useState('')
 
   const load = async () => {
     setFailed(false)
     setDevices(null)
+    // Limit is best-effort — a failure just hides the cap, never blocks the list.
+    getProfile()
+      .then((p) => setLimit(p.device_limit || null))
+      .catch(() => {})
     try {
       setDevices(await getDevices())
     } catch {
       // Don't fake an empty list (misleading) — show a retry instead.
       setFailed(true)
+    }
+  }
+
+  const saveLimit = async () => {
+    const n = Math.max(0, parseInt(limitVal || '0', 10) || 0)
+    setBusy(true)
+    try {
+      await setDeviceLimit(n)
+      setLimit(n || null)
+      setLimitOpen(false)
+      toast(t('settings.subSaved'))
+      onChanged?.()
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -142,6 +167,30 @@ export function DevicesSheet({
   return (
     <>
       <Sheet open={open} onClose={onClose} title={t('devices.title')}>
+        {/* Count / limit header — moved here from Settings; tap to change the cap. */}
+        {devices && (
+          <button
+            onClick={() => {
+              setLimitVal(limit ? String(limit) : '')
+              setLimitOpen(true)
+            }}
+            className="tap mb-4 flex w-full items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3 text-left active:bg-surface-sunken"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-surface-sunken text-faint">
+              <Sliders size={20} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="font-display text-[17px] font-semibold leading-tight text-ink">
+                {limit ? `${devices.length} / ${limit}` : devices.length}{' '}
+                <span className="text-[13px] font-normal text-muted">{t('devices.limitHeader')}</span>
+              </div>
+              <div className="mt-0.5 text-[12.5px] text-muted">
+                {limit ? t('settings.deviceLimit') : t('settings.noLimit')}
+              </div>
+            </div>
+            <ChevronRight size={20} className="text-faint" />
+          </button>
+        )}
         {failed ? (
           <LoadError onRetry={load} />
         ) : !devices ? (
@@ -190,6 +239,23 @@ export function DevicesSheet({
         <div className="pb-2">
           <Button stretched loading={busy} disabled={!renameVal.trim()} onClick={doRename}>
             {t('devices.renameSave')}
+          </Button>
+        </div>
+      </Sheet>
+
+      {/* device limit — moved here from Settings */}
+      <Sheet open={limitOpen} onClose={() => setLimitOpen(false)} onBack={() => setLimitOpen(false)} title={t('settings.subSettings')}>
+        <label className="px-1 text-[12px] font-medium text-faint">{t('settings.deviceLimit')}</label>
+        <input
+          value={limitVal}
+          onChange={(e) => setLimitVal(e.target.value.replace(/[^0-9]/g, ''))}
+          inputMode="numeric"
+          placeholder={t('settings.noLimit')}
+          className="mb-4 mt-2 h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
+        />
+        <div className="pb-2">
+          <Button stretched loading={busy} onClick={saveLimit}>
+            {t('common.save')}
           </Button>
         </div>
       </Sheet>

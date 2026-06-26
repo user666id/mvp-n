@@ -3,6 +3,25 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.5.0] — 2026-06-26
+
+### Added
+- **Home dashboard widgets** (`ConfigsScreen`): two iOS-widget-style cards — Devices
+  (`used / limit`) and Usage (total traffic) — between the subscription strip and the
+  config list, each tapping through to `DevicesSheet` / `UsageSheet`. Counts are
+  best-effort (`getDevices` + `getProfileTraffic` folded into the home load; a failed
+  widget fetch shows "—" and never fails the page). Numbers use `animate-rise`.
+
+### Changed
+- **Device limit moved to the Devices screen**: `DevicesSheet` now shows a "N / limit"
+  header (tap to edit) and hosts the limit editor (fetches `device_limit` itself via
+  `getProfile`, saves via `setDeviceLimit`). Removed the limit row + editor sheet from
+  `SettingsScreen`.
+- **Onboarding copy + brand mark**: welcome (`auth.welcome`) and the locked-home
+  (`sub.connectTitle` → "Connect the VPN", `sub.connectHint`) now mention VPN +
+  subscription/key; the locked-home and About headers show the `Logo` in a circular
+  frame (was a lock icon / bare logo).
+
 ## [2.4.7] — 2026-06-26
 
 ### Fixed

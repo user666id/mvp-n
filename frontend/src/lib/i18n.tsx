@@ -36,8 +36,8 @@ const dict = {
 
   // ── auth / key ─────────────────────────────────────────────────────────────
   'auth.welcome': {
-    en: 'Sign in with Telegram, then buy a subscription or activate an access key.',
-    ru: 'Войдите через Telegram, затем оформите подписку или активируйте ключ доступа.',
+    en: 'Sign in with Telegram, then subscribe to the VPN or activate an access key.',
+    ru: 'Войдите через Telegram и оформите подписку на VPN или активируйте ключ доступа.',
   },
   'auth.login': { en: 'Sign in with Telegram', ru: 'Войти через Telegram' },
   'auth.loginFailed': { en: 'Sign-in failed', ru: 'Не удалось войти' },
@@ -97,11 +97,18 @@ const dict = {
   'wallet.connectHint': { en: 'Connect a TON wallet to pay for your subscription.', ru: 'Подключите TON-кошелёк, чтобы оплачивать подписку.' },
   'sub.extend': { en: 'Renew', ru: 'Продлить' },
   'sub.haveKey': { en: 'Activate key', ru: 'Активировать ключ' },
-  'sub.connectTitle': { en: 'Activate access', ru: 'Подключите доступ' },
+  'sub.connectTitle': { en: 'Connect the VPN', ru: 'Подключите VPN' },
   'sub.connectHint': {
-    en: 'Buy a subscription or activate an access key to use the VPN.',
-    ru: 'Купите подписку или активируйте ключ, чтобы пользоваться VPN.',
+    en: 'Subscribe to the VPN or activate an access key to get started.',
+    ru: 'Оформите подписку на VPN или активируйте ключ доступа, чтобы начать.',
   },
+  // Home dashboard widgets (devices + usage at a glance).
+  'home.devices': { en: 'Devices', ru: 'Устройства' },
+  'home.devicesSub': { en: 'connected', ru: 'подключено' },
+  'home.usage': { en: 'Usage', ru: 'Использование' },
+  'home.usageSub': { en: 'total', ru: 'всего' },
+  // Devices screen: count / limit header + inline limit control.
+  'devices.limitHeader': { en: 'devices', ru: 'устройств' },
   'pay.title': { en: 'Subscription', ru: 'Подписка' },
   'pay.method': { en: 'Payment method', ru: 'Способ оплаты' },
   'pay.plan': { en: 'Plan', ru: 'Тариф' },

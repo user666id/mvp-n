@@ -17,6 +17,34 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '2.5',
+    date: '2026-06-26',
+    groups: [
+      {
+        kind: 'added',
+        items: [
+          {
+            en: 'Home dashboard — at-a-glance Devices and Usage widgets right on the main screen; tap either to open the full view.',
+            ru: 'Главный экран-дэшборд — виджеты «Устройства» и «Использование» прямо на главной; тап по любому открывает подробности.',
+          },
+        ],
+      },
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'Device limit moved onto the Devices screen, which now shows your “used / limit” count at the top.',
+            ru: 'Лимит устройств переехал на экран «Устройства» — сверху теперь видно «использовано / лимит».',
+          },
+          {
+            en: 'Clearer first run — the welcome and activation screens now say it’s a VPN and show the app’s mark.',
+            ru: 'Понятнее первый запуск — экраны входа и активации теперь явно говорят, что это VPN, и показывают знак приложения.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '2.4',
     date: '2026-06-26',
     groups: [

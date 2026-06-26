@@ -4,12 +4,11 @@ import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { Switch } from '../components/ui/Switch'
 import { Dropdown } from '../components/ui/Dropdown'
-import { Button } from '../components/ui/Button'
 import { Sheet } from '../components/ui/Sheet'
 import { BusyOverlay } from '../components/ui/BusyOverlay'
 import { useToast } from '../components/ui/Toast'
 import {
-  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, User, ChartLine, Vibrate,
+  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, User, ChartLine, Vibrate,
   Monitor, Sun, Moon, Key, Clock,
 } from '../components/icons'
 import { ProfileDetails } from '../components/ProfileDetails'
@@ -26,7 +25,7 @@ import { plural } from '../lib/format'
 import { useT } from '../lib/i18n'
 import { subLabel } from '../lib/subscription'
 import {
-  ApiError, deleteAccount, getProfile, resetSubscriptionLink, setDeviceLimit, setLanguage, type Profile,
+  ApiError, deleteAccount, getProfile, resetSubscriptionLink, setLanguage, type Profile,
 } from '../api'
 
 const LS_NOTIFY = 'mvpn_notify'
@@ -61,7 +60,6 @@ export function AccountSheet({
   const [notify_, setNotify] = useState(localStorage.getItem(LS_NOTIFY) === '1')
   const [devicesOpen, setDevicesOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [subOpen, setSubOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
   const [keyOpen, setKeyOpen] = useState(false)
@@ -70,7 +68,6 @@ export function AccountSheet({
   const [canAddHome, setCanAddHome] = useState(canAddToHomeScreen())
   const [theme, setThemeState] = useState<ThemePref>(getTheme())
   const [shade, setShadeState] = useState<DarkShade>(getDarkShade())
-  const [limit, setLimit] = useState('')
 
   const toggleHaptics = (v: boolean) => {
     setHaptics(v)
@@ -91,7 +88,6 @@ export function AccountSheet({
     try {
       const p = await getProfile()
       setProfile(p)
-      setLimit(p.device_limit ? String(p.device_limit) : '')
     } catch {
       /* keep null; screen still renders shell */
     }
@@ -110,21 +106,6 @@ export function AccountSheet({
   const toggleNotify = (v: boolean) => {
     setNotify(v)
     localStorage.setItem(LS_NOTIFY, v ? '1' : '0')
-  }
-
-  const saveLimit = async () => {
-    setBusy(true)
-    try {
-      const lim = Number(limit) || 0
-      await setDeviceLimit(lim)
-      setProfile((p) => (p ? { ...p, device_limit: lim } : p))
-      setSubOpen(false)
-      toast(t('settings.subSaved'))
-    } catch {
-      toast(t('common.saveFailed'))
-    } finally {
-      setBusy(false)
-    }
   }
 
   const doLogout = async () => {
@@ -198,16 +179,6 @@ export function AccountSheet({
             after={<ValueChevron value={`${devCount} ${deviceUnit(devCount, lang)}`} />}
             title={t('settings.devices')}
             onClick={() => setDevicesOpen(true)}
-          />
-          <Cell
-            before={<Sliders size={20} />}
-            after={
-              <ValueChevron
-                value={profile?.device_limit ? profile.device_limit : t('settings.noLimit')}
-              />
-            }
-            title={t('settings.subSettings')}
-            onClick={() => setSubOpen(true)}
           />
           <Cell
             before={<Refresh size={20} />}
@@ -367,29 +338,6 @@ export function AccountSheet({
       </Sheet>
 
       <DevicesSheet open={devicesOpen} onClose={() => setDevicesOpen(false)} onChanged={load} />
-
-      {/* subscription settings */}
-      <Sheet
-        open={subOpen}
-        onClose={() => setSubOpen(false)}
-        title={t('settings.subSettings')}
-      >
-        <label className="px-1 text-[12px] font-medium text-faint">
-          {t('settings.deviceLimit')}
-        </label>
-        <input
-          value={limit}
-          onChange={(e) => setLimit(e.target.value.replace(/[^0-9]/g, ''))}
-          inputMode="numeric"
-          placeholder={t('settings.noLimit')}
-          className="mb-4 mt-2 h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
-        />
-        <div className="pb-2">
-          <Button stretched onClick={saveLimit}>
-            {t('common.save')}
-          </Button>
-        </div>
-      </Sheet>
 
       <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
 
