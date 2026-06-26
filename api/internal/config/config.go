@@ -3,6 +3,7 @@ package config
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -130,8 +131,20 @@ func ConnectDB(url string) (*sql.DB, error) {
 
 // Migrate creates all required tables (idempotent).
 func Migrate(db *sql.DB) error {
-	_, err := db.Exec(schema)
-	return err
+	if _, err := db.Exec(schema); err != nil {
+		return err
+	}
+	// Defense-in-depth (security audit C2): one on-chain tx must credit at most one
+	// order. Enforce it with a partial UNIQUE index on tx_hash. Best-effort and
+	// OUTSIDE the main schema exec: if legacy duplicate tx_hash rows exist the index
+	// won't build, but that must not block startup — we just log it so it can be
+	// cleaned up and re-applied manually.
+	if _, err := db.Exec(
+		`CREATE UNIQUE INDEX IF NOT EXISTS orders_tx_hash_uniq ON orders(tx_hash) WHERE tx_hash IS NOT NULL`,
+	); err != nil {
+		log.Printf("warn: orders_tx_hash_uniq index not created (legacy duplicate tx_hash?): %v", err)
+	}
+	return nil
 }
 
 // SeedAdmin inserts the first admin user with internal_id=1 if not present.

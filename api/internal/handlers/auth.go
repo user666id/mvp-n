@@ -308,11 +308,16 @@ func verifyTelegramInitData(initData, botToken string) (tgUser, error) {
 	// on a 401) would fail once the app has been open a while. A 24h window keeps
 	// replay protection meaningful while letting long-lived sessions self-heal
 	// instead of forcing the user to relaunch.
-	if ad := params.Get("auth_date"); ad != "" {
-		ts, _ := strconv.ParseInt(ad, 10, 64)
-		if time.Now().Unix()-ts > 24*60*60 {
-			return tgUser{}, errStaleInitData
-		}
+	// auth_date is MANDATORY: a missing or unparseable value means we can't prove
+	// freshness, so reject (else an attacker could strip auth_date from a captured
+	// initData and replay it forever — the HMAC only covers the fields present).
+	ad := params.Get("auth_date")
+	if ad == "" {
+		return tgUser{}, errStaleInitData
+	}
+	ts, perr := strconv.ParseInt(ad, 10, 64)
+	if perr != nil || time.Now().Unix()-ts > 24*60*60 {
+		return tgUser{}, errStaleInitData
 	}
 	return u, nil
 }

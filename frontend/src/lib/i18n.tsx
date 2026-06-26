@@ -254,9 +254,6 @@ const dict = {
     ru: 'Отсканируйте в приложении (Happ, v2RayTun).',
   },
   'detail.copied': { en: 'Config copied to clipboard', ru: 'Конфиг скопирован в буфер обмена' },
-  'detail.renameTitle': { en: 'Rename', ru: 'Изменение имени' },
-  'detail.name': { en: 'Name', ru: 'Имя' },
-  'detail.namePlaceholder': { en: 'Enter config name', ru: 'Введите имя конфига' },
   'detail.awgImport': {
     en: 'Import into AmneziaVPN — QR or config text.',
     ru: 'Импортируйте в AmneziaVPN — QR или текст конфига.',

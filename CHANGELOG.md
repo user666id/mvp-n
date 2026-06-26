@@ -3,6 +3,39 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.4.4] — 2026-06-26
+
+Self-hosted fonts, security hardening (audit fixes), and dead-code cleanup.
+
+### Performance
+- **Self-hosted Hanken Grotesk** — removed the external Google Fonts request:
+  `woff2` for weights 400/500/600/700 (latin, latin-ext, cyrillic-ext subsets) live
+  in `public/fonts/`, `@font-face` in `public/fonts.css`, linked from `index.html`.
+  Faster + more reliable first paint inside restricted Telegram webviews, no external
+  dependency, tighter CSP. **Dropped the Inter webfont entirely** — it was only ever a
+  fallback in the stack (never primary), so 4 weights were downloaded for nothing.
+  (Note: Hanken Grotesk has no basic-Cyrillic glyphs, so Russian text already renders
+  in the system fallback — unchanged.)
+
+### Security (from a focused audit)
+- **C1 — initData replay** (`handlers/auth.go`): `auth_date` is now mandatory; a
+  missing or unparseable value is rejected (`errStaleInitData`). Previously a captured
+  `initData` with `auth_date` stripped passed the freshness check and could be replayed
+  indefinitely. Legit Telegram clients always send `auth_date`, so no user impact.
+- **C2 — crypto double-credit safety net** (`config/config.go`): added a partial
+  `UNIQUE` index `orders_tx_hash_uniq ON orders(tx_hash) WHERE tx_hash IS NOT NULL`
+  (best-effort, logged-not-fatal so legacy dup rows can't block startup). Enforces
+  one-tx-one-order at the DB level instead of a TOCTOU SELECT.
+- Operational items for the VPS owner (not code — see audit notes): bind the API to
+  localhost + `deny /internal/` in nginx (M2/H1), set distinct `INTERNAL_TOKEN_CONNECT`
+  / `INTERNAL_TOKEN_BOT` (don't share `ADMIN_TOKEN`, M1), cap pending orders per user
+  (M3). Apply the tightened CSP from `nginx/mvpn.conf` (Google font domains removed).
+
+### Removed
+- Dead i18n keys left over from config-rename: `detail.renameTitle`, `detail.name`,
+  `detail.namePlaceholder`. (Kept `Config.name` — it's the functional launcher entry
+  label served in the subscription, not a user-given name.)
+
 ## [2.4.3] — 2026-06-26
 
 Full one-style / one-logic polish pass across every screen.

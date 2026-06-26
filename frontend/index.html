@@ -8,16 +8,10 @@
     />
     <title>mvp-n</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Non-render-blocking: page paints immediately with the fallback serif/sans
-         and upgrades to Fraunces/Inter once the stylesheet arrives. -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-      media="print"
-      onload="this.media='all'"
-    />
+    <!-- Self-hosted Hanken Grotesk (woff2 in /fonts, @font-face in /fonts.css) —
+         no external Google Fonts request. font-display:swap, so the page paints
+         immediately with the system fallback and upgrades when the font arrives. -->
+    <link rel="stylesheet" href="./fonts.css" />
     <!-- No-flash background. Telegram's BotFather loading screen stays up until
          ready() is called (once React mounts). To avoid a white/cream flash before
          the theme applies, set the canvas to the SAVED app theme synchronously here
