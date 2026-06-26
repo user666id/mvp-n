@@ -6,44 +6,13 @@ import { WalletPill } from '../WalletPill'
 import { WalletSheet } from '../WalletSheet'
 import { useT } from '../../lib/i18n'
 import { useHeaderCtx } from '../../lib/headerCtx'
-import { inTelegram, pushBackHandler, popBackHandler } from '../../lib/telegram'
+import { inTelegram, pushBackHandler, popBackHandler, accountPhotoUrl } from '../../lib/telegram'
+import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 const DUR = 360 // ms — enter/exit slide
 
-// ── Background scroll lock ─────────────────────────────────────────────────────
-// While any Sheet is open, the page behind it must NOT scroll — only the sheet's
-// own body scrolls. Uses the position:fixed trick (reliable in iOS/Telegram
-// webviews where `overflow:hidden` alone leaks touch momentum). Ref-counted so
-// nested sheets (e.g. admin → profile) don't unlock the page prematurely.
-let lockCount = 0
-let savedScrollY = 0
-
-function lockBodyScroll() {
-  lockCount++
-  if (lockCount > 1) return
-  savedScrollY = window.scrollY
-  const b = document.body.style
-  b.position = 'fixed'
-  b.top = `-${savedScrollY}px`
-  b.left = '0'
-  b.right = '0'
-  b.width = '100%'
-  b.overflow = 'hidden'
-}
-
-function unlockBodyScroll() {
-  lockCount = Math.max(0, lockCount - 1)
-  if (lockCount > 0) return
-  const b = document.body.style
-  b.position = ''
-  b.top = ''
-  b.left = ''
-  b.right = ''
-  b.width = ''
-  b.overflow = ''
-  window.scrollTo(0, savedScrollY)
-}
+// Background scroll lock lives in lib/scrollLock (shared with BottomSheet).
 
 /**
  * Full-screen push panel (Claude style): slides in from the right, scrollable
@@ -59,7 +28,6 @@ export function Sheet({
   footer,
   anim = 'push',
   pills = true,
-  avatarBack = false,
 }: {
   open: boolean
   onClose: () => void
@@ -77,12 +45,9 @@ export function Sheet({
   /** When true, render the account-avatar + wallet pills in the header (via
    *  HeaderCtx) so the profile/wallet persist on drill-down sheets. */
   pills?: boolean
-  /** When true (the Account sheet), the avatar pill acts as back/close — tapping
-   *  it returns instead of re-opening the account — and shows a ‹ chevron. */
-  avatarBack?: boolean
 }) {
   const { t } = useT()
-  const { accountName, onAccount } = useHeaderCtx()
+  const { accountName, onAccount, accountOpen, goHome } = useHeaderCtx()
   const [walletOpen, setWalletOpen] = useState(false)
 
   // Mount-delay so the sheet can play an EXIT slide before unmounting (smooth,
@@ -134,17 +99,17 @@ export function Sheet({
   // paint over a full-screen sheet. At body level its z-50 reliably wins.
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-canvas will-change-transform"
+      className="fixed inset-0 z-50 flex flex-col"
       role="dialog"
       aria-modal="true"
-      style={{
-        opacity: anim === 'center' ? (shown ? 1 : 0) : 1,
-        transform:
-          anim === 'center' ? (shown ? 'scale(1)' : 'scale(0.94)') : shown ? 'translateX(0)' : 'translateX(100%)',
-        transition: `opacity ${DUR}ms ${EASE}, transform ${DUR}ms ${EASE}`,
-      }}
     >
-      <div className="flex items-center border-b border-white/10 px-4 pb-6 pt-[max(12px,env(safe-area-inset-top),var(--tg-safe-top,0px))]">
+      {/* Header (avatar + wallet pills + the hairline) is STATIC + identical to the
+          tab PageHeader — same translucent glass, same paddings — so it never moves,
+          doubles, or flickers as you navigate; only the body below animates. */}
+      <div className="border-b border-white/10 bg-canvas/72 px-4 pb-6 pt-[max(10px,env(safe-area-inset-top),var(--tg-safe-top,0px))] backdrop-blur-xl">
+        {/* Inner row matches PageHeader's min-h-[44px] so the hairline sits at the
+            EXACT same height on every screen — no jump/doubling on transitions. */}
+        <div className="relative flex min-h-[44px] items-center">
         {/* Inside Telegram the native BackButton (wired below) shows a ‹ back in the
             client header — don't duplicate it. Keep the title centred with a spacer.
             Outside Telegram (browser) our in-sheet ‹ is the only back, so keep it. */}
@@ -160,12 +125,15 @@ export function Sheet({
               </button>
             )}
             <button
-              onClick={avatarBack ? (onBack ?? onClose) : onAccount}
+              onClick={accountOpen ? (goHome ?? onBack ?? onClose) : onAccount}
               aria-label="Account"
               className="flex items-center gap-1 rounded-full bg-surface-sunken p-1 pr-2 active:opacity-80"
             >
-              <Avatar name={accountName} size={30} />
-              {avatarBack ? (
+              <Avatar name={accountName} photoUrl={accountPhotoUrl} size={30} />
+              {accountName && (
+                <span className="max-w-[84px] truncate text-[13.5px] font-medium text-ink">{accountName}</span>
+              )}
+              {accountOpen ? (
                 <ChevronLeft size={14} className="text-faint" />
               ) : (
                 <ChevronRight size={14} className="text-faint" />
@@ -190,20 +158,38 @@ export function Sheet({
         ) : (
           <span className="w-11 shrink-0" />
         )}
+        </div>
       </div>
       <div
-        className={
-          'no-scrollbar animate-fade flex-1 overflow-y-auto px-4 pt-4 ' +
-          (footer ? 'pb-4' : 'pb-[max(20px,env(safe-area-inset-bottom))]')
+        className="flex min-h-0 flex-1 flex-col bg-canvas will-change-transform"
+        style={
+          anim === 'center'
+            ? {
+                opacity: shown ? 1 : 0,
+                transform: shown ? 'scale(1)' : 'scale(0.96)',
+                transformOrigin: 'center',
+                transition: `opacity ${DUR}ms ${EASE}, transform ${DUR}ms ${EASE}`,
+              }
+            : {
+                transform: shown ? 'translateX(0)' : 'translateX(100%)',
+                transition: `transform ${DUR}ms ${EASE}`,
+              }
         }
       >
-        {children}
-      </div>
-      {footer && (
-        <div className="border-t border-white/10 bg-canvas/80 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur-xl backdrop-saturate-150">
-          {footer}
+        <div
+          className={
+            'no-scrollbar animate-fade flex-1 overflow-y-auto px-4 pt-4 ' +
+            (footer ? 'pb-4' : 'pb-[max(20px,env(safe-area-inset-bottom))]')
+          }
+        >
+          {children}
         </div>
-      )}
+        {footer && (
+          <div className="border-t border-white/10 bg-canvas/80 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur-xl backdrop-saturate-150">
+            {footer}
+          </div>
+        )}
+      </div>
       {pills && <WalletSheet open={walletOpen} onClose={() => setWalletOpen(false)} />}
     </div>,
     document.body,

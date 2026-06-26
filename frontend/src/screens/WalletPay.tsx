@@ -20,6 +20,8 @@ interface Props {
   onCancel: () => void
   /** Override the button label (else "Connect wallet" / "Pay in wallet"). */
   label?: string
+  /** When connected, show "Renew in wallet" instead of "Pay in wallet". */
+  renewing?: boolean
   /** Visual emphasis + extra classes — the parent owns hierarchy/spacing. */
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
   className?: string
@@ -46,7 +48,7 @@ async function resolveJettonWallet(owner: string): Promise<string> {
   return addr
 }
 
-function PayInner({ asset, makeOrder, onConfirmed, onCancel, label, variant, className }: Props) {
+function PayInner({ asset, makeOrder, onConfirmed, onCancel, label, renewing, variant, className }: Props) {
   const { t } = useT()
   const [tonConnectUI] = useTonConnectUI()
   const address = useTonAddress() // friendly address, '' when not connected
@@ -111,7 +113,7 @@ function PayInner({ asset, makeOrder, onConfirmed, onCancel, label, variant, cla
 
   return (
     <Button onClick={onClick} loading={busy} variant={variant} className={className} stretched>
-      {label ?? (needConnect ? t('pay.connectWallet') : t('pay.payWallet'))}
+      {label ?? (needConnect ? t('pay.connectWallet') : renewing ? t('pay.renewWallet') : t('pay.payWallet'))}
     </Button>
   )
 }

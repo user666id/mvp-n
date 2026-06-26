@@ -31,6 +31,23 @@ export const RELEASES: ReleaseNote[] = [
             en: 'A more consistent look — unified section headers, buttons and loading indicators across the app.',
             ru: 'Единообразный вид — общий стиль заголовков, кнопок и индикаторов загрузки по всему приложению.',
           },
+          {
+            en: 'Clearer payment — the buttons now say how you pay (in your wallet / directly), for both new and renewing subscriptions.',
+            ru: 'Понятнее оплата — кнопки показывают способ (в кошельке / напрямую), и при покупке, и при продлении.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        items: [
+          {
+            en: 'An expired subscription now keeps your config and connection link — it just pauses. Renew and your existing link works again (refresh the subscription in your app).',
+            ru: 'Истёкшая подписка больше не удаляет конфиг и ссылку — она просто приостанавливается. Продлите — и ваша же ссылка снова работает (обновите подписку в приложении).',
+          },
+          {
+            en: 'Steadier navigation — the top bar (avatar + wallet) and its divider stay put as you move around, and sheets close more reliably from the avatar.',
+            ru: 'Стабильнее навигация — верхняя панель (аватар + кошелёк) и линия не дёргаются при переходах, а листы надёжнее закрываются по аватарке.',
+          },
         ],
       },
     ],

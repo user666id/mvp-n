@@ -58,6 +58,15 @@ const dict = {
   'sub.daysLeft': { en: '{n} days left', ru: 'осталось {n} дн.' },
   'sub.activeShort': { en: 'Active until {d}', ru: 'Активна до {d}' },
   'sub.expired': { en: 'Subscription expired', ru: 'Подписка истекла' },
+  'sub.blocked': { en: 'Blocked', ru: 'Заблокировано' },
+  'pay.refreshLauncher': {
+    en: 'Refresh the subscription in your VPN app to bring the connection back.',
+    ru: 'Обновите подписку в приложении, чтобы VPN снова заработал.',
+  },
+  'admin.blockedBy': {
+    en: 'Blocked by the owner or an administrator.',
+    ru: 'Заблокировано владельцем или администратором.',
+  },
   'sub.status': { en: 'Billing', ru: 'Оплата' },
   'sub.lifetimeShort': { en: 'Lifetime', ru: 'Бессрочно' },
   'sub.none': { en: 'No subscription', ru: 'Нет подписки' },
@@ -104,6 +113,9 @@ const dict = {
   'pay.network': { en: 'network', ru: 'сеть' },
   'pay.payWallet': { en: 'Pay in wallet', ru: 'Оплатить в кошельке' },
   'pay.connectWallet': { en: 'Connect wallet', ru: 'Подключить кошелёк' },
+  'pay.renewWallet': { en: 'Renew in wallet', ru: 'Продлить в кошельке' },
+  'pay.payDirect': { en: 'Pay directly', ru: 'Оплатить напрямую' },
+  'pay.renewDirect': { en: 'Renew directly', ru: 'Продлить напрямую' },
   'pay.starsProcessing': {
     en: 'Payment received — your subscription will activate shortly.',
     ru: 'Платёж получен — подписка активируется в течение минуты.',

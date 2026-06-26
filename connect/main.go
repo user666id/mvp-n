@@ -176,6 +176,16 @@ func (s *server) handleSubscription(w http.ResponseWriter, r *http.Request) {
 		// device or expose the real config; return the placeholder (this also stops
 		// browser/scraper hits from consuming device slots).
 		uri = browserStub
+	} else if expired {
+		// Lapsed paid subscription: keep the link/QR alive but DON'T provision — no
+		// working key is handed out (reconcile won't re-arm an expired config, and
+		// the expiry cron revoked it), so the VPN stays off until renewal. Relabel
+		// the node "Подписка истекла" so the lapsed state is obvious in the launcher.
+		// The config (and this link) survive expiry, so renewing brings the SAME
+		// link back to life.
+		if i := strings.LastIndex(uri, "#"); i >= 0 {
+			uri = uri[:i+1] + url.PathEscape("Подписка истекла")
+		}
 	} else {
 		// Per-device provisioning: each (device, launcher) gets its own VLESS UUID
 		// from the API. Falls back to the config's stored URI when the API is
@@ -191,14 +201,6 @@ func (s *server) handleSubscription(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// Fallback path — API didn't provision; still track the device.
 			go s.recordDeviceVisit(userID, r)
-		}
-		// Expired subscription → relabel the node "Подписка истекла" (drops the
-		// flag) so the lapsed state is obvious in the launcher; the past `expire`
-		// above already marks it expired and the key won't authorise until renewed.
-		if expired {
-			if i := strings.LastIndex(uri, "#"); i >= 0 {
-				uri = uri[:i+1] + url.PathEscape("Подписка истекла")
-			}
 		}
 	}
 

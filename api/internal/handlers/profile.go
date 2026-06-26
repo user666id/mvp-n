@@ -396,6 +396,67 @@ func (h *Handler) resetUserSessions(ctx context.Context, uid int64) {
 	_, _ = h.DB.ExecContext(ctx, `DELETE FROM devices WHERE user_id = $1`, uid)
 }
 
+// suspendUserSubscription suspends a LAPSED paid subscription WITHOUT deleting it:
+// every VLESS key (per-device + config base) is dropped from xray and AmneziaWG
+// peers removed, and device rows are cleared — so the VPN stops — but the config
+// rows (and their subscription links) are KEPT. reconcileXray won't re-arm an
+// expired config; renewing (paid_until back in the future) lets it re-arm the SAME
+// key, so the user's existing launcher link comes back to life on the next refresh.
+func (h *Handler) suspendUserSubscription(ctx context.Context, uid int64) {
+	var internalID int
+	_ = h.DB.QueryRowContext(ctx, `SELECT internal_id FROM users WHERE id = $1`, uid).Scan(&internalID)
+
+	// Per-device VLESS keys + device rows (devices re-provision on renewal).
+	if rows, err := h.DB.QueryContext(ctx,
+		`SELECT COALESCE(vpn_email, '') FROM devices WHERE user_id = $1`, uid); err == nil {
+		var emails []string
+		for rows.Next() {
+			var e string
+			if rows.Scan(&e) == nil && e != "" {
+				emails = append(emails, e)
+			}
+		}
+		rows.Close()
+		for _, e := range emails {
+			_ = h.Xray.RemoveUser(ctx, e)
+		}
+	}
+	_, _ = h.DB.ExecContext(ctx, `DELETE FROM devices WHERE user_id = $1`, uid)
+
+	// Config base keys — revoked, but the config rows are KEPT (is_active stays
+	// true) so the subscription link survives.
+	type cfg struct{ shortID, protocol, awgClientID string }
+	var cfgs []cfg
+	if rows, err := h.DB.QueryContext(ctx, `
+		SELECT short_id, protocol, COALESCE(awg_client_id, '')
+		FROM vpn_configs WHERE user_id = $1 AND is_active = true`, uid); err == nil {
+		for rows.Next() {
+			var c cfg
+			if rows.Scan(&c.shortID, &c.protocol, &c.awgClientID) == nil {
+				cfgs = append(cfgs, c)
+			}
+		}
+		rows.Close()
+	}
+	for _, c := range cfgs {
+		if c.protocol == "awg" {
+			if c.awgClientID != "" {
+				_ = h.Awg.Delete(ctx, c.awgClientID)
+			}
+		} else {
+			_ = h.Xray.RemoveUser(ctx, xray.EmailFor(internalID, c.shortID))
+		}
+	}
+	// NB: no DELETE FROM vpn_configs — the config + its link survive expiry.
+}
+
+// SuspendExpired is the subscription-expiry callback (wired in main.go). It
+// suspends VPN access (revokes keys, clears devices) but keeps configs/links, so
+// renewing restores the SAME subscription link.
+func (h *Handler) SuspendExpired(ctx context.Context, uid int64) {
+	h.suspendUserSubscription(ctx, uid)
+}
+
 // ResetSubscriptionLink disconnects all the user's devices (sessions); the config
 // is kept and each device reconnects on its next subscription refresh.
 func (h *Handler) ResetSubscriptionLink(w http.ResponseWriter, r *http.Request) {

@@ -8,7 +8,7 @@ import { AccountSheet } from './screens/SettingsScreen'
 import { AdminScreen } from './screens/AdminSheet'
 import { Spinner } from './components/ui/Spinner'
 import { ApiError, authTelegram, clearToken, getProfile, getToken, setLanguage, type Profile } from './api'
-import { notify, signalReady } from './lib/telegram'
+import { notify, signalReady, closeAllSheets } from './lib/telegram'
 import { useT } from './lib/i18n'
 import { TonConnectUIProvider } from '@tonconnect/ui-react'
 import { HeaderCtx } from './lib/headerCtx'
@@ -26,6 +26,9 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('configs')
+  // True when the Subscription tab was opened via a Renew/Buy button (not the
+  // bottom nav) — shows a back arrow there to return to Configs.
+  const [subBack, setSubBack] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   // Bumped when the Account sheet closes, so the screen behind it re-fetches
   // (e.g. after a reset that wiped configs) instead of showing stale data.
@@ -99,6 +102,15 @@ export default function App() {
     setPhase('auth')
   }
 
+  // The account avatar in any sheet returns to the home (Configs) tab — collapse
+  // the whole sheet stack and switch tabs. Uniform "go home" from anywhere.
+  const goHome = () => {
+    closeAllSheets()
+    setAccountOpen(false)
+    setSubBack(false)
+    setTab('configs')
+  }
+
   return (
     <TonConnectUIProvider manifestUrl={TON_MANIFEST} actionsConfiguration={{ twaReturnUrl: TON_TWA_RETURN }}>
     <ToastProvider>
@@ -109,7 +121,7 @@ export default function App() {
         </div>
       )}
       {phase === 'main' && (
-        <HeaderCtx.Provider value={{ accountName: profile?.first_name ?? undefined, onAccount: () => setAccountOpen(true) }}>
+        <HeaderCtx.Provider value={{ accountName: profile?.first_name ?? undefined, onAccount: () => setAccountOpen(true), accountOpen, goHome }}>
           {/* Keep all tabs MOUNTED and just toggle visibility, so switching tabs
               doesn't unmount + reload a screen from a blank skeleton every time.
               Each screen refreshes itself in the background when it becomes active. */}
@@ -118,7 +130,10 @@ export default function App() {
               active={tab === 'configs'}
               onAccount={() => setAccountOpen(true)}
               accountName={profile?.first_name ?? undefined}
-              onGoSubscription={() => setTab('subscription')}
+              onGoSubscription={() => {
+                setSubBack(true)
+                setTab('subscription')
+              }}
               revalidate={revalidate}
             />
           </div>
@@ -128,6 +143,7 @@ export default function App() {
               profile={profile}
               onChanged={refreshProfile}
               onAccount={() => setAccountOpen(true)}
+              onBack={subBack ? () => { setSubBack(false); setTab('configs') } : undefined}
               accountName={profile?.first_name ?? undefined}
               revalidate={revalidate}
             />
@@ -142,11 +158,15 @@ export default function App() {
               />
             </div>
           )}
-          <BottomTabs active={tab} onSelect={setTab} isAdmin={isAdmin} />
+          <BottomTabs active={tab} onSelect={(tb) => { setSubBack(false); setTab(tb) }} isAdmin={isAdmin} />
           <AccountSheet
             open={accountOpen}
             onClose={() => {
               setAccountOpen(false)
+              // Leaving Settings always lands on the home (Configs) tab — the avatar
+              // there returns to the start, not "back" to wherever you opened it from.
+              setSubBack(false)
+              setTab('configs')
               setRevalidate((v) => v + 1)
             }}
             onLogout={handleLogout}

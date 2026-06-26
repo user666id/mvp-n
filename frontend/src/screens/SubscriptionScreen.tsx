@@ -1,8 +1,10 @@
+import { useEffect, useRef } from 'react'
 import { PageHeader } from '../components/PageHeader'
 import { SubscribeSheet } from './SubscribeSheet'
 import { useT } from '../lib/i18n'
 import { useActiveRefresh } from '../lib/useForeground'
 import { subState } from '../lib/subscription'
+import { pushBackHandler, popBackHandler } from '../lib/telegram'
 import { type Profile } from '../api'
 
 /** Dedicated "Subscription" tab. Shows the current status — lifetime (key),
@@ -14,6 +16,7 @@ export function SubscriptionScreen({
   profile,
   onChanged,
   onAccount,
+  onBack,
   accountName,
   revalidate,
 }: {
@@ -21,6 +24,7 @@ export function SubscriptionScreen({
   profile: Profile | null
   onChanged: () => void
   onAccount: () => void
+  onBack?: () => void
   accountName?: string
   revalidate?: number
 }) {
@@ -30,9 +34,23 @@ export function SubscriptionScreen({
   // Refresh on tab-active / revalidate / foreground — the shared screen logic.
   useActiveRefresh(active, revalidate, onChanged)
 
+  // When opened via a Renew/Buy button, drive Telegram's native BackButton
+  // (‹ Назад, replacing "Закрыть") so it matches every other screen. Outside
+  // Telegram, PageHeader renders an in-app ‹ instead. A ref keeps the handler
+  // current without re-subscribing each render.
+  const backRef = useRef(onBack)
+  backRef.current = onBack
+  const hasBack = !!onBack
+  useEffect(() => {
+    if (!active || !hasBack) return
+    const handler = () => backRef.current?.()
+    pushBackHandler(handler)
+    return () => popBackHandler(handler)
+  }, [active, hasBack])
+
   return (
     <div className="animate-fade min-h-screen pb-24">
-      <PageHeader title={t('tab.subscription')} onAccount={onAccount} accountName={accountName} />
+      <PageHeader title={t('tab.subscription')} onAccount={onAccount} onBack={onBack} accountName={accountName} />
       <div className="px-4">
         {/* Оплата = action only (buy / renew); subscription status lives on the
             home banner. Lifetime has nothing to buy → a short note. */}
@@ -46,6 +64,7 @@ export function SubscriptionScreen({
               onClose={() => {}}
               onPaid={onChanged}
               renewing={state === 'active'}
+              wasExpired={state === 'expired'}
             />
           </div>
         )}

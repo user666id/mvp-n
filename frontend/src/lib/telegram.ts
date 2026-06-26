@@ -30,15 +30,31 @@ interface TgWebApp {
   addToHomeScreen?: () => void
   checkHomeScreenStatus?: (cb: (status: string) => void) => void
   exitFullscreen?: () => void
+  disableVerticalSwipes?: () => void
+  enableVerticalSwipes?: () => void
   isVersionAtLeast?: (version: string) => boolean
   safeAreaInset?: { top: number; bottom: number; left: number; right: number }
   contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number }
+  initDataUnsafe?: {
+    user?: {
+      id?: number
+      first_name?: string
+      last_name?: string
+      username?: string
+      photo_url?: string
+    }
+  }
 }
 
 export const tg: TgWebApp | undefined = (window as any).Telegram?.WebApp
 
 /** True when launched as a real Telegram Mini App (signed initData present). */
 export const inTelegram = Boolean(tg?.initData)
+
+/** The user's real Telegram profile photo URL, when the client exposes one
+ *  (often present on mobile). Undefined in a plain browser / when unset — the
+ *  Avatar then falls back to the coloured letter. */
+export const accountPhotoUrl: string | undefined = tg?.initDataUnsafe?.user?.photo_url
 
 const CANVAS_LIGHT = '#faf9f5'
 // Per-shade dark page colour (kept in sync with the .dark[data-shade] CSS so the
@@ -133,6 +149,15 @@ export function initTelegram() {
   // Telegram keeps its own BotFather loading screen up through the whole load —
   // no blank flash, and no separate in-app splash needed.
   tg.expand()
+  // Stop Telegram's swipe-down-to-minimize gesture from fighting the app's own
+  // scrolling and the bottom-sheet drag — it made the whole webview rubber-band
+  // (the "two windows moving" when swiping a sheet). position:fixed body-lock can't
+  // touch this native gesture. 7.7+; a no-op on older clients.
+  if (tg.isVersionAtLeast?.('7.7')) {
+    try {
+      tg.disableVerticalSwipes?.()
+    } catch {}
+  }
   // Defensive: an earlier build offered fullscreen (since removed — it covered the
   // app header and broke tab nav). Exit it on boot so anyone left stuck in
   // fullscreen by a cached old bundle is recovered. No-op when not fullscreen.
@@ -271,6 +296,13 @@ export function popBackHandler(fn: () => void) {
   const i = backStack.lastIndexOf(fn)
   if (i >= 0) backStack.splice(i, 1)
   if (backStack.length === 0) tg?.BackButton?.hide()
+}
+
+/** Close EVERY open sheet by firing each back handler. Used by the avatar "go
+ *  home" to collapse the whole drill-down stack at once. Iterates a snapshot since
+ *  each handler's sheet pops itself from the stack as it closes. */
+export function closeAllSheets() {
+  for (const fn of [...backStack]) fn()
 }
 
 /** Offer to add the Mini App to the device home screen (Telegram Mini Apps 2.0).

@@ -3,6 +3,59 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.2.1] — 2026-06-26
+
+Subscription-expiry rework + UX fixes on top of 2.2.0. (User-facing notes live in
+`frontend/src/lib/changelog.ts` under the 2.2 entry.)
+
+### Changed
+- **Expiry now SUSPENDS instead of deleting** (`SuspendExpired` in
+  `handlers/profile.go`, wired as the expiry-cron callback): revokes xray/AWG keys
+  and clears devices but KEEPS the config rows + their subscription links.
+  `reconcileXray`'s config-base query is gated on `paid_until`; `connect` serves an
+  expired link relabeled "Подписка истекла" without provisioning. Renewal re-arms
+  the SAME key, so the existing launcher link revives.
+- **Pay-button labels name the method**: «Оплатить/Продлить в кошельке» (TON Connect)
+  vs «Оплатить/Продлить напрямую» (manual QR / Stars / TRC20).
+- **Avatar navigation** driven by `HeaderCtx.accountOpen`: opens Settings everywhere,
+  goes back inside the Settings stack (Account → home, sub-sheet → Account).
+- **Static sheet header** — identical to the tab `PageHeader` and never transforms;
+  both sheet animations (push slide, center scale+fade) run on the body only, so the
+  top bar + its divider line no longer move / double / flicker on transitions.
+- Account pill shows the real Telegram photo + first name (orange letter fallback).
+
+### Added
+- Admin: a blocked profile shows «Заблокировано» as its status + a red (!) → a small
+  sheet "Заблокировано владельцем или администратором".
+- `BottomSheet` ✕ close button + swipe-down-to-dismiss; ref-counted background scroll
+  lock (`lib/scrollLock`) shared with `Sheet`.
+
+## [2.2.0] — 2026-06-26
+
+Cosmetic polish + a code-quality sweep — no behaviour change. (User-facing notes
+live in `frontend/src/lib/changelog.ts`.)
+
+### Changed
+- **Unified group headers** to one uppercase-eyebrow style (`text-[12px] font-medium
+  uppercase tracking-[0.06em] text-faint`) — `Card`'s `Section` and the admin headers
+  now match.
+- **`Button` gained `size="sm"`** (inline pill); the four hand-rolled accent pills
+  (renew / buy / resume / connect across `ConfigsScreen` / `SubscribeSheet` /
+  `WalletStatus`) now route through it — one source for the recipe.
+- **Dropdown** menu fades + scales on open/close (was an instant pop).
+- **Collapse** content expands/collapses smoothly (grid-rows) + chevron `duration-200`.
+- **BottomTabs** blur `2xl → xl` (match the other frosted surfaces); **BottomSheet**
+  `320 → 360 ms` (match `Sheet`).
+- Config-detail copy / QR icon buttons unified to `rounded-full`.
+
+### Added
+- **`<BusyOverlay/>`** — single component for the three identical busy spinners
+  (config detail / account / admin), with a fade-in.
+
+### Removed (cleanup)
+- Unused keyframes (`sheet-up` / `drawer-in` / `push-in`), the unused Newsreader /
+  `serif` font family, and the no-op `shadow-card` boxShadow (+ all 7 usages).
+
 ## [2.1.0] — 2026-06-25
 
 The config-detail redesign, a header TON-wallet capsule, default-Enhanced configs,

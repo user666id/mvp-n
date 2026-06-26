@@ -10,6 +10,7 @@ export interface SubFields {
   is_active?: boolean
   paid_until?: string | null
   is_expired?: boolean
+  is_blocked?: boolean
 }
 
 export function subState(p: SubFields): SubState {
@@ -43,6 +44,8 @@ export function subLabel(
   lang: 'en' | 'ru',
 ): { state: SubState; text: string; tone: 'success' | 'danger' | 'muted' } {
   const state = subState(p)
+  // A blocked profile overrides the subscription status wherever it's shown.
+  if (p.is_blocked) return { state, text: t('sub.blocked'), tone: 'danger' }
   switch (state) {
     case 'lifetime':
       // Neutral by request — only "expired" is colored (red). Active vs key is

@@ -36,6 +36,7 @@ export function SubscribeSheet({
   onClose,
   onPaid,
   renewing = false,
+  wasExpired = false,
   inline = false,
 }: {
   open: boolean
@@ -43,6 +44,9 @@ export function SubscribeSheet({
   onPaid: () => void
   /** true = the user already had a subscription (renew), false = first purchase. */
   renewing?: boolean
+  /** True when paying from an EXPIRED subscription — the done view then tells the
+   *  user to refresh the subscription in their VPN app to bring the link back. */
+  wasExpired?: boolean
   /** Render in-screen (Оплата tab) instead of a modal sheet. The pay/done steps
    *  replace the plan list, with a "back to plans" affordance. */
   inline?: boolean
@@ -139,7 +143,7 @@ export function SubscribeSheet({
   const label = cur?.label ?? asset
   const network = cur?.network ?? 'TON'
   // "Продлить" when an active sub is being extended, else "Купить" (none / expired).
-  const buyLabel = renewing ? t('sub.extend') : t('pay.buy')
+  const buyLabel = renewing ? t('pay.renewDirect') : t('pay.payDirect')
   const isStars = asset === 'STARS'
   const isUsdt = asset.startsWith('USDT_')
   // TON-network assets can pay via TON Connect (native GRAM or USD₮ jetton);
@@ -322,8 +326,11 @@ export function SubscribeSheet({
           </span>
           <h3 className="font-display mt-4 text-[20px] font-semibold text-ink">{t('pay.done')}</h3>
           <p className="mt-1 text-[14px] text-muted">
-            {renewing ? t('pay.doneRenewed') : t('pay.doneActivated')}
+            {renewing || wasExpired ? t('pay.doneRenewed') : t('pay.doneActivated')}
           </p>
+          {wasExpired && (
+            <p className="mt-2 max-w-[280px] text-[13px] leading-snug text-success">{t('pay.refreshLauncher')}</p>
+          )}
           <Button onClick={finish} stretched className="mt-6">
             {t('common.close')}
           </Button>
@@ -525,6 +532,7 @@ export function SubscribeSheet({
                     <WalletPay
                       asset={asset}
                       variant="primary"
+                      renewing={renewing}
                       makeOrder={makeWalletOrder}
                       onConfirmed={() => setStep('pay')}
                       onCancel={() => toast(t('pay.walletCancelled'))}

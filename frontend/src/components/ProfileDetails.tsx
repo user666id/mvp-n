@@ -1,6 +1,7 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { Avatar } from './ui/Avatar'
 import { Badge } from './ui/Badge'
+import { BottomSheet } from './ui/BottomSheet'
 import { Copy, ExternalLink } from './icons'
 import { useToast } from './ui/Toast'
 import { copyText } from '../lib/clipboard'
@@ -37,6 +38,7 @@ export function ProfileDetails({ p, showWallet }: { p: ProfileDetailsData; showW
   const { t, lang } = useT()
   const toast = useToast()
   const sub = subLabel(p, t, lang)
+  const [blkOpen, setBlkOpen] = useState(false)
 
   const Row = ({
     k,
@@ -77,7 +79,6 @@ export function ProfileDetails({ p, showWallet }: { p: ProfileDetailsData; showW
               {p.first_name || 'id' + p.id}
             </span>
             {p.is_admin && <Badge tone="neutral">{t('settings.admin')}</Badge>}
-            {p.is_blocked && <Badge>{t('devices.blockedShort')}</Badge>}
           </div>
         </div>
       </div>
@@ -125,9 +126,21 @@ export function ProfileDetails({ p, showWallet }: { p: ProfileDetailsData; showW
               {sub.text}
             </span>
           }
+          onClick={p.is_blocked ? () => setBlkOpen(true) : undefined}
+          icon={
+            p.is_blocked ? (
+              <span className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-danger/15 text-[11px] font-bold leading-none text-danger">
+                !
+              </span>
+            ) : undefined
+          }
         />
         <Row k={t('admin.traffic')} v={formatBytes(p.traffic_used, lang)} />
       </div>
+
+      <BottomSheet open={blkOpen} onClose={() => setBlkOpen(false)} title={t('sub.blocked')}>
+        <p className="px-2 pb-2 text-center text-[14px] leading-relaxed text-muted">{t('admin.blockedBy')}</p>
+      </BottomSheet>
     </>
   )
 }

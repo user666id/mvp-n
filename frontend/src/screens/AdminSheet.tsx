@@ -305,7 +305,6 @@ export function AdminScreen({
                       </span>
                       {name && <span className="min-w-0 truncate text-[14px] text-muted">{name}</span>}
                       {p.is_admin && <Badge tone="neutral">{t('settings.admin')}</Badge>}
-                      {p.is_blocked && <Badge>{t('devices.blockedShort')}</Badge>}
                       {(() => {
                         const s = subLabel(p, t, lang)
                         return <Badge tone={s.tone === 'muted' ? 'neutral' : s.tone}>{s.text}</Badge>

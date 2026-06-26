@@ -176,7 +176,7 @@ export function AccountSheet({
   const devCount = profile?.devices_count ?? 0
 
   return (
-    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('account.title')} avatarBack>
+    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('account.title')}>
       <div>
         {/* Account — profile, usage, devices, limit, reset (Claude style:
             the profile is a single row, not a big card; all in one group) */}

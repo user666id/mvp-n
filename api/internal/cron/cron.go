@@ -184,7 +184,8 @@ func (s *Scheduler) reconcileXray(ctx context.Context) error {
 	if rows, err := s.db.QueryContext(ctx,
 		`SELECT c.short_id, c.client_uuid::text, u.internal_id
 		 FROM vpn_configs c JOIN users u ON u.id = c.user_id
-		 WHERE c.is_active = true AND c.protocol = 'vless' AND c.client_uuid IS NOT NULL AND u.is_blocked = false`); err == nil {
+		 WHERE c.is_active = true AND c.protocol = 'vless' AND c.client_uuid IS NOT NULL AND u.is_blocked = false
+			   AND (u.paid_until IS NULL OR u.paid_until > NOW())`); err == nil {
 		for rows.Next() {
 			var shortID, cuid string
 			var internalID int
@@ -203,12 +204,13 @@ func (s *Scheduler) reconcileXray(ctx context.Context) error {
 	return nil
 }
 
-// revokeExpiredSubs wipes the VPN footprint of users whose PAID subscription has
-// lapsed (paid_until in the past): configs and devices are deleted and xray/AWG
-// access revoked — the ACCOUNT is kept so renewing restores the ability to make
-// new configs. NULL paid_until (key-activated / grandfathered) is never touched.
-// Only targets expired users who still have something to clean, so it's a no-op
-// once they've been wiped.
+// revokeExpiredSubs SUSPENDS the VPN of users whose PAID subscription has lapsed
+// (paid_until in the past): xray/AWG keys are revoked and device rows cleared, but
+// the configs (and their subscription links) are KEPT — so renewing brings the
+// SAME link back to life (reconcileXray re-arms it once paid_until is in the
+// future). NULL paid_until (key-activated / grandfathered) is never touched. The
+// callback (SuspendExpired) is idempotent, so re-running on an already-suspended
+// user is a cheap no-op (no devices to clear, keys already revoked).
 func (s *Scheduler) revokeExpiredSubs(ctx context.Context) error {
 	if s.expiryReset == nil {
 		return nil
@@ -230,10 +232,10 @@ func (s *Scheduler) revokeExpiredSubs(ctx context.Context) error {
 	}
 	rows.Close()
 	for _, id := range ids {
-		s.expiryReset(ctx, id) // deletes configs/devices, revokes xray + AWG
+		s.expiryReset(ctx, id) // suspend: revoke keys + clear devices, KEEP configs
 	}
 	if len(ids) > 0 {
-		log.Printf("[cron] revokeExpiredSubs: wiped %d expired subscriptions", len(ids))
+		log.Printf("[cron] revokeExpiredSubs: suspended %d expired subscriptions", len(ids))
 	}
 	return nil
 }
