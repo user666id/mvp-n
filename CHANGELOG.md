@@ -3,6 +3,47 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.4.7] — 2026-06-26
+
+### Fixed
+- **Reliable loading across all user-facing screens** — applied the skeleton-then-
+  Retry pattern everywhere a fetch could fail and leave a misleading empty state:
+  - `PaymentHistorySheet`: a failed `getOrderHistory()` showed "no payments"; now a
+    `failed` flag → inline `LoadError` Retry.
+  - `TrafficSheet` / `UsageSheet`: a failed traffic fetch showed the "no traffic"
+    empty state; now → `LoadError` Retry in the chart card.
+  These join `ConfigsScreen`, `DevicesSheet`, `SubscribeSheet` (2.4.6) and
+  `ServerStatsSheet`, which already had skeleton + retry. (The Admin panel is
+  operator-only and keeps its existing skeletons + manual refresh.)
+
+## [2.4.6] — 2026-06-26
+
+### Fixed
+- **Payment screen "loads every other time"** (`SubscribeSheet`): a failed `getPlans()`
+  only fired a toast and left empty "Plan"/"Method" headers. Now plan loading has
+  proper states — a **skeleton** on first load and an inline **Retry** (`LoadError`) on
+  failure, so it never shows blank. A failed background refetch keeps the previously
+  loaded plans (cached) instead of clearing them.
+
+### Changed
+- **Stronger liquid-glass edge** (`.glass`): brighter top inset highlight + faint
+  bottom edge and a touch more blur/saturation, so the tab bar/panels read as glass
+  even on a flat dark page where there's nothing behind them to blur. (The effect was
+  never removed — it just wasn't visible without content scrolling underneath.)
+
+## [2.4.5] — 2026-06-26
+
+### Changed
+- **Tab cross-fade** (`App.tsx`): the active tab now carries `animate-fade`; because a
+  CSS animation restarts when an element goes `display:none → block`, the incoming tab
+  fades in (~200 ms) on every switch — no remount, no scroll-container change, so the
+  "all tabs stay mounted" architecture is untouched.
+- **No more double loading screen**: returning users kept Telegram's native splash AND
+  then saw a second in-app spinner. Now `signalReady()` is deferred until the auth
+  round-trip resolves (moved out of the mount effect into `handleLogin`'s `finally`),
+  so Telegram's splash stays up until the app is actually ready — the in-app spinner
+  no longer flashes. First-time users still reveal the welcome screen immediately.
+
 ## [2.4.4] — 2026-06-26
 
 Self-hosted fonts, security hardening (audit fixes), and dead-code cleanup.

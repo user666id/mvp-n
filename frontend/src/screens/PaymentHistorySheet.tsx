@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { ListSkeleton } from '../components/ui/Skeleton'
+import { LoadError } from '../components/ui/LoadError'
 import { Badge } from '../components/ui/Badge'
 import { CurrencyIcon } from '../components/CurrencyIcon'
 import { ExternalLink } from '../components/icons'
@@ -18,13 +19,21 @@ const planLabel = (days: number, t: ReturnType<typeof useT>['t']) =>
 export function PaymentHistorySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, lang } = useT()
   const [items, setItems] = useState<Order[] | null>(null)
+  const [failed, setFailed] = useState(false)
 
-  useEffect(() => {
-    if (!open) return
+  // A failed fetch must NOT look like "no payments" — flag it so the UI shows a
+  // Retry instead of the empty state.
+  const load = () => {
+    setFailed(false)
     setItems(null)
     getOrderHistory()
       .then(setItems)
-      .catch(() => setItems([]))
+      .catch(() => setFailed(true))
+  }
+
+  useEffect(() => {
+    if (open) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const fmtWhen = (s?: string) => (s ? fmtSubDate(s, lang) : '')
@@ -32,7 +41,9 @@ export function PaymentHistorySheet({ open, onClose }: { open: boolean; onClose:
 
   return (
     <Sheet open={open} onClose={onClose} onBack={onClose} title={t('sub.history')}>
-      {!items ? (
+      {failed ? (
+        <LoadError onRetry={load} />
+      ) : !items ? (
         <ListSkeleton rows={3} avatar={false} card />
       ) : items.length === 0 ? (
         <div className="py-14 text-center text-[14px] text-muted">{t('sub.historyEmpty')}</div>

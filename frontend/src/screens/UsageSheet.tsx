@@ -2,6 +2,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Section } from '../components/ui/Card'
 import { Spinner } from '../components/ui/Spinner'
+import { LoadError } from '../components/ui/LoadError'
 import { BarChart } from '../components/charts'
 import { useT } from '../lib/i18n'
 import { formatBytes } from '../lib/format'
@@ -23,21 +24,22 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const { t, lang } = useT()
   const [days, setDays] = useState<TrafficDay[] | null>(null)
   const [total, setTotal] = useState(0)
+  const [failed, setFailed] = useState(false)
 
-  useEffect(() => {
-    if (!open) return
-    let alive = true
+  const load = () => {
+    setFailed(false)
     setDays(null)
     getProfileTraffic(30)
       .then((r) => {
-        if (!alive) return
         setDays(r.days)
         setTotal(r.total)
       })
-      .catch(() => alive && setDays([]))
-    return () => {
-      alive = false
-    }
+      .catch(() => setFailed(true))
+  }
+
+  useEffect(() => {
+    if (open) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const today = days && days.length ? days[days.length - 1].bytes : 0
@@ -62,7 +64,9 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
       <Section header={t('traffic.byDay')}>
         <div className="px-3 py-4">
-          {!days ? (
+          {failed ? (
+            <LoadError onRetry={load} />
+          ) : !days ? (
             <div className="grid place-items-center py-10 text-accent">
               <Spinner size={26} />
             </div>

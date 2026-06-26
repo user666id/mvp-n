@@ -53,6 +53,10 @@ export default function App() {
       setPhase('auth')
     } finally {
       setBusy(false)
+      // Auth resolved (main on success / auth on failure) → now dismiss Telegram's
+      // native splash. For returning users this is the FIRST signalReady, so they
+      // never see the in-app spinner; idempotent for first-timers who already did.
+      signalReady()
     }
   }
 
@@ -60,12 +64,16 @@ export default function App() {
   // the welcome screen with the "Sign in with Telegram" button, then the key
   // screen — so the login step is never silently skipped.
   useEffect(() => {
-    // React has mounted → tell Telegram we're ready so it dismisses its own
-    // BotFather loading screen (there's no separate in-app splash anymore).
-    signalReady()
     if (getToken()) {
+      // Returning user: KEEP Telegram's native loading screen up through the auth
+      // round-trip (don't signalReady yet) — handleLogin() calls signalReady() once
+      // it resolves, so the app appears directly with NO flash of a second in-app
+      // spinner. (Telegram keeps its splash until ready() is called.)
       setPhase('loading')
       handleLogin()
+    } else {
+      // First-time user: nothing to wait for — reveal the welcome screen now.
+      signalReady()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -126,8 +134,11 @@ export default function App() {
         <HeaderCtx.Provider value={{ accountName: profile?.first_name ?? undefined, onAccount: () => setAccountOpen(true), accountOpen, goHome }}>
           {/* Keep all tabs MOUNTED and just toggle visibility, so switching tabs
               doesn't unmount + reload a screen from a blank skeleton every time.
-              Each screen refreshes itself in the background when it becomes active. */}
-          <div className={tab === 'configs' ? '' : 'hidden'}>
+              Each screen refreshes itself in the background when it becomes active.
+              The active tab carries `animate-fade`: a CSS animation restarts when an
+              element goes display:none → block, so the incoming tab cross-fades in on
+              every switch — no remount, no scroll-container change. */}
+          <div className={tab === 'configs' ? 'animate-fade' : 'hidden'}>
             <ConfigsScreen
               active={tab === 'configs'}
               onAccount={() => setAccountOpen(true)}
@@ -139,7 +150,7 @@ export default function App() {
               revalidate={revalidate}
             />
           </div>
-          <div className={tab === 'subscription' ? '' : 'hidden'}>
+          <div className={tab === 'subscription' ? 'animate-fade' : 'hidden'}>
             <SubscriptionScreen
               active={tab === 'subscription'}
               profile={profile}
@@ -151,7 +162,7 @@ export default function App() {
             />
           </div>
           {isAdmin && (
-            <div className={tab === 'admin' ? '' : 'hidden'}>
+            <div className={tab === 'admin' ? 'animate-fade' : 'hidden'}>
               <Suspense fallback={<div className="grid min-h-screen place-items-center text-accent"><Spinner size={28} /></div>}>
                 <AdminScreen
                   active={tab === 'admin'}

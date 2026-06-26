@@ -3,6 +3,7 @@ import { Sheet } from '../components/ui/Sheet'
 import { BottomSheet } from '../components/ui/BottomSheet'
 import { Button } from '../components/ui/Button'
 import { Spinner } from '../components/ui/Spinner'
+import { LoadError } from '../components/ui/LoadError'
 import { Qr } from '../components/Qr'
 import { CurrencyIcon } from '../components/CurrencyIcon'
 import { Check, Copy } from '../components/icons'
@@ -63,6 +64,7 @@ export function SubscribeSheet({
   const [order, setOrder] = useState<Order | null>(null)
   const [pending, setPending] = useState<Order[]>([])
   const [busy, setBusy] = useState(false)
+  const [plansFailed, setPlansFailed] = useState(false)
   const [usdtMenuOpen, setUsdtMenuOpen] = useState(false)
   const [usdtNetId, setUsdtNetId] = useState('') // remembered USDT network (persists across method switches)
   const poll = useRef<number | undefined>(undefined)
@@ -71,6 +73,22 @@ export function SubscribeSheet({
     getPendingOrders()
       .then((list) => setPending(Array.isArray(list) ? list : []))
       .catch(() => {})
+
+  // Load plans + payment methods. On failure we DON'T blank the screen — we flag it
+  // so the UI shows a skeleton (first load) or an inline Retry, instead of empty
+  // "Plan"/"Method" headers (the "loads every other time" bug). Cached plans from a
+  // previous successful load survive a failed refetch.
+  const loadPlans = () => {
+    setPlansFailed(false)
+    return getPlans()
+      .then((r) => {
+        setPlans(r.plans)
+        setAssets(r.assets)
+        setGramUsd(r.gram_usd || 0)
+        setStarsByDays(r.stars_by_days || {})
+      })
+      .catch(() => setPlansFailed(true))
+  }
 
   useEffect(() => {
     if (!open) return
@@ -81,14 +99,7 @@ export function SubscribeSheet({
     setAsset('') // no method preselected — Buy stays disabled until one is picked
     setUsdtMenuOpen(false)
     setUsdtNetId('')
-    getPlans()
-      .then((r) => {
-        setPlans(r.plans)
-        setAssets(r.assets)
-        setGramUsd(r.gram_usd || 0)
-        setStarsByDays(r.stars_by_days || {})
-      })
-      .catch(() => toast(t('pay.failed')))
+    loadPlans()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
@@ -378,6 +389,32 @@ export function SubscribeSheet({
             </div>
           )}
 
+          {/* No plans yet: first-load failure → inline Retry, otherwise a skeleton.
+              Never show empty "Plan"/"Method" headers (the "loads every other time"
+              bug). Once loaded, a failed background refetch keeps the cached plans. */}
+          {plans.length === 0 ? (
+            plansFailed ? (
+              <div className="mt-6">
+                <LoadError onRetry={loadPlans} />
+              </div>
+            ) : (
+              <div className="animate-fade">
+                <div className="mb-2 px-1 text-[13px] font-semibold text-faint">{t('pay.plan')}</div>
+                <div className="mb-5 flex flex-col gap-2">
+                  <div className="skeleton h-[62px] rounded-3xl" />
+                  <div className="skeleton h-[62px] rounded-3xl" />
+                  <div className="skeleton h-[62px] rounded-3xl" />
+                </div>
+                <div className="mb-2 px-1 text-[13px] font-semibold text-faint">{t('pay.method')}</div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="skeleton h-[58px] rounded-3xl" />
+                  <div className="skeleton h-[58px] rounded-3xl" />
+                  <div className="skeleton h-[58px] rounded-3xl" />
+                </div>
+              </div>
+            )
+          ) : (
+          <>
           {/* Plan first (Fragment order: packages, then payment method, then Buy).
               Each card: radio + name + orange saving badge, and on the right the
               amount (coin icon + value) with the USD price in grey beside it. */}
@@ -501,6 +538,8 @@ export function SubscribeSheet({
               })}
             </div>
           </div>
+          </>
+          )}
 
           {/* Buy — single primary CTA (a manual fallback stays for the TON wallet
               flow). The immediate-start / 14-day-withdrawal waiver is covered by

@@ -2,6 +2,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Section } from '../components/ui/Card'
 import { Spinner } from '../components/ui/Spinner'
+import { LoadError } from '../components/ui/LoadError'
 import { BarChart } from '../components/charts'
 import { useT } from '../lib/i18n'
 import { formatBytes } from '../lib/format'
@@ -30,16 +31,19 @@ export function TrafficSheet({
 }) {
   const { t, lang } = useT()
   const [days, setDays] = useState<TrafficDay[] | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  const load = () => {
+    setFailed(false)
+    setDays(null)
+    adminGetTraffic(30)
+      .then((r) => setDays(r.days))
+      .catch(() => setFailed(true))
+  }
 
   useEffect(() => {
-    if (!open) return
-    let alive = true
-    adminGetTraffic(30)
-      .then((r) => alive && setDays(r.days))
-      .catch(() => alive && setDays([]))
-    return () => {
-      alive = false
-    }
+    if (open) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Start the chart at the first day with traffic — don't pad the start with
@@ -63,7 +67,9 @@ export function TrafficSheet({
 
       <Section header={t('traffic.byDay')}>
         <div className="px-3 py-4">
-          {!days ? (
+          {failed ? (
+            <LoadError onRetry={load} />
+          ) : !days ? (
             <div className="grid place-items-center py-10 text-accent">
               <Spinner size={26} />
             </div>
