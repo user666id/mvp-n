@@ -3,6 +3,33 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.3.0] — 2026-06-26
+
+UI pass on the header/sheets + a legal-copy correction. (User-facing notes live in
+`frontend/src/lib/changelog.ts` under the 2.3 entry.)
+
+### Changed
+- **Header scrolls with the page**: `PageHeader` is no longer `sticky` and carries no
+  divider — it sits on a solid `bg-canvas` (dropped the translucent `bg-canvas/72` +
+  `backdrop-blur-xl`), so the avatar + wallet capsules move together with the content
+  instead of letting it bleed through a fixed glass bar. `Sheet`'s header matches
+  (solid, no hairline) and stays fixed so its enter/exit slide keeps the no-flicker
+  behaviour from 2.2.
+- **Capsules restyled**: avatar + `WalletPill` recoloured to `bg-surface` (#2C2C2E in
+  dark, matching the request) from `bg-surface-sunken`, bumped 30→32px with a slightly
+  larger label; the wallet icon disc flips to `bg-surface-sunken` to keep contrast.
+- **Pop-up sheets are immovable**: removed drag-to-dismiss from `BottomSheet` (no
+  pointer handlers / `drag` state / `CLOSE_DRAG`) — like the TON Connect modal it sits
+  still and closes only via the ✕ or a tap on the dimmed backdrop above it.
+- **Snappier transitions**: sheet slide `DUR` 360→300 ms and `.animate-fade` 240→200 ms.
+
+### Fixed
+- **Privacy Policy** (`public/legal.js`): "What we store" no longer claims to keep
+  configuration names (only device names); Retention + Deletion sections now state
+  explicitly that account deletion happens **in the app** (profile → Account → Delete
+  account), not by removing/blocking the bot in Telegram; minor wording polish across
+  privacy + terms; `Updated` date → 2026-06-26.
+
 ## [2.2.1] — 2026-06-26
 
 Subscription-expiry rework + UX fixes on top of 2.2.0. (User-facing notes live in

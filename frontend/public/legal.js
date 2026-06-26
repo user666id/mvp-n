@@ -12,7 +12,7 @@
     (document.body && document.body.dataset && document.body.dataset.doc) ||
     (p.get('doc') === 'privacy' ? 'privacy' : 'terms')
   if (doc !== 'privacy') doc = 'terms'
-  var UPDATED = '2026-06-18'
+  var UPDATED = '2026-06-26'
 
   var C = {
     terms: {
@@ -26,7 +26,7 @@
         '<li>Payment is in cryptocurrency or Telegram Stars.</li>' +
         '<li>Access is a digital service. By paying you expressly request that the service begin immediately and acknowledge that you thereby lose the 14-day right of withdrawal. Payments are non-refundable once access is activated.</li>' +
         '<li>On expiry, access is suspended and configurations are removed; the account is kept and renewing restores access.</li></ul>' +
-        '<h2>4. Account</h2><p>Your account is tied to your Telegram. You are responsible for keeping access to your Telegram. You may delete your account at any time in the app.</p>' +
+        '<h2>4. Account</h2><p>Your account is tied to your Telegram account, and you are responsible for keeping that Telegram account secure. You may delete your mvp-n account at any time from inside the app (your profile → Account → Delete account); this removes your associated data.</p>' +
         '<h2>5. No warranty</h2><p>The Service is provided “as is”, without warranty of uninterrupted operation. We are not liable for damages arising from use or inability to use the Service.</p>' +
         '<h2>6. Changes</h2><p>These Terms may be updated. The current version is always available at this link.</p>',
     },
@@ -41,15 +41,15 @@
         '<h2>What we store</h2><ul>' +
         '<li>Telegram ID, name and username (from Telegram), and an internal profile identifier the service generates itself.</li>' +
         '<li>Subscription status and expiry.</li>' +
-        '<li>The names of your configurations and devices.</li>' +
+        '<li>The names you give your devices (device names you set in the app).</li>' +
         '<li>An aggregate traffic counter (in bytes) — never per-destination detail.</li>' +
         '<li>Payment records: amount, asset, transaction hash, date.</li></ul>' +
-        '<h2>Why</h2><p>This data is used only to operate the Service: granting access, tracking the subscription, and accepting payment.</p>' +
+        '<h2>Why we keep it</h2><p>This data is used only to operate the Service: granting access, tracking your subscription, and confirming payment. Nothing here describes what you do over the VPN.</p>' +
         '<h2>Third parties</h2><p>To confirm payments we query public blockchain services (tonapi, trongrid). Transaction data is already public on-chain. We do not sell or share your data with third parties.</p>' +
         '<h2>Analytics</h2><p>We use no analytics, advertising pixels or tracking cookies.</p>' +
-        '<h2>Retention</h2><p>Data is kept while the account exists; deleting your account in the app removes the associated data.</p>' +
+        '<h2>Retention</h2><p>We keep this data only while your account exists. You delete the account yourself, from inside the mvp-n app — and doing so erases the associated data from our systems.</p>' +
         '<h2>Where data is processed</h2><p>Servers are located in the Netherlands (EU). Third-party services (tonapi, trongrid) only receive what is already public on-chain.</p>' +
-        '<h2>Deletion &amp; support</h2><p>You can delete your account and its associated data directly in the app. For anything else, contact support: @mvp_n_net_bot.</p>',
+        '<h2>Deletion &amp; support</h2><p>You can delete your account and all associated data yourself, at any time, from inside the mvp-n app: open your profile (the avatar, top-left) → Account → Delete account. This is done in the app — removing or blocking the bot in Telegram does <b>not</b> delete your account. For anything else, contact support: @mvp_n_net_bot.</p>',
     },
   }
 

@@ -17,12 +17,12 @@ export function WalletPill({ onOpen }: { onOpen: () => void }) {
     <button
       onClick={() => (address ? onOpen() : tonConnectUI.openModal())}
       aria-label={t('wallet.title')}
-      className="flex items-center gap-1 rounded-full bg-surface-sunken p-1 pr-2 active:opacity-80"
+      className="flex items-center gap-1.5 rounded-full bg-surface p-1 pr-2.5 active:opacity-80"
     >
-      <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full bg-surface">
+      <span className="grid h-[32px] w-[32px] shrink-0 place-items-center rounded-full bg-surface-sunken">
         <Wallet size={16} className={short ? 'text-success' : 'text-muted'} />
       </span>
-      <span className="text-[12.5px] font-medium tabular-nums text-ink">{short || t('wallet.label')}</span>
+      <span className="text-[13px] font-medium tabular-nums text-ink">{short || t('wallet.label')}</span>
     </button>
   )
 }

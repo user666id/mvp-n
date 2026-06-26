@@ -1,19 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from '../icons'
 import { pushBackHandler, popBackHandler } from '../../lib/telegram'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
-const DUR = 360 // ms — slide up / down
-const CLOSE_DRAG = 90 // px — drag the sheet down past this, release → close
+const DUR = 300 // ms — slide up / down
 
 /**
  * Bottom sheet: slides up from the bottom edge, sized to its content, dims the
- * page behind it. Closes on the ✕ button / backdrop tap / a downward swipe /
- * Escape / Telegram back. Use for compact, glanceable content (QR code, quick
+ * page behind it. The sheet itself is IMMOVABLE (no drag) — like the TON Connect
+ * modal; it closes ONLY on the ✕ button, a tap on the dimmed area above it, Escape,
+ * or Telegram back. Use for compact, glanceable content (QR code, quick
  * confirmations) that shouldn't take the whole screen. Locks background scroll
- * while open (ref-counted) so dragging the sheet never moves the page behind it.
+ * while open (ref-counted) so the page behind never moves.
  */
 export function BottomSheet({
   open,
@@ -28,11 +28,6 @@ export function BottomSheet({
 }) {
   const [mounted, setMounted] = useState(open)
   const [shown, setShown] = useState(false)
-  // Downward-drag-to-dismiss. `drag` = current px offset; `dragging` disables the
-  // transition so the sheet tracks the finger 1:1, then snaps (or closes) on release.
-  const [drag, setDrag] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const startY = useRef(0)
 
   useEffect(() => {
     if (open) {
@@ -67,22 +62,6 @@ export function BottomSheet({
 
   if (!mounted) return null
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    startY.current = e.clientY
-    setDragging(true)
-  }
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging) return
-    const dy = e.clientY - startY.current
-    setDrag(dy > 0 ? dy : 0)
-  }
-  const endDrag = () => {
-    if (!dragging) return
-    setDragging(false)
-    if (drag > CLOSE_DRAG) onClose()
-    setDrag(0)
-  }
-
   return createPortal(
     <div
       className="fixed inset-0 z-[60] flex flex-col justify-end"
@@ -93,25 +72,22 @@ export function BottomSheet({
       <div
         className="absolute inset-0 bg-black/50"
         style={{
-          opacity: shown ? (dragging ? Math.max(0, 1 - drag / 400) : 1) : 0,
-          transition: dragging ? 'none' : `opacity ${DUR}ms ease`,
+          opacity: shown ? 1 : 0,
+          transition: `opacity ${DUR}ms ease`,
         }}
       />
+      {/* The sheet itself swallows taps and is fixed in place — no drag handlers, so
+          it can't be moved; closing is via the ✕ or a tap on the dimmed area above. */}
       <div
         onClick={(e) => e.stopPropagation()}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        className="relative touch-none rounded-t-[28px] bg-canvas px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-5"
+        className="relative rounded-t-[28px] bg-canvas px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-5"
         style={{
-          transform: shown ? `translateY(${drag}px)` : 'translateY(100%)',
-          transition: dragging ? 'none' : `transform ${DUR}ms ${EASE}`,
+          transform: shown ? 'translateY(0)' : 'translateY(100%)',
+          transition: `transform ${DUR}ms ${EASE}`,
         }}
       >
         <button
           onClick={onClose}
-          onPointerDown={(e) => e.stopPropagation()}
           aria-label="Close"
           className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full bg-surface-sunken text-muted active:opacity-80"
         >

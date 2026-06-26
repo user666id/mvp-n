@@ -10,7 +10,7 @@ import { inTelegram, pushBackHandler, popBackHandler, accountPhotoUrl } from '..
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
-const DUR = 360 // ms — enter/exit slide
+const DUR = 300 // ms — enter/exit slide (snappy, Telegram-like)
 
 // Background scroll lock lives in lib/scrollLock (shared with BottomSheet).
 
@@ -103,13 +103,13 @@ export function Sheet({
       role="dialog"
       aria-modal="true"
     >
-      {/* Header (avatar + wallet pills + the hairline) is STATIC + identical to the
-          tab PageHeader — same translucent glass, same paddings — so it never moves,
-          doubles, or flickers as you navigate; only the body below animates. */}
-      <div className="border-b border-white/10 bg-canvas/72 px-4 pb-6 pt-[max(10px,env(safe-area-inset-top),var(--tg-safe-top,0px))] backdrop-blur-xl">
-        {/* Inner row matches PageHeader's min-h-[44px] so the hairline sits at the
-            EXACT same height on every screen — no jump/doubling on transitions. */}
-        <div className="relative flex min-h-[44px] items-center">
+      {/* Header (avatar + wallet pills) is STATIC + identical to the tab PageHeader —
+          same solid canvas, same paddings, no divider — so it never moves, doubles,
+          or flickers as you navigate; only the body below animates. */}
+      <div className="bg-canvas px-4 pb-4 pt-[max(10px,env(safe-area-inset-top),var(--tg-safe-top,0px))]">
+        {/* Inner row matches PageHeader's min-h so the capsules sit at the EXACT same
+            height on every screen — no jump on transitions. */}
+        <div className="relative flex min-h-[46px] items-center">
         {/* Inside Telegram the native BackButton (wired below) shows a ‹ back in the
             client header — don't duplicate it. Keep the title centred with a spacer.
             Outside Telegram (browser) our in-sheet ‹ is the only back, so keep it. */}
@@ -127,16 +127,16 @@ export function Sheet({
             <button
               onClick={accountOpen ? (goHome ?? onBack ?? onClose) : onAccount}
               aria-label="Account"
-              className="flex items-center gap-1 rounded-full bg-surface-sunken p-1 pr-2 active:opacity-80"
+              className="flex items-center gap-1.5 rounded-full bg-surface p-1 pr-2.5 active:opacity-80"
             >
-              <Avatar name={accountName} photoUrl={accountPhotoUrl} size={30} />
+              <Avatar name={accountName} photoUrl={accountPhotoUrl} size={32} />
               {accountName && (
-                <span className="max-w-[84px] truncate text-[13.5px] font-medium text-ink">{accountName}</span>
+                <span className="max-w-[88px] truncate text-[14px] font-medium text-ink">{accountName}</span>
               )}
               {accountOpen ? (
-                <ChevronLeft size={14} className="text-faint" />
+                <ChevronLeft size={15} className="text-faint" />
               ) : (
-                <ChevronRight size={14} className="text-faint" />
+                <ChevronRight size={15} className="text-faint" />
               )}
             </button>
           </div>

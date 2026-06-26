@@ -17,6 +17,38 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '2.3',
+    date: '2026-06-26',
+    groups: [
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'Cleaner header — the avatar and wallet capsules now scroll together with the page (no more content peeking out from under a fixed bar), the divider line is gone, and the capsules are a touch larger.',
+            ru: 'Чище шапка — капсулы аватара и кошелька теперь листаются вместе со страницей (контент больше не проглядывает из-под закреплённой панели), разделительная линия убрана, а сами капсулы чуть крупнее.',
+          },
+          {
+            en: 'Pop-up windows sit still — they no longer drag around (like TON Connect); close them with the ✕ or a tap on the dimmed area above.',
+            ru: 'Всплывающие окна зафиксированы — их больше нельзя сдвинуть (как в TON Connect); закрытие крестиком или тапом по затемнённой области сверху.',
+          },
+          {
+            en: 'Snappier, smoother transitions — sheets and screens open faster, closer to a native feel.',
+            ru: 'Быстрее и плавнее переходы — листы и экраны открываются шустрее, ближе к нативному ощущению.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        items: [
+          {
+            en: 'Clearer Privacy Policy — corrected what we store (we don’t keep configuration names) and made it explicit that you delete your account inside the app, not via Telegram.',
+            ru: 'Точнее Политика конфиденциальности — исправлено, что мы храним (названия конфигураций не хранятся), и явно указано, что аккаунт удаляется в приложении, а не через Telegram.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '2.2',
     date: '2026-06-26',
     groups: [

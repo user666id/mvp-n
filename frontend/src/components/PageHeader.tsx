@@ -33,8 +33,12 @@ export function PageHeader({
   const [walletOpen, setWalletOpen] = useState(false)
   return (
     <>
-    <header aria-label={title} className="sticky top-0 z-20 border-b border-white/10 bg-canvas/72 px-4 pb-6 pt-[max(10px,env(safe-area-inset-top),var(--tg-safe-top,0px))] backdrop-blur-xl">
-      <div className="relative flex min-h-[44px] items-center">
+    {/* Header scrolls WITH the content (not sticky) and carries no divider — so the
+        avatar + wallet capsules move together with every other block on the page,
+        and nothing bleeds through a translucent bar. Identical markup across all
+        screens keeps the capsules visually static (no jump) on transitions. */}
+    <header aria-label={title} className="bg-canvas px-4 pb-4 pt-[max(10px,env(safe-area-inset-top),var(--tg-safe-top,0px))]">
+      <div className="relative flex min-h-[46px] items-center">
         <div className="flex items-center justify-start gap-1">
           {/* Inside Telegram the native BackButton (‹ Назад) is used instead — see
               SubscriptionScreen; only render an in-app ‹ in the browser. */}
@@ -51,13 +55,13 @@ export function PageHeader({
             <button
               onClick={onAccount}
               aria-label="Account"
-              className="flex items-center gap-1 rounded-full bg-surface-sunken p-1 pr-2 active:opacity-80"
+              className="flex items-center gap-1.5 rounded-full bg-surface p-1 pr-2.5 active:opacity-80"
             >
-              <Avatar name={accountName} photoUrl={accountPhotoUrl} size={30} />
+              <Avatar name={accountName} photoUrl={accountPhotoUrl} size={32} />
               {accountName && (
-                <span className="max-w-[84px] truncate text-[13.5px] font-medium text-ink">{accountName}</span>
+                <span className="max-w-[88px] truncate text-[14px] font-medium text-ink">{accountName}</span>
               )}
-              <ChevronRight size={14} className="text-faint" />
+              <ChevronRight size={15} className="text-faint" />
             </button>
           ) : onMenu ? (
             <button
