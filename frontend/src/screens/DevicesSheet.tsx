@@ -6,7 +6,9 @@ import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
-import { Trash, Sliders, ChevronRight } from '../components/icons'
+import { WheelPicker } from '../components/ui/WheelPicker'
+import { SheetHero } from '../components/ui/SheetHero'
+import { Trash, ChevronDown, Refresh, Phone } from '../components/icons'
 import { DeviceRow, isOSName } from '../components/DeviceRow'
 import { useToast } from '../components/ui/Toast'
 import { confirmDialog } from '../lib/telegram'
@@ -21,6 +23,9 @@ import {
   resetSubscriptionLink,
   type Device,
 } from '../api'
+
+// Device-limit wheel options: 0 = no limit, then 1…10.
+const LIMIT_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 export function DevicesSheet({
   open,
@@ -39,10 +44,11 @@ export function DevicesSheet({
   const [renameVal, setRenameVal] = useState('')
   const [busy, setBusy] = useState(false)
   // Device limit lives here now (moved off the profile/Settings): the count + cap
-  // are most meaningful right next to the device list.
+  // are most meaningful right next to the device list. Edited inline with an
+  // iOS-style wheel (no separate sheet, no typing). 0 = no limit.
   const [limit, setLimit] = useState<number | null>(null)
-  const [limitOpen, setLimitOpen] = useState(false)
-  const [limitVal, setLimitVal] = useState('')
+  const [editingLimit, setEditingLimit] = useState(false)
+  const [limitVal, setLimitVal] = useState(0)
 
   const load = async () => {
     setFailed(false)
@@ -59,17 +65,15 @@ export function DevicesSheet({
     }
   }
 
-  const saveLimit = async () => {
-    const n = Math.max(0, parseInt(limitVal || '0', 10) || 0)
-    setBusy(true)
+  // No Save button — the wheel auto-persists the value once it settles on a number.
+  const persistLimit = async (v: number) => {
+    setLimitVal(v)
     try {
-      await setDeviceLimit(n)
-      setLimit(n || null)
-      setLimitOpen(false)
-      toast(t('settings.subSaved'))
+      await setDeviceLimit(v)
+      setLimit(v || null)
       onChanged?.()
-    } finally {
-      setBusy(false)
+    } catch {
+      /* keep the wheel value; the user can re-pick to retry */
     }
   }
 
@@ -128,9 +132,6 @@ export function DevicesSheet({
     }
   }
 
-  const vlessList = (devices ?? []).filter((d) => d.kind !== 'awg')
-  const awgList = (devices ?? []).filter((d) => d.kind === 'awg')
-
   const renderGroup = (list: Device[]) => (
     <div className="stagger mb-4 overflow-hidden rounded-3xl border border-border bg-surface">
       {list.map((d, i) => {
@@ -160,37 +161,11 @@ export function DevicesSheet({
       })}
     </div>
   )
-  const groupHeader = (label: string) => (
-    <div className="font-display mb-2 px-3 text-[15px] font-semibold text-ink">{label}</div>
-  )
 
   return (
     <>
       <Sheet open={open} onClose={onClose} title={t('devices.title')}>
-        {/* Count / limit header — moved here from Settings; tap to change the cap. */}
-        {devices && (
-          <button
-            onClick={() => {
-              setLimitVal(limit ? String(limit) : '')
-              setLimitOpen(true)
-            }}
-            className="tap mb-4 flex w-full items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3 text-left active:bg-surface-sunken"
-          >
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-surface-sunken text-faint">
-              <Sliders size={20} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="font-display text-[17px] font-semibold leading-tight text-ink">
-                {limit ? `${devices.length} / ${limit}` : devices.length}{' '}
-                <span className="text-[13px] font-normal text-muted">{t('devices.limitHeader')}</span>
-              </div>
-              <div className="mt-0.5 text-[12.5px] text-muted">
-                {limit ? t('settings.deviceLimit') : t('settings.noLimit')}
-              </div>
-            </div>
-            <ChevronRight size={20} className="text-faint" />
-          </button>
-        )}
+        <SheetHero icon={<Phone size={30} />} title={t('home.devices')} />
         {failed ? (
           <LoadError onRetry={load} />
         ) : !devices ? (
@@ -198,33 +173,55 @@ export function DevicesSheet({
         ) : devices.length === 0 ? (
           <div className="py-14 text-center text-[15px] text-muted">{t('devices.empty')}</div>
         ) : (
-          // A labelled category per protocol that has devices.
-          <div className="animate-fade">
-            {vlessList.length > 0 && (
-              <>
-                {groupHeader(t('devices.catVless'))}
-                {renderGroup(vlessList)}
-              </>
-            )}
-            {awgList.length > 0 && (
-              <>
-                {groupHeader(t('devices.catAwg'))}
-                {renderGroup(awgList)}
-              </>
-            )}
-          </div>
+          // One flat list — no VLESS / AmneziaWG split.
+          <div className="animate-fade">{renderGroup(devices)}</div>
         )}
 
         {devices && devices.length > 0 && (
           <Section>
             <Cell
-              before={<Trash size={20} />}
+              before={<Refresh size={20} />}
               title={t('devices.deleteAll')}
               onClick={doDeleteAll}
               destructive
               last
             />
           </Section>
+        )}
+
+        {/* Device limit — BELOW "Reset active sessions". Tap to reveal the iOS wheel;
+            the value auto-saves when it settles (no Save button). */}
+        {devices && (
+          <div className="overflow-hidden rounded-3xl border border-border bg-surface">
+            <button
+              onClick={() => {
+                setLimitVal(limit ?? 0)
+                setEditingLimit((e) => !e)
+              }}
+              className="tap flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-surface-sunken"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="font-display text-[16px] font-semibold leading-tight text-ink">
+                  {limit ? `${devices.length} / ${limit}` : devices.length}{' '}
+                  <span className="text-[13px] font-normal text-muted">{t('devices.limitHeader')}</span>
+                </div>
+                <div className="mt-0.5 text-[12.5px] text-muted">
+                  {limit ? t('settings.deviceLimit') : t('settings.noLimit')}
+                </div>
+              </div>
+              <ChevronDown size={20} className={'text-faint transition-transform ' + (editingLimit ? 'rotate-180' : '')} />
+            </button>
+            {editingLimit && (
+              <div className="animate-fade border-t border-border px-4 pb-3 pt-1">
+                <WheelPicker
+                  value={limitVal}
+                  options={LIMIT_OPTIONS}
+                  onChange={persistLimit}
+                  format={(v) => (v === 0 ? t('settings.noLimit') : String(v))}
+                />
+              </div>
+            )}
+          </div>
         )}
       </Sheet>
 
@@ -243,22 +240,6 @@ export function DevicesSheet({
         </div>
       </Sheet>
 
-      {/* device limit — moved here from Settings */}
-      <Sheet open={limitOpen} onClose={() => setLimitOpen(false)} onBack={() => setLimitOpen(false)} title={t('settings.subSettings')}>
-        <label className="px-1 text-[12px] font-medium text-faint">{t('settings.deviceLimit')}</label>
-        <input
-          value={limitVal}
-          onChange={(e) => setLimitVal(e.target.value.replace(/[^0-9]/g, ''))}
-          inputMode="numeric"
-          placeholder={t('settings.noLimit')}
-          className="mb-4 mt-2 h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
-        />
-        <div className="pb-2">
-          <Button stretched loading={busy} onClick={saveLimit}>
-            {t('common.save')}
-          </Button>
-        </div>
-      </Sheet>
     </>
   )
 }

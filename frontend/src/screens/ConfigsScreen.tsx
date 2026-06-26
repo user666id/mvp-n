@@ -6,7 +6,7 @@ import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
 import { Spinner } from '../components/ui/Spinner'
 import { Layers, Globe, Phone, ChartLine } from '../components/icons'
-import { Logo } from '../components/Logo'
+import brandMark from '../assets/brand-mark.png'
 import { StatusDot } from '../components/StatusDot'
 import { useToast } from '../components/ui/Toast'
 import { ConfigDetailSheet } from './ConfigDetailSheet'
@@ -139,7 +139,7 @@ export function ConfigsScreen({
           /* ── A payment is in flight: don't tempt the user to pay again. Show a
                 "processing" state that resolves automatically (we poll). ── */
           <div className="flex flex-col items-center px-6 pt-[14vh] text-center">
-            <span className="grid h-16 w-16 place-items-center rounded-3xl bg-surface-sunken text-accent">
+            <span className="grid h-16 w-16 place-items-center rounded-full bg-surface-sunken text-accent">
               <Spinner size={28} />
             </span>
             <h2 className="font-display mt-5 text-[21px] font-semibold leading-tight text-ink">
@@ -156,8 +156,8 @@ export function ConfigsScreen({
           /* ── Not activated / expired: prominent activate block in place of the
                 configs list. Buy a subscription OR enter an access key. ── */
           <div className="flex flex-col items-center px-6 pt-[12vh] text-center">
-            <span className="grid h-[84px] w-[84px] place-items-center rounded-full bg-surface-sunken ring-1 ring-inset ring-white/10">
-              <Logo size={58} />
+            <span className="block overflow-hidden rounded-full shadow-pop" style={{ width: 84, height: 84 }}>
+              <img src={brandMark} alt="" className="h-full w-full object-cover" />
             </span>
             <h2 className="font-display mt-5 text-[21px] font-semibold leading-tight text-ink">
               {expired ? t('sub.expired') : t('sub.connectTitle')}
@@ -173,12 +173,15 @@ export function ConfigsScreen({
             </Button>
           </div>
         ) : (
-          <div className="animate-fade">
+          // One uniform vertical rhythm (16px) between the stacked blocks
+          // (subscription strip · config · widgets), matching the Section gap used
+          // in every sheet — instead of ad-hoc margins.
+          <div className="animate-fade space-y-4">
             {/* Subscription strip — expiry + days left at a glance, with a quick
                 renew. Key / lifetime users (no paid_until) see "lifetime". */}
             {profile &&
               (expired ? (
-                <div className="mb-4 flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3">
+                <div className="flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3">
                   <button onClick={onGoSubscription} className="tap min-w-0 flex-1 text-left active:opacity-70">
                     <div className="text-[14px] font-medium text-danger">{t('sub.expired')}</div>
                     <div className="mt-0.5 text-[12.5px] text-muted">{t('sub.expiredShort')}</div>
@@ -188,7 +191,7 @@ export function ConfigsScreen({
                   </Button>
                 </div>
               ) : profile.paid_until ? (
-                <div className="mb-4 flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3">
+                <div className="flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3">
                   <button onClick={onGoSubscription} className="tap min-w-0 flex-1 text-left active:opacity-70">
                     <div className="text-[14px] font-medium text-ink">
                       {t('sub.activeShort', { d: fmtSubDate(profile.paid_until, lang) })}
@@ -207,46 +210,10 @@ export function ConfigsScreen({
                   </Button>
                 </div>
               ) : (
-                <div className="mb-4 rounded-3xl border border-border bg-surface px-4 py-3 text-[14px] font-medium text-ink">
+                <div className="rounded-3xl border border-border bg-surface px-4 py-3 text-[14px] font-medium text-ink">
                   {t('sub.lifetimeBottom')}
                 </div>
               ))}
-            {/* Dashboard widgets — devices + usage at a glance (iOS-widget style);
-                each taps through to its full screen. */}
-            <div className="mb-4 grid grid-cols-2 gap-2.5">
-              <button
-                onClick={() => setDevOpen(true)}
-                className="tap rounded-3xl border border-border bg-surface p-4 text-left active:bg-surface-sunken"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Phone size={16} className="text-faint" />
-                  <span className="text-[12px] font-medium uppercase tracking-[0.06em] text-faint">{t('home.devices')}</span>
-                </div>
-                <div
-                  key={devCount ?? -1}
-                  className="animate-rise mt-2 font-display text-[22px] font-semibold leading-none text-ink"
-                >
-                  {devCount == null ? '—' : profile?.device_limit ? `${devCount} / ${profile.device_limit}` : devCount}
-                </div>
-                <div className="mt-1 text-[12.5px] text-muted">{t('home.devicesSub')}</div>
-              </button>
-              <button
-                onClick={() => setUsageOpen(true)}
-                className="tap rounded-3xl border border-border bg-surface p-4 text-left active:bg-surface-sunken"
-              >
-                <div className="flex items-center gap-1.5">
-                  <ChartLine size={16} className="text-faint" />
-                  <span className="text-[12px] font-medium uppercase tracking-[0.06em] text-faint">{t('home.usage')}</span>
-                </div>
-                <div
-                  key={trafficTotal ?? -1}
-                  className="animate-rise mt-2 font-display text-[22px] font-semibold leading-none text-ink"
-                >
-                  {trafficTotal == null ? '—' : formatBytes(trafficTotal, lang)}
-                </div>
-                <div className="mt-1 text-[12.5px] text-muted">{t('home.usageSub')}</div>
-              </button>
-            </div>
             {configs.length === 0 ? (
               <div className="flex flex-col items-center px-6 pt-[10vh] text-center">
                 <Layers size={40} className="text-faint" />
@@ -264,7 +231,7 @@ export function ConfigsScreen({
                     className="overflow-hidden rounded-3xl border border-border bg-surface"
                   >
                     <div className="flex items-center gap-3 px-4 py-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-surface-sunken text-faint">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-sunken text-faint">
                         <Globe size={22} />
                       </span>
                       <div className="min-w-0 flex-1">
@@ -290,6 +257,41 @@ export function ConfigsScreen({
             </div>
               </>
             )}
+            {/* Dashboard widgets — devices + usage at a glance (iOS-widget style),
+                BELOW the config card so the primary action stays on top. Each taps
+                through to its full screen; matching framed icons + center scale-in. */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                onClick={() => setDevOpen(true)}
+                className="tap animate-scale-in rounded-3xl border border-border bg-surface p-4 text-left active:bg-surface-sunken"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-sunken text-faint">
+                    <Phone size={15} />
+                  </span>
+                  <span className="text-[12px] font-medium uppercase tracking-[0.06em] text-muted">{t('home.devices')}</span>
+                </div>
+                <div className="mt-2.5 font-display text-[22px] font-semibold leading-none text-ink">
+                  {devCount == null ? '—' : profile?.device_limit ? `${devCount} / ${profile.device_limit}` : devCount}
+                </div>
+                <div className="mt-1 text-[12.5px] text-muted">{t('home.devicesSub')}</div>
+              </button>
+              <button
+                onClick={() => setUsageOpen(true)}
+                className="tap animate-scale-in rounded-3xl border border-border bg-surface p-4 text-left active:bg-surface-sunken"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-sunken text-faint">
+                    <ChartLine size={15} />
+                  </span>
+                  <span className="text-[12px] font-medium uppercase tracking-[0.06em] text-muted">{t('home.usage')}</span>
+                </div>
+                <div className="mt-2.5 font-display text-[22px] font-semibold leading-none text-ink">
+                  {trafficTotal == null ? '—' : formatBytes(trafficTotal, lang)}
+                </div>
+                <div className="mt-1 text-[12.5px] text-muted">{t('home.usageSub')}</div>
+              </button>
+            </div>
           </div>
         )}
       </div>

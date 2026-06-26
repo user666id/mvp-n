@@ -6,7 +6,8 @@ import { Spinner } from '../components/ui/Spinner'
 import { LoadError } from '../components/ui/LoadError'
 import { Qr } from '../components/Qr'
 import { CurrencyIcon } from '../components/CurrencyIcon'
-import { Check, Copy } from '../components/icons'
+import { Check, Copy, Dollar } from '../components/icons'
+import { SheetHero } from '../components/ui/SheetHero'
 import { useToast } from '../components/ui/Toast'
 import { copyText } from '../lib/clipboard'
 import { notify, confirmDialog, openInvoice } from '../lib/telegram'
@@ -354,6 +355,7 @@ export function SubscribeSheet({
     <>
       {(inline || step === 'select') && (
         <>
+          <SheetHero icon={<Dollar size={30} />} title={t('tab.subscription')} />
           {pending.length > 0 && (
             <div className="mb-5">
               <div className="mb-2 px-1 text-[13px] font-semibold text-faint">

@@ -1,6 +1,7 @@
 import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react'
 import { BottomSheet } from './ui/BottomSheet'
 import { Button } from './ui/Button'
+import { SheetHero } from './ui/SheetHero'
 import { Wallet } from './icons'
 import { useToast } from './ui/Toast'
 import { copyText } from '../lib/clipboard'
@@ -29,6 +30,7 @@ export function WalletSheet({ open, onClose }: { open: boolean; onClose: () => v
 
   return (
     <BottomSheet open={open} onClose={onClose} title={t('wallet.title')}>
+      <SheetHero icon={<Wallet size={30} />} title={t('wallet.title')} />
       {address ? (
         <div className="flex items-center gap-2.5 rounded-3xl border border-border bg-surface px-4 py-3">
           <button

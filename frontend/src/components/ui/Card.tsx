@@ -13,7 +13,7 @@ export function Section({
   className?: string
 }) {
   return (
-    <div className={'mb-5 ' + className}>
+    <div className={'mb-4 ' + className}>
       {header && (
         <div className="px-3 pb-2 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">{header}</div>
       )}

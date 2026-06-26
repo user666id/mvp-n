@@ -3,7 +3,7 @@ import { Sheet } from '../components/ui/Sheet'
 import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { Collapse } from '../components/ui/Collapse'
-import { Logo } from '../components/Logo'
+import brandMark from '../assets/brand-mark.png'
 import { ChevronRight, ExternalLink, Github, Telegram } from '../components/icons'
 import { openLink, effectivePalette } from '../lib/telegram'
 import { BRAND, BOT, GITHUB_URL } from '../lib/config'
@@ -115,8 +115,10 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
     <>
       <Sheet open={open} onClose={onClose} title={t('about.title')}>
         <div className="mb-6 flex flex-col items-center text-center">
-          <span className="grid h-[88px] w-[88px] place-items-center rounded-full bg-surface-sunken ring-1 ring-inset ring-white/10">
-            <Logo size={60} />
+          {/* The real brand mark (the bot's app icon), clipped to a perfect circle
+              to match the bot's round Telegram avatar. */}
+          <span className="block overflow-hidden rounded-full shadow-pop" style={{ width: 84, height: 84 }}>
+            <img src={brandMark} alt={BRAND} className="h-full w-full object-cover" />
           </span>
           <h2 className="font-display mt-3 text-[22px] font-semibold text-ink">{BRAND}</h2>
           <p className="mt-2 max-w-[300px] text-[14px] leading-relaxed text-muted">{t('about.tagline')}</p>

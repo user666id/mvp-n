@@ -4,7 +4,8 @@ import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
 import { Badge } from '../components/ui/Badge'
 import { CurrencyIcon } from '../components/CurrencyIcon'
-import { ExternalLink } from '../components/icons'
+import { ExternalLink, Clock } from '../components/icons'
+import { SheetHero } from '../components/ui/SheetHero'
 import { openLink } from '../lib/telegram'
 import { fmtSubDate, txExplorerUrl } from '../lib/subscription'
 import { getOrderHistory, type Order } from '../api'
@@ -41,6 +42,7 @@ export function PaymentHistorySheet({ open, onClose }: { open: boolean; onClose:
 
   return (
     <Sheet open={open} onClose={onClose} onBack={onClose} title={t('sub.history')}>
+      <SheetHero icon={<Clock size={30} />} title={t('sub.history')} />
       {failed ? (
         <LoadError onRetry={load} />
       ) : !items ? (

@@ -3,6 +3,8 @@ import { Sheet } from '../components/ui/Sheet'
 import { Section } from '../components/ui/Card'
 import { Spinner } from '../components/ui/Spinner'
 import { LoadError } from '../components/ui/LoadError'
+import { SheetHero } from '../components/ui/SheetHero'
+import { ChartLine } from '../components/icons'
 import { BarChart } from '../components/charts'
 import { useT } from '../lib/i18n'
 import { formatBytes } from '../lib/format'
@@ -54,6 +56,7 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
   return (
     <Sheet open={open} onClose={onClose} onBack={onClose} title={t('settings.usage')}>
+      <SheetHero icon={<ChartLine size={30} />} title={t('settings.usage')} />
       <Section>
         <div className="flex">
           <Stat label={t('admin.trafficTotalShort')} value={formatBytes(total, lang)} />

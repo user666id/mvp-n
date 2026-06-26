@@ -325,12 +325,12 @@ const dict = {
   'devices.deleteOne': { en: 'Delete device', ru: 'Удалить устройство' },
   'devices.deleteConfirm': { en: 'Delete this device?', ru: 'Удалить это устройство?' },
   'devices.deletedToast': { en: 'Device deleted', ru: 'Устройство удалено' },
-  'devices.deleteAll': { en: 'Delete all devices', ru: 'Удалить все устройства' },
+  'devices.deleteAll': { en: 'Reset active sessions', ru: 'Сбросить активные сессии' },
   'devices.deleteAllConfirm': {
-    en: 'Delete all devices? The subscription will be reset.',
-    ru: 'Удалить все устройства? Подписка будет сброшена.',
+    en: 'Reset all active sessions? Every device will be disconnected and will need to reconnect.',
+    ru: 'Сбросить все активные сессии? Все устройства будут отключены — их нужно будет подключить заново.',
   },
-  'devices.deletedAllToast': { en: 'All devices deleted', ru: 'Все устройства удалены' },
+  'devices.deletedAllToast': { en: 'Sessions reset', ru: 'Сессии сброшены' },
 
   // ── settings ───────────────────────────────────────────────────────────────
   'settings.admin': { en: 'admin', ru: 'админ' },

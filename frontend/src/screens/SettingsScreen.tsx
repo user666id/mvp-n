@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useForegroundRefetch } from '../lib/useForeground'
 import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
@@ -8,42 +8,24 @@ import { Sheet } from '../components/ui/Sheet'
 import { BusyOverlay } from '../components/ui/BusyOverlay'
 import { useToast } from '../components/ui/Toast'
 import {
-  Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, User, ChartLine, Vibrate,
+  Bell, Phone, Info, ChevronRight, LogOut, Trash, User, Vibrate,
   Monitor, Sun, Moon, Key, Clock,
 } from '../components/icons'
 import { ProfileDetails } from '../components/ProfileDetails'
-import { DevicesSheet } from './DevicesSheet'
 import { AboutSheet } from './AboutSheet'
-import { UsageSheet } from './UsageSheet'
 import { KeyEntrySheet } from './KeyEntrySheet'
 import { PaymentHistorySheet } from './PaymentHistorySheet'
 import {
   confirmDialog, notify, hapticsEnabled, getTheme, setTheme, getDarkShade, setDarkShade,
   isDarkActive, addToHomeScreen, canAddToHomeScreen, type ThemePref, type DarkShade,
 } from '../lib/telegram'
-import { plural } from '../lib/format'
 import { useT } from '../lib/i18n'
 import { subLabel } from '../lib/subscription'
 import {
-  ApiError, deleteAccount, getProfile, resetSubscriptionLink, setLanguage, type Profile,
+  ApiError, deleteAccount, getProfile, setLanguage, type Profile,
 } from '../api'
 
 const LS_NOTIFY = 'mvpn_notify'
-
-function deviceUnit(n: number, lang: 'en' | 'ru') {
-  if (lang === 'ru') return plural(n, 'устройство', 'устройства', 'устройств')
-  return n === 1 ? 'device' : 'devices'
-}
-
-/** Claude-style row trailing: current value (muted) + chevron. */
-function ValueChevron({ value }: { value: ReactNode }) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <span className="text-[15px] text-muted">{value}</span>
-      <ChevronRight size={20} className="text-faint" />
-    </span>
-  )
-}
 
 export function AccountSheet({
   open,
@@ -58,10 +40,8 @@ export function AccountSheet({
   const toast = useToast()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [notify_, setNotify] = useState(localStorage.getItem(LS_NOTIFY) === '1')
-  const [devicesOpen, setDevicesOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
-  const [usageOpen, setUsageOpen] = useState(false)
   const [keyOpen, setKeyOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [haptics, setHaptics] = useState(hapticsEnabled())
@@ -113,20 +93,6 @@ export function AccountSheet({
     onLogout()
   }
 
-  const doReset = async () => {
-    if (!(await confirmDialog(t('settings.resetConfirm')))) return
-    setBusy(true)
-    try {
-      await resetSubscriptionLink()
-      notify('success')
-      toast(t('settings.resetDone'))
-      load()
-    } catch {
-      toast(t('settings.resetFailed'))
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const doDeleteAccount = async () => {
     if (profile?.is_admin) {
@@ -154,37 +120,18 @@ export function AccountSheet({
     }
   }
 
-  const devCount = profile?.devices_count ?? 0
 
   return (
     <Sheet open={open} onClose={onClose} onBack={onClose} title={t('account.title')}>
       <div>
-        {/* Account — profile, usage, devices, limit, reset (Claude style:
-            the profile is a single row, not a big card; all in one group) */}
+        {/* Account — just the profile row now; devices + usage live on the home
+            dashboard widgets, and "reset sessions" lives on the Devices screen. */}
         <Section header={t('settings.account')}>
           <Cell
             before={<User size={20} />}
             after={<ChevronRight size={20} className="text-faint" />}
             title={t('settings.profile')}
             onClick={() => profile && setProfileOpen(true)}
-          />
-          <Cell
-            before={<ChartLine size={20} />}
-            after={<ChevronRight size={20} className="text-faint" />}
-            title={t('settings.usage')}
-            onClick={() => setUsageOpen(true)}
-          />
-          <Cell
-            before={<Phone size={20} />}
-            after={<ValueChevron value={`${devCount} ${deviceUnit(devCount, lang)}`} />}
-            title={t('settings.devices')}
-            onClick={() => setDevicesOpen(true)}
-          />
-          <Cell
-            before={<Refresh size={20} />}
-            title={t('settings.reset')}
-            onClick={doReset}
-            destructive
             last
           />
         </Section>
@@ -337,11 +284,7 @@ export function AccountSheet({
         )}
       </Sheet>
 
-      <DevicesSheet open={devicesOpen} onClose={() => setDevicesOpen(false)} onChanged={load} />
-
       <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
-
-      <UsageSheet open={usageOpen} onClose={() => setUsageOpen(false)} />
 
       <KeyEntrySheet
         open={keyOpen}

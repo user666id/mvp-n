@@ -138,16 +138,14 @@ export function ConfigDetailSheet({
       <Sheet open={open} onClose={onClose} title={t('detail.title')} anim="center" pills>
         {/* identity — globe avatar + name (no country flag, matches the configs
             list), with the protocol · transport · tech spec underneath. */}
-        <div className="mb-5 flex items-center gap-3.5">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-surface-sunken text-faint">
-            <Globe size={24} />
+        <div className="mb-6 mt-1 flex flex-col items-center text-center">
+          <span className="grid h-[74px] w-[74px] place-items-center rounded-full bg-surface-sunken text-muted ring-1 ring-inset ring-white/10">
+            <Globe size={30} />
           </span>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-display text-[18px] font-semibold leading-tight text-ink">
-              {t('detail.title')}
-            </div>
-            <div className="mt-0.5 text-[12.5px] text-faint">{configSpecLine(meta)}</div>
+          <div className="font-display mt-3 text-[20px] font-semibold leading-tight text-ink">
+            {t('detail.title')}
           </div>
+          <div className="mt-0.5 text-[12.5px] text-faint">{configSpecLine(meta)}</div>
         </div>
 
         {/* connection: AmneziaWG .conf or VLESS "install to app" */}

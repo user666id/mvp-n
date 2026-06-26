@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Button } from '../components/ui/Button'
+import { SheetHero } from '../components/ui/SheetHero'
+import { Key } from '../components/icons'
 import { notify } from '../lib/telegram'
 import { ApiError, activateKey } from '../api'
 import { useT } from '../lib/i18n'
@@ -48,6 +50,7 @@ export function KeyEntrySheet({
       onClose={onClose}
       title={t('key.activateTitle')}
     >
+      <SheetHero icon={<Key size={30} />} title={t('key.activateTitle')} />
       <p className="mb-4 text-[14px] leading-relaxed text-muted">{t('key.activateHint')}</p>
       <input
         value={key}

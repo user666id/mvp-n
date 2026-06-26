@@ -3,6 +3,63 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.5.6] — 2026-06-26
+
+### Changed
+- **Hero redesign** (`SheetHero`): premium accent treatment (solid accent disc, WHITE
+  glyph, halo ring, drop glow, top gloss — inspired by the reference VPN's glowing
+  icons, in our terracotta) + a **title under the icon** on every screen (Config,
+  Devices, Usage, Payment, Wallet, History, Activate key). Config detail matches.
+- **Devices: one flat list** — removed the VLESS / AmneziaWG split + group headers.
+- **Device limit reworked**: moved BELOW the list, icon removed, **no Save button** —
+  the inline iOS wheel auto-persists when it settles. `WheelPicker` redesigned with a
+  hairline selection band (value always visible, no gradient overlap), 5 rows, haptic
+  tick per value.
+
+## [2.5.5] — 2026-06-26
+
+### Added
+- **Category hero icon** (`components/ui/SheetHero.tsx`): a centred circular icon under
+  the avatar/wallet header on each screen, for a consistent visual anchor. Applied to
+  Config detail (Globe — its identity is now centred), Devices (Phone), Usage
+  (ChartLine), Payment (Dollar), Wallet (Wallet), Payment history (Clock), Activate key
+  (Key). First pass — icon-only, sizing/subtitle to be tuned.
+
+## [2.5.4] — 2026-06-26
+
+### Changed
+- **Consistent icon frames**: every framed "tile" icon is now a circle (`rounded-full`)
+  — converted the few squircle/rounded ones (config globe, config-detail identity,
+  home widgets, device-limit, activate/pending tiles, `LoadError`) so nothing is
+  round-here / square-there.
+- **Device limit — inline iOS wheel** (`components/ui/WheelPicker.tsx`): the limit on
+  the Devices screen no longer opens a separate sheet with a text field. Tap the
+  count/limit header to expand an inline scroll-snap **wheel** (0 = no limit, 1–10)
+  with a haptic tick per value and a Save button. Removed the old input sheet.
+
+## [2.5.3] — 2026-06-26
+
+### Changed
+- **Consistent vertical rhythm**: one 16px gap between stacked blocks everywhere.
+  The home (`ConfigsScreen`) now uses `space-y-4` on its content stack (dropped the
+  ad-hoc `mb-4` / `mt-2.5`), and the shared `Section` gap went `mb-5` → `mb-4` (20 →
+  16px) so sheets match the home. Within-card list gaps stay tighter (10px) to keep
+  the hierarchy.
+
+## [2.5.2] — 2026-06-26
+
+### Changed
+- **Home layout**: the Config card now sits ABOVE the Devices/Usage widgets (primary
+  action first; widgets are the supplementary glance row below).
+- **Widget polish**: matching framed mini-icons (28px rounded square, like the config
+  globe), eyebrow labels lifted `text-faint` → `text-muted`, and a center scale-in
+  entrance (`.animate-scale-in`) instead of the rise.
+- **Devices**: "Delete all devices" → **"Reset active sessions"** with a circular-arrow
+  (Refresh) icon and matching confirm/toast copy (same action: revoke + reconnect).
+- **Settings slimmed**: removed the Connected devices, Usage, and Reset rows from the
+  Account section — devices/usage now live on the home widgets and "reset sessions" on
+  the Devices screen (removed the now-dead handlers/sheets/helpers too).
+
 ## [2.5.0] — 2026-06-26
 
 ### Added

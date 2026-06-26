@@ -8,7 +8,7 @@ export function LoadError({ onRetry, className = '' }: { onRetry: () => void; cl
   const { t } = useT()
   return (
     <div className={'flex flex-col items-center px-6 py-12 text-center ' + className}>
-      <span className="grid h-14 w-14 place-items-center rounded-3xl bg-surface-sunken text-faint">
+      <span className="grid h-14 w-14 place-items-center rounded-full bg-surface-sunken text-faint">
         <Refresh size={24} />
       </span>
       <p className="mb-5 mt-4 max-w-[260px] text-[14px] leading-relaxed text-muted">
