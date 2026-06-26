@@ -3,6 +3,38 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.4.0] — 2026-06-26
+
+UI consistency pass — unified "liquid glass", tactility, native-feel transitions,
+and code-splitting for faster load. (User-facing notes live in
+`frontend/src/lib/changelog.ts` under the 2.4 entry.)
+
+### Changed
+- **One liquid-glass material**: added `.glass` / `.glass-thin` utilities in
+  `index.css` (single source of truth — translucent fill + blur + saturation +
+  hairline edge + top highlight). Replaced ad-hoc glass strings across
+  `BottomTabs`, `Toast`, `Dropdown`, `Sheet` footer and `SubscribeSheet`'s asset
+  menu. Dropped wasted `backdrop-blur` from `Button`, `Switch` and the in-card
+  accent buttons (blur over a solid surface is invisible but costs GPU).
+- **Buttons restyled** to solid accent (`primary` = `bg-accent`, `secondary` =
+  `bg-accent/85`), with a press `active:scale-[0.97]` and a light haptic tick wired
+  once in the shared `Button`. Interactive `Cell` rows get `active:scale` + a
+  `selectionChanged` haptic.
+- **Sliding tab indicator**: `BottomTabs` now moves a single highlight between the
+  two main tabs (transform transition) instead of fading a per-tab pill in place.
+- **Staggered list entrance**: `.stagger` utility (nth-child delays) applied to the
+  configs and devices lists.
+- **Snappier base** carried over from 2.3 (sheet 300 ms, fade 200 ms).
+
+### Performance
+- **Code-splitting**: `AdminScreen` is now `React.lazy` (admin-only, ~12 kB off the
+  main bundle); the `qrcode` lib is imported dynamically inside `Qr` (~24 kB,
+  on-demand); a `manualChunks` rule splits the React runtime (~193 kB) into its own
+  chunk that stays cached across deploys. Main bundle 844 → 615 kB (gzip 258 → 186).
+
+### Accessibility
+- `prefers-reduced-motion` now also neutralises the stagger + toast animations.
+
 ## [2.3.0] — 2026-06-26
 
 UI pass on the header/sheets + a legal-copy correction. (User-facing notes live in

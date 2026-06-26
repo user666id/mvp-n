@@ -298,7 +298,7 @@ export function AccountSheet({
                   className={
                     'grid h-9 w-9 place-items-center rounded-2xl border transition-colors ' +
                     (theme === val
-                      ? 'border-white/20 bg-accent/70 text-white backdrop-blur-md backdrop-saturate-150'
+                      ? 'border-white/20 bg-accent text-white'
                       : 'border-border text-muted active:bg-surface-sunken')
                   }
                 >

@@ -212,7 +212,7 @@ export function ConfigsScreen({
               </div>
             ) : (
               <>
-            <div className="flex flex-col gap-2.5">
+            <div className="stagger flex flex-col gap-2.5">
               {configs.map((c) => (
                   <div
                     key={c.id}

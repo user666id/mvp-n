@@ -12,10 +12,9 @@ const MAIN: { id: Tab; key: TKey; Icon: typeof Globe }[] = [
   { id: 'subscription', key: 'tab.subscription', Icon: Dollar },
 ]
 
-// Shared frosted-glass surface (iOS "liquid glass"): translucent + heavy blur so
-// content scrolling underneath shows through, a thin light edge + soft shadow.
-const GLASS =
-  'border border-white/10 bg-surface/65 shadow-[0_10px_34px_-8px_rgba(0,0,0,0.55)] backdrop-blur-xl backdrop-saturate-150'
+// Shared frosted-glass surface (iOS "liquid glass") — defined once as `.glass` in
+// index.css (translucent fill + blur + saturation + light edge + top highlight).
+const GLASS = 'glass'
 
 export function BottomTabs({
   active,
@@ -27,6 +26,9 @@ export function BottomTabs({
   isAdmin?: boolean
 }) {
   const { t } = useT()
+  // Index of the active tab within the main pill (-1 when Admin is active) — drives
+  // the sliding indicator's position.
+  const mainIdx = MAIN.findIndex((m) => m.id === active)
   const tap = (id: Tab) => {
     if (id !== active) selection()
     onSelect(id)
@@ -35,8 +37,18 @@ export function BottomTabs({
     // Wrapper is click-through; only the pill + the admin circle catch taps.
     <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(10px,env(safe-area-inset-bottom))]">
       <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-2">
-        {/* main pill — the content tabs */}
-        <div className={'flex flex-1 items-stretch gap-1 rounded-full p-1 ' + GLASS}>
+        {/* main pill — the content tabs. A single indicator SLIDES between tabs
+            (shared-layout, native feel) instead of fading in on the spot. */}
+        <div className={'relative flex flex-1 items-stretch gap-1 rounded-full p-1 ' + GLASS}>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-y-1 left-1 rounded-full bg-ink/[0.13] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] ring-1 ring-inset ring-ink/[0.07] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            style={{
+              width: 'calc((100% - 12px) / 2)',
+              transform: `translateX(calc(${Math.max(0, mainIdx)} * (100% + 4px)))`,
+              opacity: mainIdx < 0 ? 0 : 1,
+            }}
+          />
           {MAIN.map(({ id, key, Icon }) => {
             const on = active === id
             return (
@@ -48,12 +60,6 @@ export function BottomTabs({
                   (on ? 'text-accent' : 'text-faint')
                 }
               >
-                {on && (
-                  <span
-                    aria-hidden
-                    className="animate-pill-in absolute inset-0 rounded-full bg-ink/[0.13] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] ring-1 ring-inset ring-ink/[0.07]"
-                  />
-                )}
                 <Icon
                   size={23}
                   strokeWidth={on ? 2.1 : 1.75}

@@ -18,7 +18,7 @@ export function Switch({
         'relative box-border block shrink-0 rounded-full transition-colors duration-200',
         'disabled:opacity-50',
         checked
-          ? 'bg-accent/70 ring-1 ring-inset ring-white/25 backdrop-blur-md backdrop-saturate-150'
+          ? 'bg-accent ring-1 ring-inset ring-white/25'
           : 'bg-border',
       ].join(' ')}
       style={{ width: 50, height: 30 }}

@@ -20,7 +20,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {msg && (
         <div className="pointer-events-none fixed inset-x-0 top-[max(12px,env(safe-area-inset-top))] z-[60] flex justify-center px-4">
-          <div className="animate-toast-in rounded-full border border-white/10 bg-surface/80 px-4 py-2.5 text-[14px] font-medium text-ink shadow-pop backdrop-blur-xl backdrop-saturate-150">
+          <div className="glass-thin animate-toast-in rounded-full px-4 py-2.5 text-[14px] font-medium text-ink">
             {msg}
           </div>
         </div>

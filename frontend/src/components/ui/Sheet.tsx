@@ -185,7 +185,7 @@ export function Sheet({
           {children}
         </div>
         {footer && (
-          <div className="border-t border-white/10 bg-canvas/80 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur-xl backdrop-saturate-150">
+          <div className="glass rounded-none border-x-0 border-b-0 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
             {footer}
           </div>
         )}

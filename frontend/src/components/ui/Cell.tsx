@@ -1,4 +1,5 @@
 import React from 'react'
+import { selection } from '../../lib/telegram'
 
 interface Props {
   before?: React.ReactNode
@@ -27,10 +28,12 @@ export function Cell({
   return (
     <div
       role={interactive ? 'button' : undefined}
-      onClick={interactive ? onClick : undefined}
+      onClick={interactive ? () => { selection(); onClick?.() } : undefined}
       className={[
         'relative flex items-center gap-3 px-4 min-h-[54px] py-2.5',
-        interactive ? 'active:bg-surface-sunken transition-colors cursor-pointer' : '',
+        interactive
+          ? 'cursor-pointer transition-[transform,background-color] duration-150 active:scale-[0.99] active:bg-surface-sunken'
+          : '',
         className,
       ].join(' ')}
     >

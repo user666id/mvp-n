@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { ToastProvider } from './components/ui/Toast'
 import { BottomTabs, type Tab } from './components/BottomTabs'
 import { AuthScreen } from './screens/AuthScreen'
 import { ConfigsScreen } from './screens/ConfigsScreen'
 import { SubscriptionScreen } from './screens/SubscriptionScreen'
 import { AccountSheet } from './screens/SettingsScreen'
-import { AdminScreen } from './screens/AdminSheet'
+// Admin panel is admin-only — load it lazily so the bundle non-admins download
+// stays small (it never ships in their first paint).
+const AdminScreen = lazy(() => import('./screens/AdminSheet').then((m) => ({ default: m.AdminScreen })))
 import { Spinner } from './components/ui/Spinner'
 import { ApiError, authTelegram, clearToken, getProfile, getToken, setLanguage, type Profile } from './api'
 import { notify, signalReady, closeAllSheets } from './lib/telegram'
@@ -150,12 +152,14 @@ export default function App() {
           </div>
           {isAdmin && (
             <div className={tab === 'admin' ? '' : 'hidden'}>
-              <AdminScreen
-                active={tab === 'admin'}
-                onAccount={() => setAccountOpen(true)}
-                accountName={profile?.first_name ?? undefined}
-                revalidate={revalidate}
-              />
+              <Suspense fallback={<div className="grid min-h-screen place-items-center text-accent"><Spinner size={28} /></div>}>
+                <AdminScreen
+                  active={tab === 'admin'}
+                  onAccount={() => setAccountOpen(true)}
+                  accountName={profile?.first_name ?? undefined}
+                  revalidate={revalidate}
+                />
+              </Suspense>
             </div>
           )}
           <BottomTabs active={tab} onSelect={(tb) => { setSubBack(false); setTab(tb) }} isAdmin={isAdmin} />

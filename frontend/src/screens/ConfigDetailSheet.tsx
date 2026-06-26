@@ -395,7 +395,7 @@ export function ConfigDetailSheet({
                     {store && (
                       <button
                         onClick={() => openLink(store.href)}
-                        className="mt-2.5 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-accent/15 text-[13.5px] font-medium text-accent backdrop-blur-md backdrop-saturate-150 active:bg-accent/25"
+                        className="mt-2.5 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-accent/15 text-[13.5px] font-medium text-accent active:bg-accent/25"
                       >
                         <span className="truncate">{store.label}</span>
                         <ExternalLink size={14} className="shrink-0" />
@@ -421,7 +421,7 @@ export function ConfigDetailSheet({
                     </Button>
                     <button
                       onClick={() => copy(link, t('detail.linkCopied'))}
-                      className="mt-2 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-accent/15 text-[13.5px] font-medium text-accent backdrop-blur-md backdrop-saturate-150 active:bg-accent/25"
+                      className="mt-2 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-accent/15 text-[13.5px] font-medium text-accent active:bg-accent/25"
                     >
                       <Copy size={14} className="shrink-0" /> {t('detail.copyLink')}
                     </button>

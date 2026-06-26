@@ -6,6 +6,24 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        // Split the React runtime (react + react-dom/client + scheduler) into its
+        // own chunk so it stays cached across deploys (app-code changes don't
+        // invalidate it) → faster repeat loads.
+        manualChunks(id) {
+          if (
+            id.includes('node_modules/react-dom') ||
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/scheduler')
+          ) {
+            return 'react'
+          }
+        },
+      },
+    },
+  },
   server: {
     host: true,
     port: 5173,

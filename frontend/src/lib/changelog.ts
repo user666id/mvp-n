@@ -17,6 +17,33 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '2.4',
+    date: '2026-06-26',
+    groups: [
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'A more unified look — one consistent “liquid glass” material across the tab bar, menus and notifications, with cleaner buttons and toggles.',
+            ru: 'Более цельный вид — единое «жидкое стекло» для таб-бара, меню и уведомлений, чище кнопки и переключатели.',
+          },
+          {
+            en: 'More tactile — buttons and list rows respond to your touch with a gentle press and a light haptic tick, like a native app.',
+            ru: 'Тактильнее — кнопки и строки списков отзываются на касание лёгким нажатием и хаптиком, как в нативных приложениях.',
+          },
+          {
+            en: 'Smoother navigation — the active-tab highlight now glides between tabs, and lists appear with a light cascade.',
+            ru: 'Плавнее навигация — подсветка активной вкладки скользит между вкладками, а списки появляются лёгким каскадом.',
+          },
+          {
+            en: 'Faster to open — the app is split into smaller parts that load on demand, so first paint and repeat opens are quicker.',
+            ru: 'Быстрее открывается — приложение разбито на части, которые грузятся по мере надобности, поэтому первый и повторные запуски шустрее.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '2.3',
     date: '2026-06-26',
     groups: [

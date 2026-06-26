@@ -107,7 +107,7 @@ export function DevicesSheet({
   const awgList = (devices ?? []).filter((d) => d.kind === 'awg')
 
   const renderGroup = (list: Device[]) => (
-    <div className="mb-4 overflow-hidden rounded-3xl border border-border bg-surface">
+    <div className="stagger mb-4 overflow-hidden rounded-3xl border border-border bg-surface">
       {list.map((d, i) => {
         const renamed = !isOSName(d.name)
         return (

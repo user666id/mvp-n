@@ -47,7 +47,7 @@ export function Dropdown<T extends string>({
       <div
         aria-hidden={!open}
         className={
-          'absolute left-0 right-0 z-30 overflow-hidden rounded-3xl border border-white/10 bg-surface/85 shadow-sheet backdrop-blur-xl backdrop-saturate-150 transition-[opacity,transform] duration-200 ' +
+          'glass-thin absolute left-0 right-0 z-30 overflow-hidden rounded-3xl transition-[opacity,transform] duration-200 ' +
           (align === 'up' ? 'bottom-[calc(100%+6px)] origin-bottom ' : 'top-[calc(100%+6px)] origin-top ') +
           (open ? 'opacity-100 scale-100' : 'pointer-events-none scale-95 opacity-0')
         }

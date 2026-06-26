@@ -452,7 +452,7 @@ export function SubscribeSheet({
                       {usdtMenuOpen && usdts.length > 1 && (
                         <>
                           <div className="fixed inset-0 z-30" onClick={() => setUsdtMenuOpen(false)} />
-                          <div className="absolute left-1/2 top-[calc(100%+8px)] z-40 w-[200px] -translate-x-1/2 overflow-hidden rounded-3xl border border-white/10 bg-surface/85 shadow-sheet backdrop-blur-xl backdrop-saturate-150">
+                          <div className="glass-thin absolute left-1/2 top-[calc(100%+8px)] z-40 w-[200px] -translate-x-1/2 overflow-hidden rounded-3xl">
                             {usdts.map((u) => (
                               <button
                                 key={u.id}

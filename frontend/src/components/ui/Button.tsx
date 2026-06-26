@@ -1,5 +1,6 @@
 import React from 'react'
 import { Spinner } from './Spinner'
+import { haptic } from '../../lib/telegram'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
@@ -16,8 +17,8 @@ const variants: Record<Variant, string> = {
   //  secondary = solid clay, no shadow
   //  ghost     = text-only clay (borderless link)
   //  danger    = red outline
-  primary: 'bg-accent/80 text-white border border-white/20 shadow-btn backdrop-blur-md backdrop-saturate-150 active:bg-accent',
-  secondary: 'bg-accent/65 text-white border border-white/15 backdrop-blur-md backdrop-saturate-150 active:bg-accent/80',
+  primary: 'bg-accent text-white border border-white/15 shadow-btn active:bg-accent-hover',
+  secondary: 'bg-accent/85 text-white border border-white/12 active:bg-accent',
   ghost: 'bg-transparent text-accent active:bg-accent-soft',
   danger: 'bg-transparent text-danger border border-danger/35 active:bg-danger/10',
 }
@@ -44,9 +45,15 @@ export function Button({
     <button
       {...rest}
       disabled={disabled || loading}
-      onClick={onClick}
+      // A light haptic tick on every CTA press — one place, so the whole app gets
+      // the same native tap feedback (the result still fires notify() on success).
+      onClick={(e) => {
+        if (!disabled && !loading) haptic('light')
+        onClick?.(e)
+      }}
       className={[
-        'inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors select-none',
+        'inline-flex items-center justify-center gap-2 rounded-full font-medium select-none',
+        'transition-[transform,background-color,color,opacity] duration-150 active:scale-[0.97]',
         'disabled:opacity-50 disabled:pointer-events-none',
         sizes[size],
         variants[variant],

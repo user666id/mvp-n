@@ -1,17 +1,26 @@
 import { useEffect, useState } from 'react'
-import QRCode from 'qrcode'
 
 /** Renders `value` as a QR code PNG data-URL on a white rounded plate
- *  (dark-on-light — the most reliably scannable across all client apps). */
+ *  (dark-on-light — the most reliably scannable across all client apps). The
+ *  `qrcode` lib is imported dynamically, so it's split out of the main bundle and
+ *  only fetched the first time a QR is actually shown. */
 export function Qr({ value, size = 256 }: { value: string; size?: number }) {
   const [src, setSrc] = useState('')
   useEffect(() => {
-    QRCode.toDataURL(value, {
-      width: size * 2,
-      margin: 1,
-      errorCorrectionLevel: 'M',
-      color: { dark: '#1f1e1d', light: '#ffffff' },
-    }).then(setSrc)
+    let alive = true
+    import('qrcode').then(({ default: QRCode }) =>
+      QRCode.toDataURL(value, {
+        width: size * 2,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#1f1e1d', light: '#ffffff' },
+      }).then((url) => {
+        if (alive) setSrc(url)
+      }),
+    )
+    return () => {
+      alive = false
+    }
   }, [value, size])
 
   return (
