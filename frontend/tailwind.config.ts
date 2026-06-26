@@ -29,7 +29,6 @@ export default {
         'chart-net': 'rgb(var(--c-chart-net) / <alpha-value>)',
       },
       fontFamily: {
-        serif: ['Newsreader', 'Georgia', 'ui-serif', 'serif'],
         sans: [
           'Hanken Grotesk',
           'Inter',
@@ -48,24 +47,11 @@ export default {
       },
       boxShadow: {
         // Flat — Claude relies on hairline borders, not shadow.
-        card: 'none',
         btn: '0 1px 2px rgb(120 70 50 / 0.16)',
         sheet: '0 -8px 40px rgb(0 0 0 / 0.18)',
         pop: '0 10px 34px rgb(60 40 30 / 0.16)',
       },
       keyframes: {
-        'sheet-up': {
-          from: { transform: 'translateY(100%)' },
-          to: { transform: 'translateY(0)' },
-        },
-        'drawer-in': {
-          from: { transform: 'translateX(-100%)' },
-          to: { transform: 'translateX(0)' },
-        },
-        'push-in': {
-          from: { transform: 'translateX(100%)' },
-          to: { transform: 'translateX(0)' },
-        },
         'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
         'toast-in': {
           from: { transform: 'translateY(-16px)', opacity: '0' },
@@ -73,9 +59,6 @@ export default {
         },
       },
       animation: {
-        'sheet-up': 'sheet-up 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
-        'drawer-in': 'drawer-in 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
-        'push-in': 'push-in 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
         'fade-in': 'fade-in 0.2s ease-out',
         'toast-in': 'toast-in 0.24s cubic-bezier(0.32, 0.72, 0, 1)',
       },

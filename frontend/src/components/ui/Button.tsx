@@ -5,6 +5,7 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
+  size?: 'md' | 'sm'
   loading?: boolean
   stretched?: boolean
 }
@@ -21,8 +22,16 @@ const variants: Record<Variant, string> = {
   danger: 'bg-transparent text-danger border border-danger/35 active:bg-danger/10',
 }
 
+// Size controls padding + text only; both share the pill (rounded-full) shape.
+//  md = full-height CTA (44px) · sm = inline pill (renew / connect / resume)
+const sizes = {
+  md: 'px-5 h-[44px] text-[15px]',
+  sm: 'px-4 py-1.5 text-[13px]',
+}
+
 export function Button({
   variant = 'primary',
+  size = 'md',
   loading,
   stretched,
   className = '',
@@ -37,9 +46,9 @@ export function Button({
       disabled={disabled || loading}
       onClick={onClick}
       className={[
-        'inline-flex items-center justify-center gap-2 rounded-full px-5 h-[44px]',
-        'text-[15px] font-medium transition-colors select-none',
+        'inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors select-none',
         'disabled:opacity-50 disabled:pointer-events-none',
+        sizes[size],
         variants[variant],
         stretched ? 'w-full' : '',
         className,

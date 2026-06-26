@@ -15,7 +15,7 @@ export function Qr({ value, size = 256 }: { value: string; size?: number }) {
   }, [value, size])
 
   return (
-    <div className="mx-auto w-fit rounded-3xl bg-white p-4 shadow-card">
+    <div className="mx-auto w-fit rounded-3xl bg-white p-4">
       {src ? (
         <img src={src} width={size} height={size} alt="QR" />
       ) : (

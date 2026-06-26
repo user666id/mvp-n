@@ -174,12 +174,9 @@ export function ConfigsScreen({
                     <div className="text-[14px] font-medium text-danger">{t('sub.expired')}</div>
                     <div className="mt-0.5 text-[12.5px] text-muted">{t('sub.expiredShort')}</div>
                   </button>
-                  <button
-                    onClick={onGoSubscription}
-                    className="shrink-0 rounded-full border border-white/20 bg-accent/80 px-4 py-1.5 text-[13px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
-                  >
+                  <Button size="sm" className="shrink-0" onClick={onGoSubscription}>
                     {t('pay.buy')}
-                  </button>
+                  </Button>
                 </div>
               ) : profile.paid_until ? (
                 <div className="mb-4 flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3">
@@ -196,12 +193,9 @@ export function ConfigsScreen({
                       })}
                     </div>
                   </button>
-                  <button
-                    onClick={onGoSubscription}
-                    className="shrink-0 rounded-full border border-white/20 bg-accent/80 px-4 py-1.5 text-[13px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
-                  >
+                  <Button size="sm" className="shrink-0" onClick={onGoSubscription}>
                     {t('sub.extend')}
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <div className="mb-4 rounded-3xl border border-border bg-surface px-4 py-3 text-[14px] font-medium text-ink">

@@ -356,12 +356,9 @@ export function SubscribeSheet({
                       </div>
                       <div className="text-[12px] text-faint">{dayName(o.plan_days)}</div>
                     </div>
-                    <button
-                      onClick={() => resume(o)}
-                      className="shrink-0 rounded-full border border-white/20 bg-accent/80 px-3.5 py-1.5 text-[13px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
-                    >
+                    <Button size="sm" className="shrink-0" onClick={() => resume(o)}>
                       {t('pay.resumeBtn')}
-                    </button>
+                    </Button>
                     <button
                       onClick={() => cancel(o)}
                       className="shrink-0 px-2 py-1.5 text-[13px] font-medium text-danger active:opacity-70"

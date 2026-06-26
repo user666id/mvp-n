@@ -3,7 +3,7 @@ import { Sheet } from '../components/ui/Sheet'
 import { BottomSheet } from '../components/ui/BottomSheet'
 import { Button } from '../components/ui/Button'
 import { Dropdown } from '../components/ui/Dropdown'
-import { Spinner } from '../components/ui/Spinner'
+import { BusyOverlay } from '../components/ui/BusyOverlay'
 import { Qr } from '../components/Qr'
 import {
   Pencil, Copy, QrCode, ChevronRight, ChevronDown, ExternalLink,
@@ -191,14 +191,14 @@ export function ConfigDetailSheet({
               <div className="flex shrink-0 flex-col gap-1">
                 <button
                   onClick={() => setShowQr(true)}
-                  className="grid h-9 w-9 place-items-center rounded-2xl text-ink active:bg-border"
+                  className="grid h-9 w-9 place-items-center rounded-full text-ink active:bg-border"
                   aria-label={t('detail.qr')}
                 >
                   <QrCode size={20} />
                 </button>
                 <button
                   onClick={() => copy(awgConf, t('detail.confCopied'))}
-                  className="grid h-9 w-9 place-items-center rounded-2xl text-ink active:bg-border"
+                  className="grid h-9 w-9 place-items-center rounded-full text-ink active:bg-border"
                   aria-label={t('common.copy')}
                 >
                   <Copy size={20} />
@@ -224,18 +224,18 @@ export function ConfigDetailSheet({
 
         {/* Subscription link — standalone capsule (copy / scan) */}
         {!isAwg && (
-          <div className="mb-3 flex items-center gap-2 rounded-3xl border border-border bg-surface px-4 py-3 shadow-card">
+          <div className="mb-3 flex items-center gap-2 rounded-3xl border border-border bg-surface px-4 py-3">
             <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-ink">{link}</span>
             <button
               onClick={() => setShowQr(true)}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl text-accent active:bg-surface-sunken"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent active:bg-surface-sunken"
               aria-label={t('detail.qr')}
             >
               <QrCode size={20} />
             </button>
             <button
               onClick={() => copy(link, t('detail.linkCopied'))}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl text-accent active:bg-surface-sunken"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent active:bg-surface-sunken"
               aria-label={t('detail.copyLink')}
             >
               <Copy size={20} />
@@ -245,7 +245,7 @@ export function ConfigDetailSheet({
 
         {/* Settings — own capsule (protocol picker + mode picker, VLESS only) */}
         {!isAwg && (
-          <div className="mb-3 overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
+          <div className="mb-3 overflow-hidden rounded-3xl border border-border bg-surface">
             <div>
               <button
                 type="button"
@@ -325,7 +325,7 @@ export function ConfigDetailSheet({
         )}
 
         {/* Server status — own capsule */}
-        <div className="mb-5 overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
+        <div className="mb-5 overflow-hidden rounded-3xl border border-border bg-surface">
           <button
             onClick={onOpenStats}
             className="flex w-full items-center gap-2.5 px-4 py-3.5 text-left active:bg-surface-sunken"
@@ -338,11 +338,7 @@ export function ConfigDetailSheet({
           </button>
         </div>
 
-        {busy && (
-          <div className="fixed inset-0 z-[55] grid place-items-center bg-black/20">
-            <Spinner size={30} />
-          </div>
-        )}
+        <BusyOverlay show={busy} />
       </Sheet>
 
       {/* app chooser — OS tabs + launcher tabs + numbered install stepper */}
@@ -383,7 +379,7 @@ export function ConfigDetailSheet({
           const store = (app.stores[os] ?? [])[0]
           const isMobile = os === 'ios' || os === 'android'
           return (
-            <div key={launcher} className="animate-fade rounded-3xl border border-border bg-surface p-4 shadow-card">
+            <div key={launcher} className="animate-fade rounded-3xl border border-border bg-surface p-4">
               <div className="relative">
                 {/* vertical line connecting the step numbers (centre to centre) */}
                 <div className="absolute bottom-3.5 left-[13px] top-3.5 w-[2px] bg-border" />

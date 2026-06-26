@@ -15,7 +15,7 @@ const MAIN: { id: Tab; key: TKey; Icon: typeof Globe }[] = [
 // Shared frosted-glass surface (iOS "liquid glass"): translucent + heavy blur so
 // content scrolling underneath shows through, a thin light edge + soft shadow.
 const GLASS =
-  'border border-white/10 bg-surface/65 shadow-[0_10px_34px_-8px_rgba(0,0,0,0.55)] backdrop-blur-2xl backdrop-saturate-150'
+  'border border-white/10 bg-surface/65 shadow-[0_10px_34px_-8px_rgba(0,0,0,0.55)] backdrop-blur-xl backdrop-saturate-150'
 
 export function BottomTabs({
   active,

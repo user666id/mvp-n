@@ -17,6 +17,25 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '2.2',
+    date: '2026-06-26',
+    groups: [
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'Smoother interface — menus and expandable sections now open with a gentle fade instead of popping.',
+            ru: 'Плавнее интерфейс — меню и разворачивающиеся блоки открываются мягким появлением, без рывков.',
+          },
+          {
+            en: 'A more consistent look — unified section headers, buttons and loading indicators across the app.',
+            ru: 'Единообразный вид — общий стиль заголовков, кнопок и индикаторов загрузки по всему приложению.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '2.1',
     date: '2026-06-25',
     groups: [

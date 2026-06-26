@@ -15,7 +15,7 @@ export function Section({
   return (
     <div className={'mb-5 ' + className}>
       {header && (
-        <div className="px-3 pb-2 text-[13px] font-semibold text-faint">{header}</div>
+        <div className="px-3 pb-2 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">{header}</div>
       )}
       <div className="overflow-hidden rounded-3xl border border-border bg-surface">
         {children}

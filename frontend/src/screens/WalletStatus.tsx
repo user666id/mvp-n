@@ -1,5 +1,6 @@
 import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react'
 import { Wallet } from '../components/icons'
+import { Button } from '../components/ui/Button'
 import { useT } from '../lib/i18n'
 
 function WalletInner() {
@@ -14,12 +15,9 @@ function WalletInner() {
       <div className="flex items-center gap-2.5 rounded-3xl border border-border bg-surface px-4 py-3">
         <Wallet size={20} className="text-muted" />
         <div className="min-w-0 flex-1 text-[15px] text-ink">{t('settings.walletNotConnected')}</div>
-        <button
-          onClick={() => tonConnectUI.openModal()}
-          className="shrink-0 rounded-full border border-white/20 bg-accent/80 px-3.5 py-1.5 text-[13px] font-medium text-white backdrop-blur-md backdrop-saturate-150 active:bg-accent/85"
-        >
+        <Button size="sm" className="shrink-0" onClick={() => tonConnectUI.openModal()}>
           {t('settings.walletConnect')}
-        </button>
+        </Button>
       </div>
     )
   }

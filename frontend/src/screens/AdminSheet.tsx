@@ -5,7 +5,7 @@ import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { Button } from '../components/ui/Button'
 import { ListSkeleton } from '../components/ui/Skeleton'
-import { Spinner } from '../components/ui/Spinner'
+import { BusyOverlay } from '../components/ui/BusyOverlay'
 import { Badge } from '../components/ui/Badge'
 import { Avatar } from '../components/ui/Avatar'
 import { Copy, ChevronRight, Ban, Trash, ExternalLink, Refresh } from '../components/icons'
@@ -391,7 +391,7 @@ function DomainStatusSheet({
             kind === 'web' ? t('admin.domainsWeb') : kind === 'vpn' ? t('admin.domainsVpn') : t('admin.domainsSvc')
           return (
             <div key={kind} className="mb-4">
-              <div className="font-display mb-2 px-3 text-[13px] font-medium uppercase tracking-[0.06em] text-faint">
+              <div className="mb-2 px-3 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
                 {label}
               </div>
               <div className="overflow-hidden rounded-3xl border border-border bg-surface">
@@ -606,11 +606,7 @@ function AdminProfileSheet({
     </Sheet>
 
 
-    {busy && (
-      <div className="fixed inset-0 z-[55] grid place-items-center bg-black/20">
-        <Spinner size={30} />
-      </div>
-    )}
+    <BusyOverlay show={busy} />
     </>
   )
 }

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { pushBackHandler, popBackHandler } from '../../lib/telegram'
 
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
-const DUR = 320 // ms — slide up / down
+const DUR = 360 // ms — slide up / down
 
 /**
  * Bottom sheet: slides up from the bottom edge, sized to its content, dims the
@@ -64,7 +64,7 @@ export function BottomSheet({
       />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative rounded-t-[28px] bg-canvas px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-3 shadow-card"
+        className="relative rounded-t-[28px] bg-canvas px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-3"
         style={{
           transform: shown ? 'translateY(0)' : 'translateY(100%)',
           transition: `transform ${DUR}ms ${EASE}`,

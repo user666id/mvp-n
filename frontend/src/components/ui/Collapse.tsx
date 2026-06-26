@@ -17,7 +17,7 @@ export function Collapse({
   const [open, setOpen] = useState(defaultOpen)
   return (
     <>
-      <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -26,10 +26,14 @@ export function Collapse({
           <span className="text-[16px] font-medium text-ink">{title}</span>
           <ChevronDown
             size={20}
-            className={'text-muted transition-transform ' + (open ? 'rotate-180' : '')}
+            className={'text-muted transition-transform duration-200 ' + (open ? 'rotate-180' : '')}
           />
         </button>
-        {open && <div className="border-t border-border">{children}</div>}
+        <div className={'grid transition-[grid-template-rows] duration-300 ease-out ' + (open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
+          <div className="overflow-hidden">
+            <div className="border-t border-border">{children}</div>
+          </div>
+        </div>
       </div>
       {open && footer}
     </>

@@ -6,7 +6,7 @@ import { Switch } from '../components/ui/Switch'
 import { Dropdown } from '../components/ui/Dropdown'
 import { Button } from '../components/ui/Button'
 import { Sheet } from '../components/ui/Sheet'
-import { Spinner } from '../components/ui/Spinner'
+import { BusyOverlay } from '../components/ui/BusyOverlay'
 import { useToast } from '../components/ui/Toast'
 import {
   Bell, Phone, Refresh, Info, ChevronRight, LogOut, Trash, Sliders, User, ChartLine, Vibrate,
@@ -405,11 +405,7 @@ export function AccountSheet({
       />
       <PaymentHistorySheet open={historyOpen} onClose={() => setHistoryOpen(false)} />
 
-      {busy && (
-        <div className="fixed inset-0 z-[55] grid place-items-center bg-black/20">
-          <Spinner size={30} />
-        </div>
-      )}
+      <BusyOverlay show={busy} />
     </Sheet>
   )
 }

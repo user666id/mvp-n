@@ -44,13 +44,14 @@ export function Dropdown<T extends string>({
         </span>
         <ChevronDown size={18} className={'text-muted transition-transform ' + (open ? 'rotate-180' : '')} />
       </button>
-      {open && (
-        <div
-          className={
-            'absolute left-0 right-0 z-30 overflow-hidden rounded-3xl border border-white/10 bg-surface/85 shadow-sheet backdrop-blur-xl backdrop-saturate-150 ' +
-            (align === 'up' ? 'bottom-[calc(100%+6px)]' : 'top-[calc(100%+6px)]')
-          }
-        >
+      <div
+        aria-hidden={!open}
+        className={
+          'absolute left-0 right-0 z-30 overflow-hidden rounded-3xl border border-white/10 bg-surface/85 shadow-sheet backdrop-blur-xl backdrop-saturate-150 transition-[opacity,transform] duration-200 ' +
+          (align === 'up' ? 'bottom-[calc(100%+6px)] origin-bottom ' : 'top-[calc(100%+6px)] origin-top ') +
+          (open ? 'opacity-100 scale-100' : 'pointer-events-none scale-95 opacity-0')
+        }
+      >
           {options.map((o) => (
             <button
               key={o.value}
@@ -74,7 +75,6 @@ export function Dropdown<T extends string>({
             </button>
           ))}
         </div>
-      )}
     </div>
   )
 }
