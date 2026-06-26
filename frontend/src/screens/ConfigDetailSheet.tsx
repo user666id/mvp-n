@@ -139,7 +139,7 @@ export function ConfigDetailSheet({
         {/* identity — globe avatar + name (no country flag, matches the configs
             list), with the protocol · transport · tech spec underneath. */}
         <div className="mb-6 mt-1 flex flex-col items-center text-center">
-          <span className="grid h-[74px] w-[74px] place-items-center rounded-full bg-surface-sunken text-muted ring-1 ring-inset ring-white/10">
+          <span className="grid h-[74px] w-[74px] place-items-center rounded-full bg-surface-sunken text-muted ring-1 ring-inset ring-border">
             <Globe size={30} />
           </span>
           <div className="font-display mt-3 text-[20px] font-semibold leading-tight text-ink">
@@ -158,14 +158,14 @@ export function ConfigDetailSheet({
               <div className="flex shrink-0 flex-col gap-1">
                 <button
                   onClick={() => setShowQr(true)}
-                  className="grid h-9 w-9 place-items-center rounded-full text-ink active:bg-border"
+                  className="tap grid h-9 w-9 place-items-center rounded-full text-ink active:bg-border"
                   aria-label={t('detail.qr')}
                 >
                   <QrCode size={20} />
                 </button>
                 <button
                   onClick={() => copy(awgConf, t('detail.confCopied'))}
-                  className="grid h-9 w-9 place-items-center rounded-full text-ink active:bg-border"
+                  className="tap grid h-9 w-9 place-items-center rounded-full text-ink active:bg-border"
                   aria-label={t('common.copy')}
                 >
                   <Copy size={20} />

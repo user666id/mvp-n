@@ -7,6 +7,13 @@ import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 const DUR = 300 // ms — slide up / down
 
+// How many bottom-sheets (wallet, QR, confirms …) are open. While any is up, the
+// screen UNDER it must not scroll/bounce/refresh — PullToRefresh checks this.
+let openCount = 0
+export function anyBottomSheetOpen() {
+  return openCount > 0
+}
+
 /**
  * Bottom sheet: slides up from the bottom edge, sized to its content, dims the
  * page behind it. The sheet itself is IMMOVABLE (no drag) — like the TON Connect
@@ -54,10 +61,15 @@ export function BottomSheet({
 
   // Freeze the page behind while open (ref-counted, shared with Sheet) so dragging
   // the sheet never scrolls/rubber-bands the screen underneath — only it moves.
+  // Also flag a bottom-sheet as open so the surface below won't pull-to-refresh.
   useEffect(() => {
     if (!mounted) return
     lockBodyScroll()
-    return () => unlockBodyScroll()
+    openCount++
+    return () => {
+      unlockBodyScroll()
+      openCount--
+    }
   }, [mounted])
 
   if (!mounted) return null
@@ -89,7 +101,7 @@ export function BottomSheet({
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full bg-surface-sunken text-muted active:opacity-80"
+          className="tap absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full bg-surface-sunken text-muted active:opacity-80"
         >
           <X size={18} />
         </button>

@@ -27,18 +27,35 @@ export const RELEASES: ReleaseNote[] = [
             en: 'Home dashboard — at-a-glance Devices and Usage widgets right on the main screen; tap either to open the full view.',
             ru: 'Главный экран-дэшборд — виджеты «Устройства» и «Использование» прямо на главной; тап по любому открывает подробности.',
           },
+          {
+            en: 'Pull to refresh — drag down on the home, Payment, Devices, Usage, history, server-stats and admin screens to reload, with a haptic tick.',
+            ru: 'Потяните вниз, чтобы обновить — на главном, в «Оплате», «Устройствах», «Использовании», истории, статусах сервера и в админке, с лёгким хаптиком.',
+          },
         ],
       },
       {
         kind: 'changed',
         items: [
           {
-            en: 'Device limit moved onto the Devices screen, which now shows your “used / limit” count at the top.',
-            ru: 'Лимит устройств переехал на экран «Устройства» — сверху теперь видно «использовано / лимит».',
+            en: 'Device limit moved onto the Devices screen — now shown right above the device list.',
+            ru: 'Лимит устройств переехал на экран «Устройства» — теперь прямо над списком устройств.',
           },
           {
             en: 'Clearer first run — the welcome and activation screens now say it’s a VPN and show the app’s mark.',
             ru: 'Понятнее первый запуск — экраны входа и активации теперь явно говорят, что это VPN, и показывают знак приложения.',
+          },
+          {
+            en: 'Smoother loading — screens now show a matching placeholder instead of a jump, and boot shows a slim progress bar instead of a spinner.',
+            ru: 'Плавнее загрузка — экраны теперь показывают аккуратный плейсхолдер вместо «прыжка», а при запуске — тонкая полоска прогресса вместо крутилки.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        items: [
+          {
+            en: 'TON-wallet sheet no longer shows its name twice.',
+            ru: 'В окне TON-кошелька название больше не дублируется.',
           },
         ],
       },

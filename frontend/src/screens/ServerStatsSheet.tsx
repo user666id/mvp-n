@@ -1,7 +1,7 @@
 import React, { Suspense, useCallback, useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
-import { Spinner } from '../components/ui/Spinner'
 import { LoadError } from '../components/ui/LoadError'
+import { SheetHero } from '../components/ui/SheetHero'
 import { AreaChart } from '../components/charts'
 import { Globe, Clock, Monitor } from '../components/icons'
 import { StatusDot } from '../components/StatusDot'
@@ -41,24 +41,46 @@ export function ServerStatsSheet({
       .catch(() => setError(true))
   }, [configId])
 
+  // Pull-to-refresh: re-fetch without blanking the charts to skeletons.
+  const refresh = useCallback(
+    () => (configId ? getServerStats(configId).then(setStats).catch(() => {}) : Promise.resolve()),
+    [configId],
+  )
+
   useEffect(() => {
     if (open) load()
   }, [open, load])
 
   return (
-    <Sheet open={open} onClose={onClose} title={t('stats.title')}>
+    <Sheet open={open} onClose={onClose} title={t('stats.title')} onRefresh={refresh}>
+      <SheetHero icon={<Monitor size={30} />} title={t('stats.title')} />
       {error ? (
         <LoadError onRetry={load} />
       ) : !stats ? (
-        <div className="grid place-items-center py-20 text-accent">
-          <Spinner size={28} />
-        </div>
+        <StatsSkeleton />
       ) : (
         <div className="animate-fade">
           <StatsBody stats={stats} />
         </div>
       )}
     </Sheet>
+  )
+}
+
+// Placeholder that mirrors the stats layout (status pill · info card · 3 charts)
+// so the first paint doesn't jump when the data lands.
+function StatsSkeleton() {
+  return (
+    <div className="animate-fade">
+      <div className="skeleton mb-3 h-[52px] w-full rounded-3xl" />
+      <div className="skeleton mb-5 h-[150px] w-full rounded-3xl" />
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="mb-5">
+          <div className="skeleton mb-2 ml-1 h-3 w-24 rounded" />
+          <div className="skeleton h-[192px] w-full rounded-3xl" />
+        </div>
+      ))}
+    </div>
   )
 }
 

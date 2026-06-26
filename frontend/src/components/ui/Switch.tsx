@@ -24,7 +24,7 @@ export function Switch({
       style={{ width: 50, height: 30 }}
     >
       <span
-        className="rounded-full bg-white shadow-sm transition-transform duration-200"
+        className="rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform duration-200"
         style={{
           position: 'absolute',
           top: 3,

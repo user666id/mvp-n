@@ -8,7 +8,7 @@ import { AccountSheet } from './screens/SettingsScreen'
 // Admin panel is admin-only — load it lazily so the bundle non-admins download
 // stays small (it never ships in their first paint).
 const AdminScreen = lazy(() => import('./screens/AdminSheet').then((m) => ({ default: m.AdminScreen })))
-import { Spinner } from './components/ui/Spinner'
+import { LoadingBar } from './components/ui/LoadingBar'
 import { ApiError, authTelegram, clearToken, getProfile, getToken, setLanguage, type Profile } from './api'
 import { notify, signalReady, closeAllSheets } from './lib/telegram'
 import { useT } from './lib/i18n'
@@ -126,8 +126,8 @@ export default function App() {
     <ToastProvider>
       {phase === 'auth' && <AuthScreen onLogin={handleLogin} busy={busy} error={error} />}
       {phase === 'loading' && (
-        <div className="grid min-h-screen place-items-center text-accent">
-          <Spinner size={32} />
+        <div className="min-h-screen bg-canvas">
+          <LoadingBar />
         </div>
       )}
       {phase === 'main' && (
@@ -163,7 +163,7 @@ export default function App() {
           </div>
           {isAdmin && (
             <div className={tab === 'admin' ? 'animate-fade' : 'hidden'}>
-              <Suspense fallback={<div className="grid min-h-screen place-items-center text-accent"><Spinner size={28} /></div>}>
+              <Suspense fallback={<div className="min-h-screen bg-canvas"><LoadingBar /></div>}>
                 <AdminScreen
                   active={tab === 'admin'}
                   onAccount={() => setAccountOpen(true)}

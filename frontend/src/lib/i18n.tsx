@@ -70,7 +70,6 @@ const dict = {
   'sub.status': { en: 'Billing', ru: 'Оплата' },
   'sub.lifetimeShort': { en: 'Lifetime', ru: 'Бессрочно' },
   'sub.none': { en: 'No subscription', ru: 'Нет подписки' },
-  'sub.activeTitle': { en: 'Subscription active', ru: 'Подписка активна' },
   'sub.history': { en: 'Payment history', ru: 'История платежей' },
   'sub.historyEmpty': { en: 'No payments yet', ru: 'Платежей пока нет' },
   'sub.statusPaid': { en: 'Paid', ru: 'Оплачено' },
@@ -79,10 +78,6 @@ const dict = {
   'sub.lifetimeHint': {
     en: 'Granted by an access key — it never expires.',
     ru: 'Доступ выдан по ключу — без срока действия.',
-  },
-  'sub.noneHint': {
-    en: 'Buy a subscription or activate an access key to use the VPN.',
-    ru: 'Купите подписку или активируйте ключ, чтобы пользоваться VPN.',
   },
   'sub.expiredHint': {
     en: 'Renew it to use the VPN and create configs again.',
@@ -108,7 +103,6 @@ const dict = {
   'home.usage': { en: 'Usage', ru: 'Использование' },
   'home.usageSub': { en: 'total', ru: 'всего' },
   // Devices screen: count / limit header + inline limit control.
-  'devices.limitHeader': { en: 'devices', ru: 'устройств' },
   'pay.title': { en: 'Subscription', ru: 'Подписка' },
   'pay.method': { en: 'Payment method', ru: 'Способ оплаты' },
   'pay.plan': { en: 'Plan', ru: 'Тариф' },
@@ -160,10 +154,8 @@ const dict = {
     en: 'You don’t have any configs yet. Create your first one to connect.',
     ru: 'У вас пока нет конфигов. Создайте первый, чтобы подключиться.',
   },
-  'configs.create': { en: 'Create config', ru: 'Создать конфиг' },
   'configs.configure': { en: 'Configure', ru: 'Настроить' },
   'configs.deleted': { en: 'Config deleted', ru: 'Конфиг удалён' },
-  'configs.country': { en: 'Netherlands', ru: 'Нидерланды' },
   'server.online': { en: 'Server is up', ru: 'Сервер работает' },
   'server.offline': { en: 'Server is down', ru: 'Сервер недоступен' },
 
@@ -202,7 +194,6 @@ const dict = {
   'admin.domainsSvc': { en: 'Services', ru: 'Сервисы' },
   'admin.domainOk': { en: 'online', ru: 'онлайн' },
   'admin.domainDown': { en: 'unreachable', ru: 'недоступен' },
-  'admin.refresh': { en: 'Refresh', ru: 'Обновить' },
   'admin.devShort': { en: '{n} dev.', ru: '{n} устр.' },
   'admin.profileFallback': { en: 'Profile {id}', ru: 'Профиль {id}' },
   'admin.idCopied': { en: 'ID copied', ru: 'ID скопирован' },
@@ -294,17 +285,8 @@ const dict = {
   },
 
   // ── create config ──────────────────────────────────────────────────────────
-  'create.title': { en: 'New config', ru: 'Создание конфига' },
-  'create.location': { en: 'Location', ru: 'Локация' },
-  'create.protocolHeader': { en: 'Protocol', ru: 'Протокол' },
-  'create.recommended': { en: 'recommended', ru: 'рекомендовано' },
-  'create.awgNote': {
-    en: 'One config = one device.',
-    ru: 'Один конфиг = одно устройство.',
-  },
   'create.advanced': { en: 'Advanced settings', ru: 'Дополнительные настройки' },
   'create.enhanced': { en: 'Enhanced', ru: 'Усиленный' },
-  'create.game': { en: 'Game mode', ru: 'Игровой режим' },
   'create.standard': { en: 'Standard', ru: 'Обычный' },
   'create.protocol': { en: 'Protocol', ru: 'Протокол' },
   'create.mode': { en: 'Mode', ru: 'Режим' },
@@ -351,21 +333,11 @@ const dict = {
   'settings.darkShade': { en: 'Dark background', ru: 'Тёмный фон' },
   'settings.shadeWarm': { en: 'Standard', ru: 'Стандарт' },
   'settings.shadeBlack': { en: 'Black', ru: 'Чёрный' },
-  'settings.devices': { en: 'Connected devices', ru: 'Подключённые устройства' },
-  'settings.subSettings': { en: 'Device limit', ru: 'Лимит устройств' },
   'settings.deviceLimit': { en: 'Maximum devices', ru: 'Максимум устройств' },
   'settings.noLimit': { en: 'No limit', ru: 'Без лимита' },
-  'settings.subSaved': { en: 'Device limit saved', ru: 'Лимит устройств сохранён' },
-  'settings.reset': { en: 'Reset sessions', ru: 'Сбросить сессии' },
   'settings.walletNotConnected': { en: 'Wallet not connected', ru: 'Кошелёк не подключён' },
   'settings.walletConnect': { en: 'Connect', ru: 'Подключить' },
   'settings.walletDisconnect': { en: 'Disconnect', ru: 'Отключить' },
-  'settings.resetConfirm': {
-    en: 'This disconnects every device using your VPN — you’ll need to reconnect them.',
-    ru: 'Это отключит все устройства, использующие ваш VPN, — нужно будет подключить их заново.',
-  },
-  'settings.resetDone': { en: 'Sessions reset', ru: 'Сессии сброшены' },
-  'settings.resetFailed': { en: 'Failed to reset link', ru: 'Не удалось сбросить ссылку' },
   'settings.deleteAccount': { en: 'Delete account', ru: 'Удалить аккаунт' },
   'settings.adminLocked': { en: 'The admin account is locked', ru: 'Аккаунт администратора закреплён' },
   'settings.deleteAccountConfirm': {
@@ -401,10 +373,6 @@ const dict = {
   'about.terms': { en: 'Usage policy', ru: 'Политика использования' },
   'about.privacy': { en: 'Privacy policy', ru: 'Политика конфиденциальности' },
   'about.licenses': { en: 'Licenses', ru: 'Лицензии' },
-  'about.licensesHint': {
-    en: 'mvp-n is open source (AGPL-3.0). The third-party components it ships or runs, by area — the full (incl. transitive) list lives in the source repositories:',
-    ru: 'mvp-n — открытый код (AGPL-3.0). Сторонние компоненты, которые мы поставляем или запускаем, по областям — полный (включая транзитивные) список в репозиториях:',
-  },
   'lic.app': { en: 'This service', ru: 'Этот сервис' },
   'lic.miniApp': { en: 'Mini App', ru: 'Мини-приложение' },
   'lic.bot': { en: 'Telegram bot', ru: 'Telegram-бот' },

@@ -32,6 +32,9 @@ export function PaymentHistorySheet({ open, onClose }: { open: boolean; onClose:
       .catch(() => setFailed(true))
   }
 
+  // Pull-to-refresh: re-fetch without blanking the list to a skeleton.
+  const refresh = () => getOrderHistory().then(setItems).catch(() => {})
+
   useEffect(() => {
     if (open) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -41,7 +44,7 @@ export function PaymentHistorySheet({ open, onClose }: { open: boolean; onClose:
   const assetLabel = (a: string) => (a === 'TON' ? 'GRAM' : 'USDT')
 
   return (
-    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('sub.history')}>
+    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('sub.history')} onRefresh={refresh}>
       <SheetHero icon={<Clock size={30} />} title={t('sub.history')} />
       {failed ? (
         <LoadError onRetry={load} />

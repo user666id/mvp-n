@@ -1,7 +1,6 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Section } from '../components/ui/Card'
-import { Spinner } from '../components/ui/Spinner'
 import { LoadError } from '../components/ui/LoadError'
 import { SheetHero } from '../components/ui/SheetHero'
 import { ChartLine } from '../components/icons'
@@ -39,6 +38,15 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
       .catch(() => setFailed(true))
   }
 
+  // Pull-to-refresh: re-fetch without blanking the chart to a skeleton.
+  const refresh = () =>
+    getProfileTraffic(30)
+      .then((r) => {
+        setDays(r.days)
+        setTotal(r.total)
+      })
+      .catch(() => {})
+
   useEffect(() => {
     if (open) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,7 +63,7 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
   })()
 
   return (
-    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('settings.usage')}>
+    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('settings.usage')} onRefresh={refresh}>
       <SheetHero icon={<ChartLine size={30} />} title={t('settings.usage')} />
       <Section>
         <div className="flex">
@@ -70,9 +78,7 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
           {failed ? (
             <LoadError onRetry={load} />
           ) : !days ? (
-            <div className="grid place-items-center py-10 text-accent">
-              <Spinner size={26} />
-            </div>
+            <div className="skeleton h-[168px] w-full rounded-2xl" />
           ) : chart.length ? (
             <Suspense fallback={<div className="skeleton h-[168px] w-full rounded-2xl" />}>
               <BarChart

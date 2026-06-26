@@ -3,6 +3,119 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.5.18] — 2026-06-26
+
+### Changed
+Whole-app consistency pass (two full audits — spacing/sizing + materials/structure/behavior).
+Most of the app was already consistent (glass split, Sheet vs BottomSheet, empty/error/retry,
+back-affordances, haptics, loading skeletons). Fixed the real outliers:
+- **TrafficSheet** brought in line with its twin UsageSheet — added the `SheetHero` (icon +
+  title), wired pull-to-refresh (`onRefresh`), and replaced its content spinner with a
+  layout-matching skeleton.
+- **ServerStatsSheet** — added the missing `SheetHero` so every full data sheet has the
+  icon+title anchor.
+- **Press feedback unified** — added the shared `.tap` (scale-0.97 + transition) to the
+  header back/account/menu buttons (PageHeader **and** Sheet header), the BottomSheet ✕,
+  and the config-detail QR/Copy icon buttons, so every tappable control presses the same way.
+- **Admin search input** height `48px → 52px` to match every other input.
+
+Deliberately left as-is (intentional, not outliers): ConfigDetail's 74px identity hero and
+About's 84px brand mark (bespoke by design), small segmented controls' tighter radius, and
+elements inside `.stagger`/animated containers where `.tap` would clash with their entrance
+transform.
+
+## [2.5.17] — 2026-06-26
+
+### Fixed
+- **Page under a mini-modal stays put** — while a `BottomSheet` (wallet, QR, confirm) is
+  open, the screen beneath no longer scrolls/bounces/refreshes. `PullToRefresh` now bails
+  out when any bottom-sheet is open (shared `anyBottomSheetOpen()` flag).
+
+## [2.5.16] — 2026-06-26
+
+### Changed
+- **Scroll feels native everywhere, both directions** — the tabs (Configs/Payment/Admin)
+  drop the custom wrapper entirely and use plain window scroll (up + down bounce like
+  before). `PullToRefresh` is now a two-way elastic overscroll that engages ONLY on
+  short, non-scrolling surfaces (so scrollable sheets keep native momentum/edge-bounce,
+  no double). Silent refresh on a downward pull stays (no spinner).
+- **Device-limit picker floats over the list** — tapping the limit card now reveals the
+  wheel on a frosted `glass-thin` overlay above the device list (scale+fade in, tap-out
+  to close), the same pattern as the language picker — instead of pushing the list down.
+
+## [2.5.15] — 2026-06-26
+
+### Changed
+- **Pull-down without a spinner** — `PullToRefresh` no longer shows a loading spinner.
+  The elastic bounce stays on every screen; on data screens, crossing the threshold
+  fires the refresh silently in the background (haptic tick only) and the content
+  springs straight back — no held state, no indicator.
+
+## [2.5.14] — 2026-06-26
+
+### Changed
+- **Elastic pull-down on EVERY sheet** — `PullToRefresh` now lives inside the `Sheet`
+  component itself, so all full-screen sheets get the native rubber-band bounce even
+  with nothing to reload (`onRefresh` optional → bounce-only mode, no spinner/haptic).
+  Data sheets pass `onRefresh` to the Sheet instead of wrapping their own. Removed the
+  now-redundant per-sheet `PullToRefresh` wrappers.
+- **Home widgets entrance** — the Devices/Usage widgets scaled oddly because each button
+  carried both `.tap` (transitions transform) and `.animate-scale-in` (animates
+  transform); the two fought. Moved the scale-in to the grid container → a clean centre
+  pop, matching the "Настроить" sheet.
+
+### Fixed
+- **TON-wallet title** is back UNDER the icon (consistent with every other screen);
+  the BottomSheet header no longer carries a duplicate copy.
+
+## [2.5.13] — 2026-06-26
+
+### Added
+- **Pull-to-refresh everywhere it's useful** — extended `PullToRefresh` to the Devices,
+  Usage, Payment-history and Server-stats sheets and the Admin tab (was: home, Payment,
+  admin statuses). Every data surface now reloads with a drag-down + haptic; static
+  screens (About, key entry, config detail) deliberately have none.
+
+### Changed
+- **Devices: limit moved ABOVE the list** (was below "Reset active sessions"), per request.
+- **Consistent skeletons** — Usage and Server-stats sheets now show layout-matching
+  placeholders instead of a centred spinner while loading (matching the home dashboard).
+- **Theme-aware disc rings** — the grey category/identity discs use `ring-border`
+  instead of a hardcoded `ring-white/10`, so the edge is visible in light theme too.
+- **Switch thumb** gets a stronger shadow so the off-state (white thumb on a light track)
+  stays visible in light theme.
+
+### Fixed
+- **TON-wallet sheet** showed its title twice ("TON-кошелёк" in the header AND under the
+  icon) — the duplicate label under the icon is removed.
+
+### Removed
+- **20 dead i18n keys** that were defined but never referenced (leftovers from the
+  removed config-create/rename and reset-sessions flows, the old admin Refresh button,
+  and the device-limit header label).
+
+## [2.5.12] — 2026-06-26
+
+### Added
+- **Pull-to-refresh** (`PullToRefresh`): drag-down to reload on the home and Payment
+  tabs and inside the admin domain-status sheet. Scroll-container aware (works on the
+  window-scrolled screens AND inside a portal `Sheet`'s own scroller), rubber-band
+  resistance, haptic tick on threshold + success tick on release. Replaces the manual
+  "Refresh" button in the admin status sheet.
+
+### Changed
+- **Home skeleton** (`HomeSkeleton`): first paint now mirrors the real dashboard layout
+  (subscription strip · config card · 2-up widgets) instead of a generic 2-row list, so
+  content no longer jumps in when data lands.
+- **Boot loading bar** (`LoadingBar`): the app-boot and lazy-chunk fallbacks now show a
+  slim clay-orange (accent) progress bar pinned to the bottom instead of a centred
+  spinner. Button spinners are unchanged. New `loadbar-sweep` keyframes in `index.css`.
+
+### Removed
+- **Config / category icon glow**: the accent `box-shadow` halo on the config detail
+  identity disc, the home config globe, and the `SheetHero` category discs — now flat
+  grey circles, per request ("без свечения").
+
 ## [2.5.6] — 2026-06-26
 
 ### Changed

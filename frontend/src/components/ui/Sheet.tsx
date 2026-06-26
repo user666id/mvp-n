@@ -8,6 +8,7 @@ import { useT } from '../../lib/i18n'
 import { useHeaderCtx } from '../../lib/headerCtx'
 import { inTelegram, pushBackHandler, popBackHandler, accountPhotoUrl } from '../../lib/telegram'
 import { lockBodyScroll, unlockBodyScroll } from '../../lib/scrollLock'
+import { PullToRefresh } from './PullToRefresh'
 
 const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
 const DUR = 300 // ms — enter/exit slide (snappy, Telegram-like)
@@ -26,6 +27,7 @@ export function Sheet({
   title,
   children,
   footer,
+  onRefresh,
   anim = 'push',
   pills = true,
 }: {
@@ -35,6 +37,10 @@ export function Sheet({
   onBack?: () => void
   title: React.ReactNode
   children: React.ReactNode
+  /** Optional pull-to-refresh handler. When set, dragging the body down past the
+   *  threshold runs it (spinner + haptics). When omitted, the body still gets the
+   *  elastic bounce-down — every sheet feels native, refresh or not. */
+  onRefresh?: () => Promise<unknown> | unknown
   /** Optional sticky action bar pinned to the bottom (the sheet's primary
    *  action). The body scrolls above it. Used by the beta layout system so every
    *  sheet's main action lives in the same place. */
@@ -118,7 +124,7 @@ export function Sheet({
             {!inTelegram && (
               <button
                 onClick={onBack ?? onClose}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink active:bg-surface-sunken"
+                className="tap grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink active:bg-surface-sunken"
                 aria-label={t('common.back')}
               >
                 <ChevronLeft size={24} />
@@ -127,7 +133,7 @@ export function Sheet({
             <button
               onClick={accountOpen ? (goHome ?? onBack ?? onClose) : onAccount}
               aria-label="Account"
-              className="flex items-center gap-1.5 rounded-full bg-surface p-1 pr-2.5 active:opacity-80"
+              className="tap flex items-center gap-1.5 rounded-full bg-surface p-1 pr-2.5 active:opacity-80"
             >
               <Avatar name={accountName} photoUrl={accountPhotoUrl} size={32} />
               {accountName && (
@@ -145,7 +151,7 @@ export function Sheet({
         ) : (
           <button
             onClick={onBack ?? onClose}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink active:bg-surface-sunken"
+            className="tap grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink active:bg-surface-sunken"
             aria-label={t('common.back')}
           >
             <ChevronLeft size={26} />
@@ -182,7 +188,11 @@ export function Sheet({
             (footer ? 'pb-4' : 'pb-[max(20px,env(safe-area-inset-bottom))]')
           }
         >
-          {children}
+          {/* Every sheet body gets the native pull-down: elastic bounce always,
+              plus a real refresh when the screen passes an onRefresh. */}
+          <PullToRefresh onRefresh={onRefresh} disabled={!open}>
+            {children}
+          </PullToRefresh>
         </div>
         {footer && (
           <div className="glass rounded-none border-x-0 border-b-0 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">

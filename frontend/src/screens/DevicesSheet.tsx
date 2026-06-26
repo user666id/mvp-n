@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForegroundRefetch } from '../lib/useForeground'
 import { Sheet } from '../components/ui/Sheet'
 import { Button } from '../components/ui/Button'
@@ -49,6 +49,18 @@ export function DevicesSheet({
   const [limit, setLimit] = useState<number | null>(null)
   const [editingLimit, setEditingLimit] = useState(false)
   const [limitVal, setLimitVal] = useState(0)
+  const limitRef = useRef<HTMLDivElement>(null)
+
+  // Close the floating limit picker on a tap outside it (same as the language
+  // dropdown) — the wheel itself lives inside the ref, so scrolling it never closes.
+  useEffect(() => {
+    if (!editingLimit) return
+    const onDoc = (e: PointerEvent) => {
+      if (limitRef.current && !limitRef.current.contains(e.target as Node)) setEditingLimit(false)
+    }
+    document.addEventListener('pointerdown', onDoc)
+    return () => document.removeEventListener('pointerdown', onDoc)
+  }, [editingLimit])
 
   const load = async () => {
     setFailed(false)
@@ -88,6 +100,18 @@ export function DevicesSheet({
   const refresh = async () => {
     await load()
     onChanged?.()
+  }
+
+  // Pull-to-refresh: re-fetch WITHOUT blanking the list to a skeleton — keep the
+  // current rows visible and swap them in when the new data lands.
+  const pullRefresh = async () => {
+    getProfile().then((p) => setLimit(p.device_limit || null)).catch(() => {})
+    try {
+      setDevices(await getDevices())
+      onChanged?.()
+    } catch {
+      /* keep what's shown */
+    }
   }
 
   // Delete a device inline (with a confirm) — no separate actions sheet.
@@ -164,8 +188,51 @@ export function DevicesSheet({
 
   return (
     <>
-      <Sheet open={open} onClose={onClose} title={t('devices.title')}>
+      <Sheet open={open} onClose={onClose} title={t('devices.title')} onRefresh={pullRefresh}>
         <SheetHero icon={<Phone size={30} />} title={t('home.devices')} />
+
+        {/* Device limit — ABOVE the list. Tapping floats the iOS wheel OVER the list
+            on frosted glass (like the language picker); the value auto-saves when it
+            settles (no Save button). */}
+        {devices && (
+          <div className="relative z-20 mb-4" ref={limitRef}>
+            <div className="overflow-hidden rounded-3xl border border-border bg-surface">
+              <button
+                onClick={() => {
+                  setLimitVal(limit ?? 0)
+                  setEditingLimit((e) => !e)
+                }}
+                className="tap flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-surface-sunken"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="font-display text-[16px] font-semibold leading-tight text-ink tabular-nums">
+                    {limit ? `${devices.length} / ${limit}` : devices.length}
+                  </div>
+                  <div className="mt-0.5 text-[12.5px] text-muted">
+                    {limit ? t('settings.deviceLimit') : t('settings.noLimit')}
+                  </div>
+                </div>
+                <ChevronDown size={20} className={'text-faint transition-transform ' + (editingLimit ? 'rotate-180' : '')} />
+              </button>
+            </div>
+            {/* Floating glass picker — overlays the device list instead of pushing it. */}
+            <div
+              aria-hidden={!editingLimit}
+              className={
+                'glass-thin absolute left-0 right-0 top-[calc(100%+6px)] z-30 origin-top overflow-hidden rounded-3xl px-4 py-2 transition-[opacity,transform] duration-200 ' +
+                (editingLimit ? 'opacity-100 scale-100' : 'pointer-events-none scale-95 opacity-0')
+              }
+            >
+              <WheelPicker
+                value={limitVal}
+                options={LIMIT_OPTIONS}
+                onChange={persistLimit}
+                format={(v) => (v === 0 ? t('settings.noLimit') : String(v))}
+              />
+            </div>
+          </div>
+        )}
+
         {failed ? (
           <LoadError onRetry={load} />
         ) : !devices ? (
@@ -187,41 +254,6 @@ export function DevicesSheet({
               last
             />
           </Section>
-        )}
-
-        {/* Device limit — BELOW "Reset active sessions". Tap to reveal the iOS wheel;
-            the value auto-saves when it settles (no Save button). */}
-        {devices && (
-          <div className="overflow-hidden rounded-3xl border border-border bg-surface">
-            <button
-              onClick={() => {
-                setLimitVal(limit ?? 0)
-                setEditingLimit((e) => !e)
-              }}
-              className="tap flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-surface-sunken"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="font-display text-[16px] font-semibold leading-tight text-ink">
-                  {limit ? `${devices.length} / ${limit}` : devices.length}{' '}
-                  <span className="text-[13px] font-normal text-muted">{t('devices.limitHeader')}</span>
-                </div>
-                <div className="mt-0.5 text-[12.5px] text-muted">
-                  {limit ? t('settings.deviceLimit') : t('settings.noLimit')}
-                </div>
-              </div>
-              <ChevronDown size={20} className={'text-faint transition-transform ' + (editingLimit ? 'rotate-180' : '')} />
-            </button>
-            {editingLimit && (
-              <div className="animate-fade border-t border-border px-4 pb-3 pt-1">
-                <WheelPicker
-                  value={limitVal}
-                  options={LIMIT_OPTIONS}
-                  onChange={persistLimit}
-                  format={(v) => (v === 0 ? t('settings.noLimit') : String(v))}
-                />
-              </div>
-            )}
-          </div>
         )}
       </Sheet>
 

@@ -1,8 +1,9 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Section } from '../components/ui/Card'
-import { Spinner } from '../components/ui/Spinner'
 import { LoadError } from '../components/ui/LoadError'
+import { SheetHero } from '../components/ui/SheetHero'
+import { ChartLine } from '../components/icons'
 import { BarChart } from '../components/charts'
 import { useT } from '../lib/i18n'
 import { formatBytes } from '../lib/format'
@@ -41,6 +42,9 @@ export function TrafficSheet({
       .catch(() => setFailed(true))
   }
 
+  // Pull-to-refresh: re-fetch without blanking the chart to a skeleton.
+  const refresh = () => adminGetTraffic(30).then((r) => setDays(r.days)).catch(() => {})
+
   useEffect(() => {
     if (open) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,7 +59,8 @@ export function TrafficSheet({
   })()
 
   return (
-    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('admin.traffic')}>
+    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('admin.traffic')} onRefresh={refresh}>
+      <SheetHero icon={<ChartLine size={30} />} title={t('admin.traffic')} />
       {/* top card — same as the admin panel: TOTAL / TODAY */}
       <Section>
         <div className="flex">
@@ -70,9 +75,7 @@ export function TrafficSheet({
           {failed ? (
             <LoadError onRetry={load} />
           ) : !days ? (
-            <div className="grid place-items-center py-10 text-accent">
-              <Spinner size={26} />
-            </div>
+            <div className="skeleton h-[168px] w-full rounded-2xl" />
           ) : chart.length ? (
             <Suspense fallback={<div className="skeleton h-[168px] w-full rounded-2xl" />}>
               <BarChart

@@ -29,7 +29,9 @@ export function WalletSheet({ open, onClose }: { open: boolean; onClose: () => v
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={t('wallet.title')}>
+    <BottomSheet open={open} onClose={onClose}>
+      {/* Title lives UNDER the icon (the SheetHero), like every other screen —
+          so the BottomSheet header carries no title here (would be a duplicate). */}
       <SheetHero icon={<Wallet size={30} />} title={t('wallet.title')} />
       {address ? (
         <div className="flex items-center gap-2.5 rounded-3xl border border-border bg-surface px-4 py-3">

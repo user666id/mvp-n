@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useActiveRefresh } from '../lib/useForeground'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
-import { ListSkeleton } from '../components/ui/Skeleton'
+import { HomeSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
 import { Spinner } from '../components/ui/Spinner'
 import { Layers, Globe, Phone, ChartLine } from '../components/icons'
@@ -132,7 +132,7 @@ export function ConfigsScreen({
 
       <div className="px-4 pt-4">
         {loading ? (
-          <ListSkeleton rows={2} />
+          <HomeSkeleton />
         ) : failed && !profile && configs.length === 0 ? (
           <LoadError onRetry={load} />
         ) : !hasAccess && pending.length > 0 ? (
@@ -260,10 +260,10 @@ export function ConfigsScreen({
             {/* Dashboard widgets — devices + usage at a glance (iOS-widget style),
                 BELOW the config card so the primary action stays on top. Each taps
                 through to its full screen; matching framed icons + center scale-in. */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="animate-scale-in grid grid-cols-2 gap-2.5">
               <button
                 onClick={() => setDevOpen(true)}
-                className="tap animate-scale-in rounded-3xl border border-border bg-surface p-4 text-left active:bg-surface-sunken"
+                className="tap rounded-3xl border border-border bg-surface p-4 text-left active:bg-surface-sunken"
               >
                 <div className="flex items-center gap-2">
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-sunken text-faint">
@@ -278,7 +278,7 @@ export function ConfigsScreen({
               </button>
               <button
                 onClick={() => setUsageOpen(true)}
-                className="tap animate-scale-in rounded-3xl border border-border bg-surface p-4 text-left active:bg-surface-sunken"
+                className="tap rounded-3xl border border-border bg-surface p-4 text-left active:bg-surface-sunken"
               >
                 <div className="flex items-center gap-2">
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-sunken text-faint">

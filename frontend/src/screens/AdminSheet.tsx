@@ -8,7 +8,7 @@ import { ListSkeleton } from '../components/ui/Skeleton'
 import { BusyOverlay } from '../components/ui/BusyOverlay'
 import { Badge } from '../components/ui/Badge'
 import { Avatar } from '../components/ui/Avatar'
-import { Copy, ChevronRight, Ban, Trash, ExternalLink, Refresh } from '../components/icons'
+import { Copy, ChevronRight, Ban, Trash, ExternalLink } from '../components/icons'
 import { DeviceRow } from '../components/DeviceRow'
 import { StatusDot } from '../components/StatusDot'
 import { ProfileDetails } from '../components/ProfileDetails'
@@ -276,7 +276,7 @@ export function AdminScreen({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('admin.search')}
-              className="h-[48px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[15px] text-ink outline-none placeholder:text-faint focus:border-accent"
+              className="h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[15px] text-ink outline-none placeholder:text-faint focus:border-accent"
             />
           </div>
         )}
@@ -373,13 +373,17 @@ function DomainStatusSheet({
     adminGetDomains().then(setItems).catch(() => setItems([]))
   }
 
+  // Pull-to-refresh: re-fetch WITHOUT blanking to a skeleton — keep the current
+  // statuses visible and swap them in. (Replaces the old "Refresh" button.)
+  const refresh = () => adminGetDomains().then(setItems).catch(() => {})
+
   useEffect(() => {
     if (open) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   return (
-    <Sheet open={open} onClose={onClose} onBack={onBack} title={t('admin.domains')} pills>
+    <Sheet open={open} onClose={onClose} onBack={onBack} title={t('admin.domains')} pills onRefresh={refresh}>
       {!items ? (
         <ListSkeleton rows={3} />
       ) : (
@@ -426,11 +430,6 @@ function DomainStatusSheet({
           )
         })
       )}
-      <div className="pb-2">
-        <Button variant="secondary" stretched disabled={!items} onClick={load}>
-          <Refresh size={18} /> {t('admin.refresh')}
-        </Button>
-      </div>
     </Sheet>
   )
 }

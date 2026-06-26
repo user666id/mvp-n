@@ -46,7 +46,7 @@ export function PageHeader({
             <button
               onClick={onBack}
               aria-label={t('common.back')}
-              className="grid h-9 w-9 place-items-center rounded-full text-ink active:bg-surface-sunken"
+              className="tap grid h-9 w-9 place-items-center rounded-full text-ink active:bg-surface-sunken"
             >
               <ChevronLeft size={24} />
             </button>
@@ -55,7 +55,7 @@ export function PageHeader({
             <button
               onClick={onAccount}
               aria-label="Account"
-              className="flex items-center gap-1.5 rounded-full bg-surface p-1 pr-2.5 active:opacity-80"
+              className="tap flex items-center gap-1.5 rounded-full bg-surface p-1 pr-2.5 active:opacity-80"
             >
               <Avatar name={accountName} photoUrl={accountPhotoUrl} size={32} />
               {accountName && (
@@ -67,7 +67,7 @@ export function PageHeader({
             <button
               onClick={onMenu}
               aria-label="Menu"
-              className="grid h-11 w-11 place-items-center rounded-full text-ink active:bg-surface-sunken"
+              className="tap grid h-11 w-11 place-items-center rounded-full text-ink active:bg-surface-sunken"
             >
               <Menu size={24} />
             </button>
