@@ -192,7 +192,7 @@ export function SubscribeSheet({
     }
   }
   const chipCls = (on: boolean) =>
-    'flex w-full items-center gap-2 rounded-3xl border bg-surface px-3 py-3 text-left transition-colors ' +
+    'flex w-full items-center gap-2 rounded-3xl border bg-surface px-3 py-3 text-left transition-[transform,background-color,border-color] duration-150 active:scale-[0.98] ' +
     (on ? 'border-accent' : 'border-border active:bg-surface-sunken')
 
   const startPay = async () => {
@@ -391,7 +391,7 @@ export function SubscribeSheet({
                   key={p.days}
                   onClick={() => setDays(p.days)}
                   className={
-                    'flex items-center gap-3 rounded-3xl border bg-surface px-4 py-3.5 text-left transition-colors ' +
+                    'flex items-center gap-3 rounded-3xl border bg-surface px-4 py-3.5 text-left transition-[transform,background-color,border-color] duration-150 active:scale-[0.99] ' +
                     (selected ? 'border-accent' : 'border-border active:bg-surface-sunken')
                   }
                 >

@@ -39,6 +39,14 @@ export const RELEASES: ReleaseNote[] = [
             en: 'Faster to open — the app is split into smaller parts that load on demand, so first paint and repeat opens are quicker.',
             ru: 'Быстрее открывается — приложение разбито на части, которые грузятся по мере надобности, поэтому первый и повторные запуски шустрее.',
           },
+          {
+            en: 'Quicker stats — charts load on demand, so the usage and server screens open faster.',
+            ru: 'Шустрее статистика — графики подгружаются по необходимости, поэтому экраны использования и сервера открываются быстрее.',
+          },
+          {
+            en: 'A more consistent feel everywhere — the Payment and Admin screens match the new style, and copying a link gives a light tap of feedback.',
+            ru: 'Единообразнее по всему приложению — экраны «Оплата» и «Админка» приведены к новому стилю, а копирование ссылки отзывается лёгким откликом.',
+          },
         ],
       },
     ],

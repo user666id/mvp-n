@@ -41,7 +41,7 @@
         '<h2>What we store</h2><ul>' +
         '<li>Telegram ID, name and username (from Telegram), and an internal profile identifier the service generates itself.</li>' +
         '<li>Subscription status and expiry.</li>' +
-        '<li>The names you give your devices (device names you set in the app).</li>' +
+        '<li>The names you give your devices in the app.</li>' +
         '<li>An aggregate traffic counter (in bytes) — never per-destination detail.</li>' +
         '<li>Payment records: amount, asset, transaction hash, date.</li></ul>' +
         '<h2>Why we keep it</h2><p>This data is used only to operate the Service: granting access, tracking your subscription, and confirming payment. Nothing here describes what you do over the VPN.</p>' +

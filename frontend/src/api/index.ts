@@ -42,10 +42,6 @@ export function getConfig(id: string) {
   return request<Config>('GET', `/configs/${id}`)
 }
 
-export function renameConfig(id: string, name: string) {
-  return request<{ renamed: boolean }>('PATCH', `/configs/${id}/title`, { name })
-}
-
 export function deleteConfig(id: string) {
   return request<{ deleted: boolean }>('DELETE', `/configs/${id}`)
 }

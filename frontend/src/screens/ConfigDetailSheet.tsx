@@ -3,10 +3,9 @@ import { Sheet } from '../components/ui/Sheet'
 import { BottomSheet } from '../components/ui/BottomSheet'
 import { Button } from '../components/ui/Button'
 import { Dropdown } from '../components/ui/Dropdown'
-import { BusyOverlay } from '../components/ui/BusyOverlay'
 import { Qr } from '../components/Qr'
 import {
-  Pencil, Copy, QrCode, ChevronRight, ChevronDown, ExternalLink,
+  Copy, QrCode, ChevronRight, ChevronDown, ExternalLink,
   Globe, Sliders, Download,
 } from '../components/icons'
 import { StatusDot } from '../components/StatusDot'
@@ -103,14 +102,12 @@ export function ConfigDetailSheet({
   open,
   onClose,
   onToggle,
-  onRename,
   onOpenStats,
 }: {
   config: Config | null
   open: boolean
   onClose: () => void
   onToggle: (key: 'enhanced' | 'game_mode', val: boolean) => void
-  onRename: (name: string) => Promise<void>
   /** Kept for API compatibility with the parent; config delete is no longer
    *  exposed (the config comes with the subscription). */
   onDelete?: () => Promise<void>
@@ -123,9 +120,6 @@ export function ConfigDetailSheet({
   const [os, setOs] = useState<OSKey>(detectOs)
   const [launcher, setLauncher] = useState<string>(() => launchersFor(detectOs())[0]?.id ?? 'happ')
   const [advOpen, setAdvOpen] = useState(false)
-  const [showRename, setShowRename] = useState(false)
-  const [renameVal, setRenameVal] = useState('')
-  const [busy, setBusy] = useState(false)
 
   if (!config) return null
   const isAwg = config.protocol === 'awg'
@@ -139,19 +133,6 @@ export function ConfigDetailSheet({
     toast(msg)
   }
 
-  const doRename = async () => {
-    const name = renameVal.trim()
-    if (!name) return
-    setBusy(true)
-    try {
-      await onRename(name)
-      setShowRename(false)
-      toast(t('devices.renamed'))
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
     <>
       <Sheet open={open} onClose={onClose} title={t('detail.title')} anim="center" pills>
@@ -162,20 +143,8 @@ export function ConfigDetailSheet({
             <Globe size={24} />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="truncate font-display text-[18px] font-semibold leading-tight text-ink">
-                {config.name || t('detail.title')}
-              </span>
-              <button
-                onClick={() => {
-                  setRenameVal(config.name || '')
-                  setShowRename(true)
-                }}
-                className="shrink-0 text-accent active:opacity-60"
-                aria-label={t('devices.rename')}
-              >
-                <Pencil size={16} />
-              </button>
+            <div className="truncate font-display text-[18px] font-semibold leading-tight text-ink">
+              {t('detail.title')}
             </div>
             <div className="mt-0.5 text-[12.5px] text-faint">{configSpecLine(meta)}</div>
           </div>
@@ -228,14 +197,14 @@ export function ConfigDetailSheet({
             <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-ink">{link}</span>
             <button
               onClick={() => setShowQr(true)}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent active:bg-surface-sunken"
+              className="tap grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent active:bg-surface-sunken"
               aria-label={t('detail.qr')}
             >
               <QrCode size={20} />
             </button>
             <button
               onClick={() => copy(link, t('detail.linkCopied'))}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent active:bg-surface-sunken"
+              className="tap grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent active:bg-surface-sunken"
               aria-label={t('detail.copyLink')}
             >
               <Copy size={20} />
@@ -250,7 +219,7 @@ export function ConfigDetailSheet({
               <button
                 type="button"
                 onClick={() => setAdvOpen((o) => !o)}
-                className="flex min-h-[54px] w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-sunken"
+                className="tap flex min-h-[54px] w-full items-center gap-3 px-4 py-2.5 text-left active:bg-surface-sunken"
               >
                 <Sliders size={20} className="shrink-0 text-muted" />
                 <span className="flex-1 text-[15px] text-ink">{t('create.advanced')}</span>
@@ -337,8 +306,6 @@ export function ConfigDetailSheet({
             <ChevronRight size={18} className="ml-auto text-faint" />
           </button>
         </div>
-
-        <BusyOverlay show={busy} />
       </Sheet>
 
       {/* app chooser — OS tabs + launcher tabs + numbered install stepper */}
@@ -364,7 +331,7 @@ export function ConfigDetailSheet({
               key={app.id}
               onClick={() => setLauncher(app.id)}
               className={
-                'h-9 flex-1 rounded-full border bg-surface text-[14px] font-medium text-ink transition-colors ' +
+                'tap h-9 flex-1 rounded-full border bg-surface text-[14px] font-medium text-ink transition-[transform,background-color,border-color] duration-150 ' +
                 (launcher === app.id ? 'border-accent' : 'border-border active:bg-surface-sunken')
               }
             >
@@ -395,7 +362,7 @@ export function ConfigDetailSheet({
                     {store && (
                       <button
                         onClick={() => openLink(store.href)}
-                        className="mt-2.5 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-accent/15 text-[13.5px] font-medium text-accent active:bg-accent/25"
+                        className="mt-2.5 inline-flex h-10 w-full items-center justify-center gap-1.5 tap rounded-full bg-accent/15 text-[13.5px] font-medium text-accent active:bg-accent/25"
                       >
                         <span className="truncate">{store.label}</span>
                         <ExternalLink size={14} className="shrink-0" />
@@ -421,7 +388,7 @@ export function ConfigDetailSheet({
                     </Button>
                     <button
                       onClick={() => copy(link, t('detail.linkCopied'))}
-                      className="mt-2 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-accent/15 text-[13.5px] font-medium text-accent active:bg-accent/25"
+                      className="mt-2 inline-flex h-10 w-full items-center justify-center gap-1.5 tap rounded-full bg-accent/15 text-[13.5px] font-medium text-accent active:bg-accent/25"
                     >
                       <Copy size={14} className="shrink-0" /> {t('detail.copyLink')}
                     </button>
@@ -451,24 +418,6 @@ export function ConfigDetailSheet({
           {isAwg ? t('detail.awgQrHint') : t('detail.qrHint')}
         </p>
       </BottomSheet>
-
-      {/* rename */}
-      <Sheet open={showRename} onClose={() => setShowRename(false)} onBack={() => setShowRename(false)} title={t('detail.renameTitle')} anim="center">
-        <label className="px-1 text-[12px] font-medium uppercase tracking-[0.06em] text-faint">
-          {t('detail.name')}
-        </label>
-        <input
-          value={renameVal}
-          onChange={(e) => setRenameVal(e.target.value)}
-          placeholder={t('detail.namePlaceholder')}
-          className="mb-4 mt-2 h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
-        />
-        <div className="pb-2">
-          <Button stretched loading={busy} disabled={!renameVal.trim()} onClick={doRename}>
-            {t('devices.renameSave')}
-          </Button>
-        </div>
-      </Sheet>
     </>
   )
 }

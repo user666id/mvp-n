@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Section } from '../components/ui/Card'
 import { Spinner } from '../components/ui/Spinner'
-import { BarChart } from '../components/BarChart'
+import { BarChart } from '../components/charts'
 import { useT } from '../lib/i18n'
 import { formatBytes } from '../lib/format'
 import { adminGetTraffic, type TrafficDay } from '../api'
@@ -12,7 +12,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex-1 px-4 py-3.5">
       <div className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-faint">{label}</div>
-      <div className="mt-1 font-display text-[19px] font-semibold leading-tight text-ink">{value}</div>
+      <div key={value} className="animate-rise mt-1 font-display text-[19px] font-semibold leading-tight text-ink">{value}</div>
     </div>
   )
 }
@@ -68,10 +68,12 @@ export function TrafficSheet({
               <Spinner size={26} />
             </div>
           ) : chart.length ? (
-            <BarChart
-              data={chart.map((d) => ({ day: d.day, value: d.bytes }))}
-              format={(v) => formatBytes(v, lang)}
-            />
+            <Suspense fallback={<div className="skeleton h-[168px] w-full rounded-2xl" />}>
+              <BarChart
+                data={chart.map((d) => ({ day: d.day, value: d.bytes }))}
+                format={(v) => formatBytes(v, lang)}
+              />
+            </Suspense>
           ) : (
             <div className="py-8 text-center text-[14px] text-muted">{t('traffic.empty')}</div>
           )}

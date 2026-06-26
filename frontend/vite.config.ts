@@ -20,6 +20,13 @@ export default defineConfig({
           ) {
             return 'react'
           }
+          // @tonconnect/* is pulled in eagerly by the header wallet capsule (the
+          // TonConnect provider wraps the app), so isolate it into its own chunk
+          // that stays cached across deploys. NOTE: do NOT bucket @ton/core here —
+          // it's only needed to build a payment tx and must stay lazy in WalletPay.
+          if (id.includes('node_modules/@tonconnect')) {
+            return 'ton'
+          }
         },
       },
     },

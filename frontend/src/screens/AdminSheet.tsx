@@ -218,7 +218,7 @@ export function AdminScreen({
                   key={d}
                   onClick={() => setKeyDays(d)}
                   className={
-                    'rounded-full border px-3.5 py-1.5 text-[13px] font-medium ' +
+                    'rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-transform duration-150 active:scale-95 ' +
                     (keyDays === d
                       ? 'border-accent bg-surface text-ink'
                       : 'border-border bg-surface text-muted')
@@ -293,7 +293,7 @@ export function AdminScreen({
                   key={p.id}
                   onClick={() => setSel(p)}
                   className={
-                    'flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-sunken ' +
+                    'flex w-full items-center gap-3 px-4 py-3 text-left transition-[transform,background-color] duration-150 active:scale-[0.99] active:bg-surface-sunken ' +
                     (i === shown.length - 1 ? '' : 'border-b border-border')
                   }
                 >
@@ -414,7 +414,7 @@ function DomainStatusSheet({
                     </>
                   )
                   return kind === 'web' ? (
-                    <button key={d.name} onClick={() => openLink('https://' + d.name)} className={cls + 'active:bg-surface-sunken'}>
+                    <button key={d.name} onClick={() => openLink('https://' + d.name)} className={cls + 'transition-[transform,background-color] duration-150 active:scale-[0.99] active:bg-surface-sunken'}>
                       {inner}
                     </button>
                   ) : (

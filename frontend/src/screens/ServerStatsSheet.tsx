@@ -1,13 +1,23 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
 import { Spinner } from '../components/ui/Spinner'
 import { LoadError } from '../components/ui/LoadError'
-import { AreaChart } from '../components/Chart'
+import { AreaChart } from '../components/charts'
 import { Globe, Clock, Monitor } from '../components/icons'
 import { StatusDot } from '../components/StatusDot'
 import { getServerStats, type ServerStats } from '../api'
 import { bytesRate } from '../lib/format'
 import { useT } from '../lib/i18n'
+
+// AreaChart is lazy (split out of the main bundle); show a chart-sized skeleton
+// while its chunk loads on first open.
+function LazyArea(props: React.ComponentProps<typeof AreaChart>) {
+  return (
+    <Suspense fallback={<div className="skeleton h-[160px] w-full rounded-2xl" />}>
+      <AreaChart {...props} />
+    </Suspense>
+  )
+}
 
 export function ServerStatsSheet({
   open,
@@ -73,7 +83,7 @@ function StatsBody({ stats }: { stats: ServerStats }) {
       </div>
 
       <ChartCard title={t('stats.cpu')}>
-        <AreaChart
+        <LazyArea
           timestamps={stats.timestamps}
           series={[{ values: stats.cpu, color: green }]}
           format={(v) => v.toFixed(1) + '%'}
@@ -83,7 +93,7 @@ function StatsBody({ stats }: { stats: ServerStats }) {
       </ChartCard>
 
       <ChartCard title={t('stats.ram')}>
-        <AreaChart
+        <LazyArea
           timestamps={stats.timestamps}
           series={[{ values: stats.ram, color: green }]}
           format={(v) => v.toFixed(1) + '%'}
@@ -93,7 +103,7 @@ function StatsBody({ stats }: { stats: ServerStats }) {
       </ChartCard>
 
       <ChartCard title={t('stats.net')}>
-        <AreaChart
+        <LazyArea
           timestamps={stats.timestamps}
           series={[
             { values: stats.net_out, color: green, tag: '↑' },

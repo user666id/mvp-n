@@ -29,7 +29,7 @@ function WalletInner() {
       <div className="min-w-0 flex-1 text-[15px] text-ink tabular-nums">{short}</div>
       <button
         onClick={() => tonConnectUI.disconnect()}
-        className="shrink-0 text-[13.5px] font-medium text-danger active:opacity-60"
+        className="tap shrink-0 text-[13.5px] font-medium text-danger active:opacity-60"
       >
         {t('settings.walletDisconnect')}
       </button>

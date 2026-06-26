@@ -33,7 +33,7 @@ export function WalletSheet({ open, onClose }: { open: boolean; onClose: () => v
         <div className="flex items-center gap-2.5 rounded-3xl border border-border bg-surface px-4 py-3">
           <button
             onClick={copy}
-            className="flex min-w-0 flex-1 items-center gap-2.5 text-left active:opacity-70"
+            className="tap flex min-w-0 flex-1 items-center gap-2.5 text-left active:opacity-70"
             aria-label={t('common.copy')}
           >
             <Wallet size={20} className="shrink-0 text-success" />
@@ -44,7 +44,7 @@ export function WalletSheet({ open, onClose }: { open: boolean; onClose: () => v
               tonConnectUI.disconnect()
               onClose()
             }}
-            className="shrink-0 text-[13.5px] font-medium text-danger active:opacity-60"
+            className="tap shrink-0 text-[13.5px] font-medium text-danger active:opacity-60"
           >
             {t('settings.walletDisconnect')}
           </button>

@@ -87,7 +87,6 @@ func main() {
 	mux.Handle("GET /orders/{id}", auth(http.HandlerFunc(h.GetOrder)))
 	mux.Handle("GET /configs/{id}", auth(http.HandlerFunc(h.GetConfig)))
 	mux.Handle("DELETE /configs/{id}", auth(http.HandlerFunc(h.DeleteConfig)))
-	mux.Handle("PATCH /configs/{id}/title", auth(http.HandlerFunc(h.RenameConfig)))
 	mux.Handle("PATCH /configs/{id}/settings", auth(http.HandlerFunc(h.UpdateConfigSettings)))
 	mux.Handle("GET /configs/{id}/serverStats", auth(http.HandlerFunc(h.ServerStats)))
 	mux.Handle("GET /configs/{id}/awgStats", auth(http.HandlerFunc(h.AwgStats)))

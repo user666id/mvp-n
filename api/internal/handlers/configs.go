@@ -419,24 +419,6 @@ func (h *Handler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	h.writeOK(w, map[string]any{"deleted": true})
 }
 
-// ── PATCH /configs/{id}/title ────────────────────────────────────────────────
-
-func (h *Handler) RenameConfig(w http.ResponseWriter, r *http.Request) {
-	uid, _ := middleware.UserID(r.Context())
-	id := r.PathValue("id")
-	var req struct {
-		Name string `json:"name"`
-	}
-	_ = readJSON(r, &req)
-	_, err := h.DB.ExecContext(r.Context(),
-		`UPDATE vpn_configs SET name = $1 WHERE id = $2 AND user_id = $3`, req.Name, id, uid)
-	if err != nil {
-		h.writeError(w, 500, "DB_ERROR", err.Error())
-		return
-	}
-	h.writeOK(w, map[string]any{"renamed": true})
-}
-
 // ── PATCH /configs/{id}/settings ─────────────────────────────────────────────
 // Body: { "enhanced": bool, "game_mode": bool }
 // Returns: updated config (with freshly-computed URI).

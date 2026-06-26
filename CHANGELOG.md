@@ -3,6 +3,61 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.4.3] — 2026-06-26
+
+Full one-style / one-logic polish pass across every screen.
+
+### Changed
+- **Unified tactile feedback** via a `.tap` utility (press `scale(0.97)`, reduced-motion
+  aware): applied to the remaining custom buttons across the Install screen (QR/copy,
+  app/launcher tabs, install-step buttons, Advanced toggle), Payment history rows,
+  Wallet capsule/sheet, and the home subscription strip — matching the shared
+  Button/Cell. Copy actions already tick via `copyText`.
+- **Micro-animations on numbers**: `.animate-rise` (rise + fade, keyed by value so it
+  replays on change) on the traffic TOTAL/TODAY totals and the home days-left.
+
+### Performance
+- **TON SDK split out**: `manualChunks` isolates `@tonconnect/*` into a cached `ton`
+  chunk (eager via the header wallet capsule), while `@ton/core` stays lazy in
+  `WalletPay`. Main bundle 611 → 167 kB (gzip 184 → 53); react + ton now stay cached
+  across deploys, so a redeploy only re-downloads the ~53 kB app chunk.
+
+## [2.4.2] — 2026-06-26
+
+### Removed
+- **Config rename** dropped end-to-end so config names are genuinely not stored
+  (resolves the 2.4.1 logic flag in favour of the Privacy Policy): removed the
+  rename UI + name display in `ConfigDetailSheet`, the wiring in `ConfigsScreen`,
+  `renameConfig` in the API client, and the backend `PATCH /configs/{id}/title`
+  route + `RenameConfig` handler. The config header now shows the static title.
+- Privacy Policy stays device-names-only (no configuration names).
+- Note: the legacy `vpn_configs.name` column is left in place (now write-free); a
+  follow-up migration can NULL/drop it for full erasure of any old names.
+
+## [2.4.1] — 2026-06-26
+
+Follow-up to 2.4.0: chart code-splitting + style/tactility polish on Payment & Admin.
+
+### Performance
+- **Charts are lazy** (`components/charts.tsx` — `React.lazy` wrappers for `AreaChart`
+  + `BarChart`, Suspense skeletons in `ServerStatsSheet` / `TrafficSheet` /
+  `UsageSheet`): Chart/BarChart/chartkit now split into their own ~6 kB of chunks,
+  loaded only when a stats screen is opened.
+
+### Changed
+- **Copy haptic**: a light tick fires from the shared `copyText` helper, so every
+  copy in the app (links, addresses, keys, IDs) gives the same native feedback.
+- **Payment & Admin tactility**: press `active:scale` on the plan cards, payment-method
+  chips, key-duration chips, profile rows and domain rows — matching the unified
+  feel from 2.4.0. (Glass/blur were already unified in 2.4.0.)
+
+### Notes
+- **Logic flag (unresolved):** the app DOES store & edit config names
+  (`PATCH /configs/{id}/title`, `Config.name`, rename UI in `ConfigDetailSheet`),
+  but 2.3 removed "configuration names" from the Privacy Policy's stored-data list.
+  These contradict — pending a decision to either restore the privacy line or drop
+  the config-rename feature.
+
 ## [2.4.0] — 2026-06-26
 
 UI consistency pass — unified "liquid glass", tactility, native-feel transitions,

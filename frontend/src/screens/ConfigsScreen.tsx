@@ -16,7 +16,6 @@ import {
   getConfigs,
   getProfile,
   getPendingOrders,
-  renameConfig,
   updateSettings,
   type Config,
   type Order,
@@ -103,12 +102,6 @@ export function ConfigsScreen({
     }
   }
 
-  const handleRename = async (name: string) => {
-    if (!detailId) return
-    await renameConfig(detailId, name)
-    setConfigs((prev) => prev.map((c) => (c.id === detailId ? { ...c, name } : c)))
-  }
-
   const handleDelete = async () => {
     if (!detailId) return
     await deleteConfig(detailId)
@@ -170,7 +163,7 @@ export function ConfigsScreen({
             {profile &&
               (expired ? (
                 <div className="mb-4 flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3">
-                  <button onClick={onGoSubscription} className="min-w-0 flex-1 text-left active:opacity-70">
+                  <button onClick={onGoSubscription} className="tap min-w-0 flex-1 text-left active:opacity-70">
                     <div className="text-[14px] font-medium text-danger">{t('sub.expired')}</div>
                     <div className="mt-0.5 text-[12.5px] text-muted">{t('sub.expiredShort')}</div>
                   </button>
@@ -180,11 +173,11 @@ export function ConfigsScreen({
                 </div>
               ) : profile.paid_until ? (
                 <div className="mb-4 flex items-center gap-3 rounded-3xl border border-border bg-surface px-4 py-3">
-                  <button onClick={onGoSubscription} className="min-w-0 flex-1 text-left active:opacity-70">
+                  <button onClick={onGoSubscription} className="tap min-w-0 flex-1 text-left active:opacity-70">
                     <div className="text-[14px] font-medium text-ink">
                       {t('sub.activeShort', { d: fmtSubDate(profile.paid_until, lang) })}
                     </div>
-                    <div className="mt-0.5 text-[12.5px] text-muted">
+                    <div className="animate-rise mt-0.5 text-[12.5px] text-muted">
                       {t('sub.daysLeft', {
                         n: Math.max(
                           0,
@@ -254,7 +247,6 @@ export function ConfigsScreen({
         open={!!detail}
         onClose={() => setDetailId(null)}
         onToggle={handleToggle}
-        onRename={handleRename}
         onDelete={handleDelete}
         onOpenStats={() => setStatsOpen(true)}
       />
