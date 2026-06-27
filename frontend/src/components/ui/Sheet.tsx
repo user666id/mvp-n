@@ -223,7 +223,7 @@ export function Sheet({
                 <button
                   onClick={accountOpen ? (goHome ?? onBack ?? onClose) : onAccount}
                   aria-label="Account"
-                  className="tap flex items-center gap-1.5 rounded-full bg-surface p-1 pr-2.5 active:opacity-80"
+                  className="tap flex items-center gap-1.5 rounded-full bg-surface p-1.5 pr-3 active:opacity-80"
                 >
                   <Avatar name={accountName} photoUrl={accountPhotoUrl} size={32} />
                   {accountName && (

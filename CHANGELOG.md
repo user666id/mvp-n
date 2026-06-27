@@ -3,6 +3,91 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.5.33] — 2026-06-27
+
+### Changed
+- **Aligned device rows with the rest of the list rows.** The user/admin device rows had
+  a bare size-22 icon and a full-width divider; they now use the same 30px round icon
+  tile (size-20 glyph) and the same inset divider as the Settings/Account/Admin rows, so
+  every list row across the app matches in icon size, frame and divider inset.
+
+## [2.5.32] — 2026-06-27
+
+### Changed
+- **Round icon tiles on list rows.** Settings/Account/Admin row icons get a round
+  `bg-surface-sunken` tile (30px) instead of bare icons — so everything is now
+  consistently round: row tiles, heroes, home icons, wallet, and avatars.
+
+## [2.5.31] — 2026-06-27
+
+### Changed
+- **Hybrid icon treatment (test).** List rows (Settings/Account/Admin) go back to bare,
+  frameless icons — the Telegram-native style — while every framed icon (heroes, config
+  detail, home globe + widgets + pending disc, wallet-pill icon, load-error and
+  payment-status discs) is round again. Avatars stay round. (Reverses the all-square
+  experiment; rows lose their tiles entirely.)
+
+## [2.5.30] — 2026-06-27
+
+### Reverted
+- **Hero back to just the icon + title** (no intro card / description). Reverted the
+  2.5.29 card: `SheetHero` is again a centred square icon tile + title; removed the
+  per-screen descriptions and the `hero.*` strings; restored the Activate-key hint
+  paragraph and the config-detail inline identity hero (with its spec line).
+
+## [2.5.29] — 2026-06-27
+
+### Changed
+- **Hero redesigned into an iOS-style intro card.** `SheetHero` is now a bordered card
+  with a rounded-square icon tile, a bold title and a short description (like the system
+  "General" header / Need's plan card), left-aligned — instead of a centred icon + title.
+  Added a description line to every screen that uses it: Devices, Usage, Payment, Payment
+  history, Activate key, Wallet, Server stats, Traffic, and the config-detail identity
+  (which now uses SheetHero with its protocol·transport·tech spec as the description).
+
+## [2.5.28] — 2026-06-27
+
+### Changed
+- **Header capsules a touch larger, with breathing room.** The avatar and wallet pills
+  bumped their padding `p-1 pr-2.5 → p-1.5 pr-3`, so the 32px inner tile/avatar no longer
+  nearly touches the rounded capsule edge. Both pills stay identical in size.
+
+## [2.5.27] — 2026-06-27
+
+### Fixed
+- **Smoother loading (no jump / no flash).**
+  - Devices: the limit card now has a matching skeleton during load, so the list no
+    longer jumps down when data arrives (the card used to pop in above the skeleton).
+  - Usage: the TOTAL/TODAY values show a skeleton while loading instead of a flashing
+    "0 B → real"; the chart fades in.
+  - Usage & Traffic charts fade in instead of hard-swapping from the skeleton.
+- **Icon-tile proportions.** The square tiles had glyphs that were too small for the
+  frame: the wallet-pill icon `16 → 19` and the home Devices/Usage widget icons
+  `15 → 17`, so they fill the tile like the row icons and the avatar do.
+
+## [2.5.26] — 2026-06-27
+
+### Changed
+- **All icon frames squared (except avatars).** Extended the iOS rounded-square treatment
+  to every decorative icon frame: the 74px hero discs (Devices/Usage/Payment/History/Key
+  + config detail) → `rounded-2xl`, the home config globe (40px) → `rounded-xl`, the home
+  Devices/Usage widget icons (28px) → `rounded-lg`, the wallet-pill icon (32px) →
+  `rounded-[9px]`, and the load-error / payment-status discs → `rounded-2xl`. Left
+  circular: avatars, the brand mark, round nav/action buttons (back, ✕, copy, trash),
+  radio dots, and numbered step badges — those aren't icon tiles.
+- **"Delete account" → "Delete app account"** (`Удалить аккаунт приложения`) on the
+  Settings row and the matching admin profile action, to make it explicit it's the
+  in-app account.
+
+## [2.5.25] — 2026-06-27
+
+### Changed
+- **iOS-style icon tiles on list rows (test).** Every `Cell` leading icon now sits in a
+  rounded-square `bg-surface-sunken` tile (30px, `rounded-[9px]`) like iOS Settings —
+  applied across Settings, Account, and Admin nav rows at once. Avatars are untouched
+  (they're not Cells) and stay circular. Row dividers start after the tile. Big circular
+  hero icons left as-is for now (pending feedback on whether to square those too).
+
 ## [2.5.24] — 2026-06-27
 
 ### Fixed

@@ -1,9 +1,9 @@
 import { type ReactNode } from 'react'
 
 /**
- * Category hero — a centred circular icon + a title under it, at the top of a
- * screen (under the avatar/wallet header). A clean grey disc (no glow) with a thin
- * ring, the icon, and a title under it — a consistent anchor per screen.
+ * Category hero — a centred square icon tile + a title under it, at the top of a
+ * screen. A clean grey tile with a thin ring, the icon, and a title under it — a
+ * consistent, lightweight anchor per screen.
  */
 export function SheetHero({ icon, title }: { icon: ReactNode; title?: string }) {
   return (

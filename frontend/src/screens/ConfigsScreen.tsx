@@ -267,7 +267,7 @@ export function ConfigsScreen({
               >
                 <div className="flex items-center gap-2">
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-sunken text-faint">
-                    <Phone size={15} />
+                    <Phone size={17} />
                   </span>
                   <span className="text-[12px] font-medium uppercase tracking-[0.06em] text-muted">{t('home.devices')}</span>
                 </div>
@@ -282,7 +282,7 @@ export function ConfigsScreen({
               >
                 <div className="flex items-center gap-2">
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-sunken text-faint">
-                    <ChartLine size={15} />
+                    <ChartLine size={17} />
                   </span>
                   <span className="text-[12px] font-medium uppercase tracking-[0.06em] text-muted">{t('home.usage')}</span>
                 </div>

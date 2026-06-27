@@ -10,12 +10,17 @@ import { useT } from '../lib/i18n'
 import { formatBytes } from '../lib/format'
 import { getProfileTraffic, type TrafficDay } from '../api'
 
-/** TOTAL / TODAY stat, matching the admin panel's traffic card. */
-function Stat({ label, value }: { label: string; value: string }) {
+/** TOTAL / TODAY stat, matching the admin panel's traffic card. A null value =
+ *  still loading → show a skeleton bar instead of a misleading "0 B" that flashes. */
+function Stat({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="flex-1 px-4 py-3.5">
       <div className="text-[11.5px] font-medium uppercase tracking-[0.06em] text-faint">{label}</div>
-      <div key={value} className="animate-rise mt-1 font-display text-[19px] font-semibold leading-tight text-ink">{value}</div>
+      {value === null ? (
+        <div className="skeleton mt-1.5 h-[20px] w-20 rounded" />
+      ) : (
+        <div key={value} className="animate-rise mt-1 font-display text-[19px] font-semibold leading-tight text-ink">{value}</div>
+      )}
     </div>
   )
 }
@@ -63,9 +68,9 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
       <SheetHero icon={<ChartLine size={30} />} title={t('settings.usage')} />
       <Section>
         <div className="flex">
-          <Stat label={t('admin.trafficTotalShort')} value={formatBytes(total, lang)} />
+          <Stat label={t('admin.trafficTotalShort')} value={days ? formatBytes(total, lang) : null} />
           <div className="w-px self-stretch bg-border" />
-          <Stat label={t('admin.trafficTodayShort')} value={formatBytes(today, lang)} />
+          <Stat label={t('admin.trafficTodayShort')} value={days ? formatBytes(today, lang) : null} />
         </div>
       </Section>
 
@@ -76,12 +81,14 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
           ) : !days ? (
             <div className="skeleton h-[168px] w-full rounded-2xl" />
           ) : chart.length ? (
-            <Suspense fallback={<div className="skeleton h-[168px] w-full rounded-2xl" />}>
-              <BarChart
-                data={chart.map((d) => ({ day: d.day, value: d.bytes }))}
-                format={(v) => formatBytes(v, lang)}
-              />
-            </Suspense>
+            <div className="animate-fade">
+              <Suspense fallback={<div className="skeleton h-[168px] w-full rounded-2xl" />}>
+                <BarChart
+                  data={chart.map((d) => ({ day: d.day, value: d.bytes }))}
+                  format={(v) => formatBytes(v, lang)}
+                />
+              </Suspense>
+            </div>
           ) : (
             <div className="py-8 text-center text-[14px] text-muted">{t('traffic.empty')}</div>
           )}

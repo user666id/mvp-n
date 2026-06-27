@@ -216,7 +216,7 @@ const dict = {
   },
   'admin.profileDeleted': { en: 'Profile deleted', ru: 'Профиль удалён' },
   'admin.cantDeleteAdmin': { en: 'Can’t delete the admin', ru: 'Нельзя удалить админа' },
-  'admin.deleteProfile': { en: 'Delete profile', ru: 'Удалить профиль' },
+  'admin.deleteProfile': { en: 'Delete app account', ru: 'Удалить аккаунт приложения' },
 
   // ── config characteristics ──────────────────────────────────────────────────
   'meta.modeNormal': { en: 'Standard', ru: 'Обычный' },
@@ -338,7 +338,7 @@ const dict = {
   'settings.walletNotConnected': { en: 'Wallet not connected', ru: 'Кошелёк не подключён' },
   'settings.walletConnect': { en: 'Connect', ru: 'Подключить' },
   'settings.walletDisconnect': { en: 'Disconnect', ru: 'Отключить' },
-  'settings.deleteAccount': { en: 'Delete account', ru: 'Удалить аккаунт' },
+  'settings.deleteAccount': { en: 'Delete app account', ru: 'Удалить аккаунт приложения' },
   'settings.adminLocked': { en: 'The admin account is locked', ru: 'Аккаунт администратора закреплён' },
   'settings.deleteAccountConfirm': {
     en: 'Delete your account and all configs? This can’t be undone.',

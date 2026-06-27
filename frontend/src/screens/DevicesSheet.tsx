@@ -181,7 +181,9 @@ export function DevicesSheet({
 
         {/* Device limit — ABOVE the list. Tapping floats the iOS wheel OVER the list
             on frosted glass (like the language picker); the value auto-saves when it
-            settles (no Save button). */}
+            settles (no Save button). A matching skeleton during load reserves its space
+            so the list doesn't jump down when data arrives. */}
+        {!devices && !failed && <div className="skeleton mb-4 h-[62px] w-full rounded-3xl" />}
         {devices && (
           <div className="relative z-20 mb-4" ref={limitRef}>
             <div className="overflow-hidden rounded-3xl border border-border bg-surface">

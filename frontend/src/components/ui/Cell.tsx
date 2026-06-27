@@ -37,17 +37,25 @@ export function Cell({
         className,
       ].join(' ')}
     >
-      {/* inset divider: starts after the leading icon (Claude style) */}
+      {/* inset divider: starts after the leading round icon tile */}
       {!last && (
         <span
           className={
             'pointer-events-none absolute bottom-0 right-0 h-px bg-border ' +
-            (before ? 'left-[48px]' : 'left-4')
+            (before ? 'left-[58px]' : 'left-4')
           }
         />
       )}
       {before && (
-        <div className={'shrink-0 ' + (destructive ? 'text-danger' : 'text-muted')}>{before}</div>
+        // Round icon tile (matches the round heroes/avatars).
+        <span
+          className={
+            'grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full bg-surface-sunken ' +
+            (destructive ? 'text-danger' : 'text-muted')
+          }
+        >
+          {before}
+        </span>
       )}
       <div className="min-w-0 flex-1">
         <div className={'text-[16px] leading-tight ' + (destructive ? 'text-danger' : 'text-ink')}>

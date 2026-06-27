@@ -39,8 +39,12 @@ export function DeviceRow({
   const online = !!d.online
 
   return (
-    <div className={'flex min-h-[54px] items-center gap-3 px-4 py-2.5 ' + (border ? 'border-b border-border' : '')}>
-      <Icon size={22} className={d.is_blocked ? 'text-faint' : 'text-muted'} />
+    <div className="relative flex min-h-[54px] items-center gap-3 px-4 py-2.5">
+      {/* Inset divider after the icon tile — matches the settings/account list rows. */}
+      {border && <span className="pointer-events-none absolute bottom-0 left-[58px] right-0 h-px bg-border" />}
+      <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full bg-surface-sunken">
+        <Icon size={20} className={d.is_blocked ? 'text-faint' : 'text-muted'} />
+      </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-[15px] font-medium text-ink">{primary}</span>

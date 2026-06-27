@@ -78,12 +78,14 @@ export function TrafficSheet({
           ) : !days ? (
             <div className="skeleton h-[168px] w-full rounded-2xl" />
           ) : chart.length ? (
-            <Suspense fallback={<div className="skeleton h-[168px] w-full rounded-2xl" />}>
-              <BarChart
-                data={chart.map((d) => ({ day: d.day, value: d.bytes }))}
-                format={(v) => formatBytes(v, lang)}
-              />
-            </Suspense>
+            <div className="animate-fade">
+              <Suspense fallback={<div className="skeleton h-[168px] w-full rounded-2xl" />}>
+                <BarChart
+                  data={chart.map((d) => ({ day: d.day, value: d.bytes }))}
+                  format={(v) => formatBytes(v, lang)}
+                />
+              </Suspense>
+            </div>
           ) : (
             <div className="py-8 text-center text-[14px] text-muted">{t('traffic.empty')}</div>
           )}

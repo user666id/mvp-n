@@ -136,8 +136,7 @@ export function ConfigDetailSheet({
   return (
     <>
       <Sheet open={open} onClose={onClose} title={t('detail.title')} anim="center" pills>
-        {/* identity — globe avatar + name (no country flag, matches the configs
-            list), with the protocol · transport · tech spec underneath. */}
+        {/* identity — globe tile + name, with the protocol · transport · tech spec underneath. */}
         <div className="mb-6 mt-1 flex flex-col items-center text-center">
           <span className="grid h-[74px] w-[74px] place-items-center rounded-full bg-surface-sunken text-muted ring-1 ring-inset ring-border">
             <Globe size={30} />
