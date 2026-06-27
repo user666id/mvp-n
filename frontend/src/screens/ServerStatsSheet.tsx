@@ -1,5 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useState } from 'react'
 import { Sheet } from '../components/ui/Sheet'
+import { useForegroundRefetch } from '../lib/useForeground'
 import { LoadError } from '../components/ui/LoadError'
 import { SheetHero } from '../components/ui/SheetHero'
 import { AreaChart } from '../components/charts'
@@ -41,18 +42,15 @@ export function ServerStatsSheet({
       .catch(() => setError(true))
   }, [configId])
 
-  // Pull-to-refresh: re-fetch without blanking the charts to skeletons.
-  const refresh = useCallback(
-    () => (configId ? getServerStats(configId).then(setStats).catch(() => {}) : Promise.resolve()),
-    [configId],
-  )
-
   useEffect(() => {
     if (open) load()
   }, [open, load])
 
+  // Re-fetch on foreground — a background-suspended fetch can hang on a skeleton.
+  useForegroundRefetch(open, load)
+
   return (
-    <Sheet open={open} onClose={onClose} title={t('stats.title')} onRefresh={refresh}>
+    <Sheet open={open} onClose={onClose} title={t('stats.title')}>
       <SheetHero icon={<Monitor size={30} />} title={t('stats.title')} />
       {error ? (
         <LoadError onRetry={load} />

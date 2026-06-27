@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useForegroundRefetch } from '../lib/useForeground'
 import { Sheet } from '../components/ui/Sheet'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
@@ -32,19 +33,20 @@ export function PaymentHistorySheet({ open, onClose }: { open: boolean; onClose:
       .catch(() => setFailed(true))
   }
 
-  // Pull-to-refresh: re-fetch without blanking the list to a skeleton.
-  const refresh = () => getOrderHistory().then(setItems).catch(() => {})
-
   useEffect(() => {
     if (open) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  // Re-fetch on foreground — a background-suspended fetch can hang on a skeleton;
+  // resuming reloads it (same recovery the other screens have).
+  useForegroundRefetch(open, load)
+
   const fmtWhen = (s?: string) => (s ? fmtSubDate(s, lang) : '')
   const assetLabel = (a: string) => (a === 'TON' ? 'GRAM' : 'USDT')
 
   return (
-    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('sub.history')} onRefresh={refresh}>
+    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('sub.history')}>
       <SheetHero icon={<Clock size={30} />} title={t('sub.history')} />
       {failed ? (
         <LoadError onRetry={load} />

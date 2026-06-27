@@ -135,10 +135,10 @@ export default function App() {
           {/* Keep all tabs MOUNTED and just toggle visibility, so switching tabs
               doesn't unmount + reload a screen from a blank skeleton every time.
               Each screen refreshes itself in the background when it becomes active.
-              The active tab carries `animate-fade`: a CSS animation restarts when an
-              element goes display:none → block, so the incoming tab cross-fades in on
-              every switch — no remount, no scroll-container change. */}
-          <div className={tab === 'configs' ? 'animate-fade' : 'hidden'}>
+              Switch is INSTANT (no fade) — like the iOS/Telegram tab bar. A fade-in
+              started the incoming tab at opacity 0 while the outgoing one was cut
+              instantly, so there was a one-frame blank flash (the "flicker"). */}
+          <div className={tab === 'configs' ? '' : 'hidden'}>
             <ConfigsScreen
               active={tab === 'configs'}
               onAccount={() => setAccountOpen(true)}
@@ -150,7 +150,7 @@ export default function App() {
               revalidate={revalidate}
             />
           </div>
-          <div className={tab === 'subscription' ? 'animate-fade' : 'hidden'}>
+          <div className={tab === 'subscription' ? '' : 'hidden'}>
             <SubscriptionScreen
               active={tab === 'subscription'}
               profile={profile}
@@ -162,7 +162,7 @@ export default function App() {
             />
           </div>
           {isAdmin && (
-            <div className={tab === 'admin' ? 'animate-fade' : 'hidden'}>
+            <div className={tab === 'admin' ? '' : 'hidden'}>
               <Suspense fallback={<div className="min-h-screen bg-canvas"><LoadingBar /></div>}>
                 <AdminScreen
                   active={tab === 'admin'}

@@ -3,6 +3,69 @@
 All notable changes to the project. Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versions — [SemVer](https://semver.org/).
 
+## [2.5.24] — 2026-06-27
+
+### Fixed
+- **Flicker between tabs / when leaving the avatar (account).** Two causes:
+  - Tab switches started the incoming tab at `opacity:0` while the outgoing one was cut
+    instantly → a one-frame blank flash. Tabs now switch INSTANTLY (no fade), like the
+    iOS/Telegram tab bar.
+  - Since 2.5.20 the sheet header (avatar/wallet) lived inside the sliding transition, so
+    on close the capsules slid out while the tab's capsules sat behind → a double/shift
+    flicker. The header is now STATIC again (iOS/Telegram nav-bar style) — the enter/exit
+    transform applies to the body only, so the capsules stay pinned and never double.
+    The body still scrolls + two-way elastic-bounces under the static header.
+
+## [2.5.23] — 2026-06-27
+
+### Fixed
+- **Dropdown menu clipped (language picker only half-opened)** — the `Dropdown`'s list
+  is absolutely positioned, so a parent `overflow-hidden` Section cut it off. It now
+  renders in a PORTAL (document.body, z-70) positioned from the trigger, so it's never
+  clipped. Opens downward and auto-flips up when there's no room below; closes on an
+  outside tap or any scroll. The glass material is unchanged. Trigger also gains the
+  shared `.tap` press feedback.
+
+## [2.5.22] — 2026-06-27
+
+### Changed
+- **Black dark shade now matches iOS.** The "true black" shade used near-black cards
+  (`#0E0E0E`) that vanished against the black page. Switched the grouped surfaces to the
+  iOS system palette: page `#000000`, cards/capsules `#1C1C1E`, inset/inputs `#2C2C2E`,
+  dividers `#38383A` — so blocks read as clear grey on black, like the system Settings.
+
+## [2.5.21] — 2026-06-27
+
+### Fixed
+- **Screens stuck on a skeleton ("часто не прогружается")** — Telegram suspends the
+  WebView in the background, where an in-flight fetch can hang forever (its 12s abort
+  timer is throttled while suspended), leaving the screen on a permanent skeleton with
+  no recovery. Foreground-refetch (reload on resume) was only on some screens. Added it
+  to the ones that lacked it: **Payment plans (SubscribeSheet)**, Usage, Payment history,
+  Server stats, and Traffic — so every data screen now self-heals on resume, like
+  Configs/Devices/Admin already did, instead of needing a tab switch or app restart.
+
+## [2.5.20] — 2026-06-27
+
+### Changed
+- **Sheets move as ONE piece** — the avatar+wallet header now lives INSIDE the scroll
+  surface (`SheetScroll`) instead of being a static bar above it. A swipe drags the
+  whole screen — header included — so there's no static-header / sliding-body split;
+  it matches the home tab where the header scrolls with the content.
+- **Two-way elastic overscroll with haptic, built into every sheet** — native momentum
+  scroll in the middle; at the edges a rubber-band stretches both ways (down at the top,
+  up at the bottom) and the downward pull keeps its haptic tick. Replaces the old
+  body-only `PullToRefresh` (removed) — no more per-screen wiring, and the pull is
+  identical on every sheet, short or tall.
+
+## [2.5.19] — 2026-06-26
+
+### Changed
+- **No haptic on pull-down anymore** — the pull-to-refresh gesture dropped its haptic
+  tick. It only ever fired on short, non-scrolling data sheets (e.g. Devices), so the
+  same swipe buzzed on some screens and not others. Now the gesture is silent and
+  identical everywhere; the silent background refresh on a downward pull stays.
+
 ## [2.5.18] — 2026-06-26
 
 ### Changed

@@ -45,10 +45,12 @@
    change — text/accent stay. The default "Standard" shade is the base .dark
    above (its internal id stays 'warm' for back-compat with saved prefs). */
 .dark[data-shade='black'] {
-  --c-canvas: 0 0 0; /* #000000 — true OLED black */
-  --c-surface: 14 14 14; /* #0E0E0E */
-  --c-surface-sunken: 22 22 22; /* #161616 */
-  --c-border: 34 34 34; /* #222222 */
+  /* iOS true-black: pure black page, with clearly-lighter grey grouped cards
+     (not near-black) — matches the system Settings look. */
+  --c-canvas: 0 0 0; /* #000000 — page */
+  --c-surface: 28 28 30; /* #1C1C1E — cards / capsules (iOS grouped) */
+  --c-surface-sunken: 44 44 46; /* #2C2C2E — inputs / inset blocks */
+  --c-border: 56 56 58; /* #38383A — dividers */
 }
 
 * {

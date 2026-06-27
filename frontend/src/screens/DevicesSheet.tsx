@@ -102,18 +102,6 @@ export function DevicesSheet({
     onChanged?.()
   }
 
-  // Pull-to-refresh: re-fetch WITHOUT blanking the list to a skeleton — keep the
-  // current rows visible and swap them in when the new data lands.
-  const pullRefresh = async () => {
-    getProfile().then((p) => setLimit(p.device_limit || null)).catch(() => {})
-    try {
-      setDevices(await getDevices())
-      onChanged?.()
-    } catch {
-      /* keep what's shown */
-    }
-  }
-
   // Delete a device inline (with a confirm) — no separate actions sheet.
   const doDelete = async (d: Device) => {
     if (!(await confirmDialog(t('devices.deleteConfirm')))) return
@@ -188,7 +176,7 @@ export function DevicesSheet({
 
   return (
     <>
-      <Sheet open={open} onClose={onClose} title={t('devices.title')} onRefresh={pullRefresh}>
+      <Sheet open={open} onClose={onClose} title={t('devices.title')}>
         <SheetHero icon={<Phone size={30} />} title={t('home.devices')} />
 
         {/* Device limit — ABOVE the list. Tapping floats the iOS wheel OVER the list

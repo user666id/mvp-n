@@ -9,6 +9,7 @@ import { CurrencyIcon } from '../components/CurrencyIcon'
 import { Check, Copy, Dollar } from '../components/icons'
 import { SheetHero } from '../components/ui/SheetHero'
 import { useToast } from '../components/ui/Toast'
+import { useForegroundRefetch } from '../lib/useForeground'
 import { copyText } from '../lib/clipboard'
 import { notify, confirmDialog, openInvoice } from '../lib/telegram'
 import {
@@ -112,6 +113,15 @@ export function SubscribeSheet({
     if (open && step === 'select') loadPending()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step])
+
+  // Recover on foreground: Telegram suspends the WebView in the background and an
+  // in-flight plans fetch can hang there forever (its abort timer is throttled),
+  // leaving the screen stuck on a skeleton. Re-fetch on resume so it self-heals
+  // without leaving + re-entering the tab — same recovery every other screen has.
+  useForegroundRefetch(open, () => {
+    loadPlans()
+    if (step === 'select') loadPending()
+  })
 
   const resume = (o: Order) => {
     setOrder(o)

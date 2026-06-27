@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from 'react'
+import { useForegroundRefetch } from '../lib/useForeground'
 import { Sheet } from '../components/ui/Sheet'
 import { Section } from '../components/ui/Card'
 import { LoadError } from '../components/ui/LoadError'
@@ -38,19 +39,14 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
       .catch(() => setFailed(true))
   }
 
-  // Pull-to-refresh: re-fetch without blanking the chart to a skeleton.
-  const refresh = () =>
-    getProfileTraffic(30)
-      .then((r) => {
-        setDays(r.days)
-        setTotal(r.total)
-      })
-      .catch(() => {})
-
   useEffect(() => {
     if (open) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Re-fetch on foreground — a fetch suspended in the background can hang, leaving
+  // a permanent skeleton; resuming reloads it (same recovery the other screens have).
+  useForegroundRefetch(open, load)
 
   const today = days && days.length ? days[days.length - 1].bytes : 0
 
@@ -63,7 +59,7 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
   })()
 
   return (
-    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('settings.usage')} onRefresh={refresh}>
+    <Sheet open={open} onClose={onClose} onBack={onClose} title={t('settings.usage')}>
       <SheetHero icon={<ChartLine size={30} />} title={t('settings.usage')} />
       <Section>
         <div className="flex">

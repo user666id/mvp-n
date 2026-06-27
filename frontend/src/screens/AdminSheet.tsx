@@ -373,17 +373,13 @@ function DomainStatusSheet({
     adminGetDomains().then(setItems).catch(() => setItems([]))
   }
 
-  // Pull-to-refresh: re-fetch WITHOUT blanking to a skeleton — keep the current
-  // statuses visible and swap them in. (Replaces the old "Refresh" button.)
-  const refresh = () => adminGetDomains().then(setItems).catch(() => {})
-
   useEffect(() => {
     if (open) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   return (
-    <Sheet open={open} onClose={onClose} onBack={onBack} title={t('admin.domains')} pills onRefresh={refresh}>
+    <Sheet open={open} onClose={onClose} onBack={onBack} title={t('admin.domains')} pills>
       {!items ? (
         <ListSkeleton rows={3} />
       ) : (
