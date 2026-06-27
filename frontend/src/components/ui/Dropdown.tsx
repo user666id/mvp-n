@@ -72,7 +72,7 @@ export function Dropdown<T extends string>({
         createPortal(
           <div
             ref={menuRef}
-            className="glass-thin animate-scale-in fixed z-[70] overflow-hidden rounded-3xl"
+            className="glass-thin animate-scale-in fixed z-[70] flex flex-col gap-0.5 rounded-3xl p-1.5"
             style={{
               left: rect.left,
               width: rect.width,
@@ -89,7 +89,8 @@ export function Dropdown<T extends string>({
                   setOpen(false)
                 }}
                 className={
-                  'flex h-11 w-full items-center justify-between px-4 text-left text-[15px] ' +
+                  // Inset oval pill so the highlight never touches the menu walls.
+                  'flex h-11 w-full items-center justify-between rounded-full px-3.5 text-left text-[15px] ' +
                   (o.value === value
                     ? 'bg-surface-sunken font-medium text-ink'
                     : 'text-muted active:bg-surface-sunken')

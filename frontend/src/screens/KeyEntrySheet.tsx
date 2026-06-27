@@ -39,7 +39,7 @@ export function KeyEntrySheet({
   }
 
   const primaryBtn = (
-    <Button stretched loading={busy} disabled={!key.trim()} onClick={submit}>
+    <Button stretched loading={busy} disabled={!key.trim() || busy} onClick={submit}>
       {t('key.activate')}
     </Button>
   )

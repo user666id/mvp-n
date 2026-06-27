@@ -8,11 +8,27 @@
 
 export type ChangeKind = 'added' | 'changed' | 'fixed'
 
+export interface ChangeGroup {
+  kind: ChangeKind
+  items: { en: string; ru: string }[]
+}
+
+/** A refinement (X.Y.Z) shipped under a capsule — its own date + breakdown. */
+export interface PatchNote {
+  version: string
+  /** YYYY-MM-DD */
+  date: string
+  groups: ChangeGroup[]
+}
+
+/** A capsule = a feature update (X.Y). Newest-first; patches newest-first too. */
 export interface ReleaseNote {
   version: string
   /** YYYY-MM-DD */
   date: string
-  groups: { kind: ChangeKind; items: { en: string; ru: string }[] }[]
+  groups: ChangeGroup[]
+  /** Refinements (X.Y.Z) released under this capsule, newest-first. */
+  patches?: PatchNote[]
 }
 
 export const RELEASES: ReleaseNote[] = [
@@ -60,6 +76,138 @@ export const RELEASES: ReleaseNote[] = [
         ],
       },
     ],
+    patches: [
+      {
+        version: '2.5.5',
+        date: '2026-06-27',
+        groups: [
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'Update history is now organized into capsules — open one to see the update and all its refinements.',
+                ru: 'История обновлений теперь разложена по капсулам — откройте капсулу, чтобы увидеть само обновление и все его доработки.',
+              },
+              {
+                en: 'Polished the dropdown selection — a rounded pill highlight, consistent everywhere.',
+                ru: 'Аккуратнее выбор в выпадающих списках — скруглённая «таблетка», единообразно везде.',
+              },
+            ],
+          },
+          {
+            kind: 'fixed',
+            items: [
+              {
+                en: 'Activating a key can no longer be submitted twice, and payment polling now stops cleanly.',
+                ru: 'Активацию ключа больше нельзя отправить дважды, а опрос оплаты корректно завершается.',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        version: '2.5.4',
+        date: '2026-06-27',
+        groups: [
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'A unified round-icon system across all list rows for a cleaner, more consistent look.',
+                ru: 'Единая система круглых иконок во всех строках списков — чище и единообразнее.',
+              },
+              {
+                en: 'Globe and Moon icons on the Language and Theme rows in Settings.',
+                ru: 'Иконки глобуса и луны у строк «Язык» и «Тема» в настройках.',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        version: '2.5.3',
+        date: '2026-06-27',
+        groups: [
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'Sheet headers now scroll with the content, for a more native feel.',
+                ru: 'Шапки листов теперь листаются вместе с содержимым — нативнее ощущение.',
+              },
+              {
+                en: 'Refined true-black dark theme (iOS palette).',
+                ru: 'Доработана тёмная тема «по-настоящему чёрная» (палитра iOS).',
+              },
+            ],
+          },
+          {
+            kind: 'fixed',
+            items: [
+              {
+                en: 'No more stuck loading skeletons — screens refresh in the foreground.',
+                ru: 'Скелетоны загрузки больше не «залипают» — экраны обновляются на переднем плане.',
+              },
+              {
+                en: 'Dropdown menus are never clipped, and tab/navigation no longer flickers.',
+                ru: 'Выпадающие меню больше не обрезаются, а вкладки и навигация не мерцают.',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        version: '2.5.2',
+        date: '2026-06-26',
+        groups: [
+          {
+            kind: 'added',
+            items: [
+              {
+                en: 'Pull to refresh — drag down on any screen or sheet to reload, with an elastic bounce.',
+                ru: 'Потяните вниз, чтобы обновить — на любом экране и листе, с упругим откликом.',
+              },
+            ],
+          },
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'Smoother loading — a home skeleton and a slim boot progress bar instead of a spinner.',
+                ru: 'Плавнее загрузка — скелетон на главной и тонкая полоска прогресса при запуске вместо крутилки.',
+              },
+              {
+                en: 'Native two-way overscroll everywhere.',
+                ru: 'Нативный двусторонний оверскролл по всему приложению.',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        version: '2.5.1',
+        date: '2026-06-26',
+        groups: [
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'Refined home — the brand mark as a clean circle, tidier hero icons and consistent spacing.',
+                ru: 'Доработана главная — фирменный знак чистым кругом, аккуратнее иконки и единые отступы.',
+              },
+              {
+                en: 'The device limit is a compact inline wheel that saves automatically, right above the device list.',
+                ru: 'Лимит устройств — компактное встроенное «колесо» с автосохранением, прямо над списком устройств.',
+              },
+              {
+                en: 'Slimmer Settings.',
+                ru: 'Компактнее настройки.',
+              },
+            ],
+          },
+        ],
+      },
+    ],
   },
   {
     version: '2.4',
@@ -91,6 +239,79 @@ export const RELEASES: ReleaseNote[] = [
           {
             en: 'A more consistent feel everywhere — the Payment and Admin screens match the new style, and copying a link gives a light tap of feedback.',
             ru: 'Единообразнее по всему приложению — экраны «Оплата» и «Админка» приведены к новому стилю, а копирование ссылки отзывается лёгким откликом.',
+          },
+        ],
+      },
+    ],
+    patches: [
+      {
+        version: '2.4.3',
+        date: '2026-06-26',
+        groups: [
+          {
+            kind: 'fixed',
+            items: [
+              {
+                en: 'More reliable loading across all screens — no more stuck skeletons, and the Payment screen loads dependably.',
+                ru: 'Надёжнее загрузка на всех экранах — без «залипших» скелетонов, а экран «Оплата» грузится стабильно.',
+              },
+            ],
+          },
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'A smooth cross-fade between tabs and a stronger frosted-glass material.',
+                ru: 'Плавный переход между вкладками и более выразительное «матовое стекло».',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        version: '2.4.2',
+        date: '2026-06-26',
+        groups: [
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'Self-hosted fonts — faster, privacy-friendly loading with no third-party font CDN.',
+                ru: 'Свои шрифты — быстрее и приватнее, без стороннего CDN шрифтов.',
+              },
+            ],
+          },
+          {
+            kind: 'fixed',
+            items: [
+              {
+                en: 'Security hardening.',
+                ru: 'Усилена безопасность.',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        version: '2.4.1',
+        date: '2026-06-26',
+        groups: [
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'Faster stats — charts load on demand.',
+                ru: 'Шустрее статистика — графики подгружаются по необходимости.',
+              },
+              {
+                en: 'A consistency pass across the Payment and Admin screens.',
+                ru: 'Проход на единообразие по экранам «Оплата» и «Админка».',
+              },
+              {
+                en: 'Configs are no longer named — we don’t store config names.',
+                ru: 'У конфигов больше нет названий — мы не храним имена конфигураций.',
+              },
+            ],
           },
         ],
       },
@@ -143,22 +364,35 @@ export const RELEASES: ReleaseNote[] = [
             en: 'A more consistent look — unified section headers, buttons and loading indicators across the app.',
             ru: 'Единообразный вид — общий стиль заголовков, кнопок и индикаторов загрузки по всему приложению.',
           },
-          {
-            en: 'Clearer payment — the buttons now say how you pay (in your wallet / directly), for both new and renewing subscriptions.',
-            ru: 'Понятнее оплата — кнопки показывают способ (в кошельке / напрямую), и при покупке, и при продлении.',
-          },
         ],
       },
+    ],
+    patches: [
       {
-        kind: 'fixed',
-        items: [
+        version: '2.2.1',
+        date: '2026-06-26',
+        groups: [
           {
-            en: 'An expired subscription now keeps your config and connection link — it just pauses. Renew and your existing link works again (refresh the subscription in your app).',
-            ru: 'Истёкшая подписка больше не удаляет конфиг и ссылку — она просто приостанавливается. Продлите — и ваша же ссылка снова работает (обновите подписку в приложении).',
+            kind: 'changed',
+            items: [
+              {
+                en: 'Clearer payment — the buttons now say how you pay (in your wallet / directly), for both new and renewing subscriptions.',
+                ru: 'Понятнее оплата — кнопки показывают способ (в кошельке / напрямую), и при покупке, и при продлении.',
+              },
+            ],
           },
           {
-            en: 'Steadier navigation — the top bar (avatar + wallet) and its divider stay put as you move around, and sheets close more reliably from the avatar.',
-            ru: 'Стабильнее навигация — верхняя панель (аватар + кошелёк) и линия не дёргаются при переходах, а листы надёжнее закрываются по аватарке.',
+            kind: 'fixed',
+            items: [
+              {
+                en: 'An expired subscription now keeps your config and connection link — it just pauses. Renew and your existing link works again (refresh the subscription in your app).',
+                ru: 'Истёкшая подписка больше не удаляет конфиг и ссылку — она просто приостанавливается. Продлите — и ваша же ссылка снова работает (обновите подписку в приложении).',
+              },
+              {
+                en: 'Steadier navigation — the top bar (avatar + wallet) and its divider stay put as you move around, and sheets close more reliably from the avatar.',
+                ru: 'Стабильнее навигация — верхняя панель (аватар + кошелёк) и линия не дёргаются при переходах, а листы надёжнее закрываются по аватарке.',
+              },
+            ],
           },
         ],
       },

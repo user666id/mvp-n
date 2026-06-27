@@ -366,6 +366,7 @@ const dict = {
   'about.github': { en: 'Source code', ru: 'Исходный код' },
   'about.whatsnew': { en: 'Changelog', ru: 'История изменений' },
   'about.latest': { en: 'latest', ru: 'свежее' },
+  'about.refinements': { en: 'Refinements', ru: 'Доработки' },
   'about.added': { en: 'Added', ru: 'Добавлено' },
   'about.changed': { en: 'Changed', ru: 'Изменено' },
   'about.fixed': { en: 'Fixed', ru: 'Исправлено' },

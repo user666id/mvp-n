@@ -9,7 +9,7 @@ import { BusyOverlay } from '../components/ui/BusyOverlay'
 import { useToast } from '../components/ui/Toast'
 import {
   Bell, Phone, Info, ChevronRight, LogOut, Trash, User, Vibrate,
-  Monitor, Sun, Moon, Key, Clock,
+  Monitor, Sun, Moon, Key, Clock, Globe,
 } from '../components/icons'
 import { ProfileDetails } from '../components/ProfileDetails'
 import { AboutSheet } from './AboutSheet'
@@ -177,7 +177,12 @@ export function AccountSheet({
             after={<Switch checked={haptics} onChange={toggleHaptics} />}
           />
           <div className="border-b border-border px-4 py-3.5">
-            <div className="mb-2 text-[13px] text-muted">{t('settings.language')}</div>
+            <div className="mb-2.5 flex items-center gap-3">
+              <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full bg-surface-sunken text-muted">
+                <Globe size={20} />
+              </span>
+              <span className="text-[15px] text-ink">{t('settings.language')}</span>
+            </div>
             <Dropdown
               value={lang}
               onChange={(v) => {
@@ -193,13 +198,16 @@ export function AccountSheet({
           </div>
           <div
             className={
-              'flex items-center justify-between px-4 py-3.5' +
+              'flex items-center gap-3 px-4 py-3.5' +
               (theme === 'dark' || (theme === 'system' && isDarkActive())
                 ? ' border-b border-border'
                 : '')
             }
           >
-            <span className="text-[15px] text-ink">{t('settings.theme')}</span>
+            <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full bg-surface-sunken text-muted">
+              <Moon size={20} />
+            </span>
+            <span className="flex-1 text-[15px] text-ink">{t('settings.theme')}</span>
             <div className="flex items-center gap-1.5">
               {(
                 [
@@ -214,7 +222,7 @@ export function AccountSheet({
                   aria-label={label}
                   title={label}
                   className={
-                    'grid h-9 w-9 place-items-center rounded-2xl border transition-colors ' +
+                    'grid h-9 w-9 place-items-center rounded-full border transition-colors ' +
                     (theme === val
                       ? 'border-white/20 bg-accent text-white'
                       : 'border-border text-muted active:bg-surface-sunken')

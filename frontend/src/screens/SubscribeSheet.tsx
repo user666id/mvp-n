@@ -139,9 +139,11 @@ export function SubscribeSheet({
 
   useEffect(() => {
     if (step !== 'pay' || !order) return
+    let fails = 0
     const tick = async () => {
       try {
         const o = await getOrder(order.id)
+        fails = 0
         if (o.status === 'paid') {
           window.clearInterval(poll.current)
           notify('success')
@@ -153,7 +155,13 @@ export function SubscribeSheet({
           setStep('select')
         }
       } catch {
-        /* keep polling */
+        // Tolerate transient blips, but don't poll a dead/deleted order forever
+        // (e.g. a 404 would otherwise keep the user stuck on the QR screen).
+        if (++fails >= 8) {
+          window.clearInterval(poll.current)
+          toast(t('common.loadError'))
+          setStep('select')
+        }
       }
     }
     poll.current = window.setInterval(tick, 4000)
@@ -501,7 +509,7 @@ export function SubscribeSheet({
                       {usdtMenuOpen && usdts.length > 1 && (
                         <>
                           <div className="fixed inset-0 z-30" onClick={() => setUsdtMenuOpen(false)} />
-                          <div className="glass-thin absolute left-1/2 top-[calc(100%+8px)] z-40 w-[200px] -translate-x-1/2 overflow-hidden rounded-3xl">
+                          <div className="glass-thin absolute left-1/2 top-[calc(100%+8px)] z-40 flex w-[210px] -translate-x-1/2 flex-col gap-0.5 rounded-3xl p-1.5">
                             {usdts.map((u) => (
                               <button
                                 key={u.id}
@@ -511,7 +519,8 @@ export function SubscribeSheet({
                                   setUsdtMenuOpen(false)
                                 }}
                                 className={
-                                  'flex h-11 w-full items-center gap-2.5 px-4 text-left text-[15px] transition-colors ' +
+                                  // Inset oval pill — doesn't touch the menu walls.
+                                  'flex h-11 w-full items-center gap-2.5 rounded-full px-3 text-left text-[15px] transition-colors ' +
                                   (asset === u.id
                                     ? 'bg-surface-sunken font-medium text-ink'
                                     : 'text-muted active:bg-surface-sunken')

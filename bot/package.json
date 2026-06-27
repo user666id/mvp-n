@@ -1,7 +1,7 @@
 {
   "name": "mvpn-bot",
   "private": true,
-  "version": "2.5.33",
+  "version": "2.5.5",
   "type": "module",
   "scripts": {
     "build": "tsc",

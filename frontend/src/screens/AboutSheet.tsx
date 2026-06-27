@@ -7,13 +7,37 @@ import brandMark from '../assets/brand-mark.png'
 import { ChevronRight, ExternalLink, Github, Telegram } from '../components/icons'
 import { openLink, effectivePalette } from '../lib/telegram'
 import { BRAND, BOT, GITHUB_URL } from '../lib/config'
-import { RELEASES, APP_VERSION, type ChangeKind } from '../lib/changelog'
+import { RELEASES, APP_VERSION, type ChangeKind, type ChangeGroup } from '../lib/changelog'
 import { useT, type TKey } from '../lib/i18n'
 
 const KIND_LABEL: Record<ChangeKind, TKey> = {
   added: 'about.added',
   changed: 'about.changed',
   fixed: 'about.fixed',
+}
+
+/** Added / Changed / Fixed groups — shared by a capsule and its refinements. */
+function ChangeGroups({ groups }: { groups: ChangeGroup[] }) {
+  const { t, lang } = useT()
+  return (
+    <div className="flex flex-col gap-3">
+      {groups.map((g, gi) => (
+        <div key={gi} className="flex flex-col gap-1.5">
+          <div className="text-[12px] font-medium uppercase tracking-[0.04em] text-faint">
+            {t(KIND_LABEL[g.kind])}
+          </div>
+          <ul className="flex flex-col gap-1.5">
+            {g.items.map((it, j) => (
+              <li key={j} className="flex gap-2 text-[14px] leading-relaxed text-muted">
+                <span className="text-accent">•</span>
+                <span>{lang === 'ru' ? it.ru : it.en}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -198,22 +222,33 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
                 </span>
               }
             >
-              <div className="flex flex-col gap-3 px-4 py-3.5">
-                {r.groups.map((g, gi) => (
-                  <div key={gi} className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-4 px-4 py-3.5">
+                <ChangeGroups groups={r.groups} />
+
+                {r.patches && r.patches.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
                     <div className="text-[12px] font-medium uppercase tracking-[0.04em] text-faint">
-                      {t(KIND_LABEL[g.kind])}
+                      {t('about.refinements')}
                     </div>
-                    <ul className="flex flex-col gap-1.5">
-                      {g.items.map((it, j) => (
-                        <li key={j} className="flex gap-2 text-[14px] leading-relaxed text-muted">
-                          <span className="text-accent">•</span>
-                          <span>{lang === 'ru' ? it.ru : it.en}</span>
-                        </li>
+                    <div className="flex flex-col gap-1.5">
+                      {r.patches.map((p) => (
+                        <Collapse
+                          key={p.version}
+                          title={
+                            <span className="flex items-center gap-2 text-[14px]">
+                              <span className="font-display font-medium">v{p.version}</span>
+                              <span className="text-[12px] text-faint">{fmtDate(p.date)}</span>
+                            </span>
+                          }
+                        >
+                          <div className="px-4 py-3">
+                            <ChangeGroups groups={p.groups} />
+                          </div>
+                        </Collapse>
                       ))}
-                    </ul>
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             </Collapse>
           ))}
