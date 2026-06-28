@@ -58,6 +58,23 @@ export const RELEASES: ReleaseNote[] = [
         ],
       },
     ],
+    patches: [
+      {
+        version: '2.6.1',
+        date: '2026-06-28',
+        groups: [
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'Faster, lighter app — the build pipeline moved to a new bundler, trimming the download a little.',
+                ru: 'Быстрее и легче — сборка переехала на новый движок, загрузка приложения немного уменьшилась.',
+              },
+            ],
+          },
+        ],
+      },
+    ],
   },
   {
     version: '2.5',

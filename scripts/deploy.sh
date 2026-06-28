@@ -55,7 +55,7 @@ if grep -q '^frontend/' <<<"$CHANGED"; then
   # built here on linux/musl, so a Windows-generated lockfile can omit the linux
   # entries and break strict `npm ci`. The committed lockfile is kept complete,
   # but this won't hard-fail prod if it ever drifts again.
-  docker run --rm -v "$PWD/frontend:/app" -w /app node:20-alpine \
+  docker run --rm -v "$PWD/frontend:/app" -w /app node:22-alpine \
     sh -c "npm install --no-audit --no-fund --no-save && npm run build"
   # Sync everything EXCEPT hashed assets with --delete (refreshes index.html,
   # legal.js, etc. and prunes stale top-level files). Then add new hashed assets

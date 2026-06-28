@@ -7,6 +7,12 @@ Capsules (`X.Y`) are feature updates; refinements (`X.Y.Z`) are fixes and small
 tweaks shipped under a capsule. The user-facing copy of this history lives in
 `frontend/src/lib/changelog.ts` (About → Changelog).
 
+## [2.6.1] — 2026-06-28
+
+### Dependencies
+- **Frontend build-tooling majors** (coupled): `vite 5 → 8` (now uses the rolldown bundler), `typescript 5 → 6`, `@vitejs/plugin-react 4 → 6`. Build + `tsc` + vitest + mock preview all green; main chunk shrank ~169 → ~155 KB.
+- Deploy frontend build container bumped `node:20-alpine → node:22-alpine` (Vite 8's Node floor).
+
 ## [2.6] — 2026-06-28
 
 _(2.5.6 is folded into this 2.6 — there is no separate 2.5.6 release.)_

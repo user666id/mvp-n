@@ -17,7 +17,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 			"service": "api",
 			// Keep in sync with the product version (frontend/bot package.json,
 			// i18n about.version, CHANGELOG). Bump on every release.
-			"version": "2.6.0",
+			"version": "2.6.1",
 			"uptime":  int(time.Since(startTime).Seconds()),
 		},
 	})
