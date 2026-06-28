@@ -15,7 +15,10 @@ const CHUNK_RE = /Loading chunk|dynamically imported module|Failed to fetch|impo
  * dynamic import() rejects. We do ONE hard reload (sessionStorage-guarded against
  * loops) to pull the fresh, no-store index + current chunks.
  */
-export class ErrorBoundary extends React.Component<{ children: React.ReactNode }, State> {
+export class ErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallback?: React.ReactNode },
+  State
+> {
   state: State = { hasError: false }
 
   static getDerivedStateFromError(): State {
@@ -34,6 +37,9 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
 
   render() {
     if (!this.state.hasError) return this.props.children
+    // A caller-supplied compact fallback (e.g. around the payment sheet) keeps a
+    // local crash contained instead of replacing the whole screen.
+    if (this.props.fallback !== undefined) return this.props.fallback
     // i18n lives inside this boundary, so use a plain bilingual fallback.
     const ru = (() => {
       try {

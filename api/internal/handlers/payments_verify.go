@@ -19,6 +19,12 @@ import (
 // USDT (TRC20) contract on TRON.
 const usdtTRC20Contract = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
 
+// usdtTONJettonMaster is the official Tether USD₮ jetton master on TON. Incoming
+// USDT-TON payments are matched by this CONTRACT address (not the jetton symbol),
+// so a scam jetton with a "USD…"-looking symbol and the right amount can't be
+// credited as a real payment.
+const usdtTONJettonMaster = "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs"
+
 // amountEpsilon: incoming amount must match the order's reserved amount within
 // this tolerance. Orders are spaced 0.0001 apart, so this never collides.
 const amountEpsilon = 0.00005
@@ -107,20 +113,31 @@ func (h *Handler) matchAndPay(ctx context.Context, t transfer) {
 	if err != nil {
 		return // no matching pending order (unrelated deposit / already paid)
 	}
-	// Claim the order, then credit. If crediting fails, release the claim so the
-	// next run retries — never leave the buyer paid-but-uncredited.
-	res, err := h.DB.ExecContext(ctx,
+	// Claim + credit ATOMICALLY in one tx: either the order flips to paid AND the
+	// days land, or neither does (rolled back, retried next run). This closes the
+	// crash-between-claim-and-credit window that could leave a renewing buyer
+	// paid-but-uncredited (the recovery sweep above misses them, as their
+	// paid_until is non-NULL).
+	tx, err := h.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return
+	}
+	defer tx.Rollback()
+
+	res, err := tx.ExecContext(ctx,
 		`UPDATE orders SET status='paid', tx_hash=$2, paid_at=NOW() WHERE id=$1 AND status='pending'`, id, t.tx)
 	if err != nil {
 		return
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return // raced — another worker took it
+		return // raced — another worker took it (rollback releases nothing)
 	}
-	if _, err := h.extendSubscription(ctx, uid, days); err != nil {
-		_, _ = h.DB.ExecContext(ctx,
-			`UPDATE orders SET status='pending', tx_hash=NULL, paid_at=NULL WHERE id=$1`, id)
-		log.Printf("[pay] order %s: extend failed, released for retry: %v", id, err)
+	if _, err := extendSubscriptionTx(ctx, tx, uid, days); err != nil {
+		log.Printf("[pay] order %s: extend failed, rolled back for retry: %v", id, err)
+		return // deferred rollback unclaims the order
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("[pay] order %s: commit failed, will retry: %v", id, err)
 		return
 	}
 	log.Printf("[pay] order %s paid: %s %.4f (tx %s) → +%dd for user %d", id, t.asset, t.amount, t.tx, days, uid)
@@ -129,13 +146,22 @@ func (h *Handler) matchAndPay(ctx context.Context, t transfer) {
 // ─── TON (tonapi.io) — native GRAM + USDT-TON jetton ─────────────────────────
 
 func fetchTONTransfers(ctx context.Context, wallet string) []transfer {
-	wantHash := tonAddrHash(wallet) // compare by the 32-byte hash, format-agnostic
-	url := "https://tonapi.io/v2/accounts/" + wallet + "/events?limit=50"
+	url := "https://tonapi.io/v2/accounts/" + wallet + "/events?limit=100"
 	body, err := httpGet(ctx, url, tonAuthHeader())
 	if err != nil {
 		log.Printf("[pay] tonapi: %v", err)
 		return nil
 	}
+	return parseTONTransfers(body, wallet)
+}
+
+// parseTONTransfers extracts finalized TON + USDT-TON transfers TO `wallet` from a
+// tonapi events payload. USDT is matched by the jetton master CONTRACT address
+// (usdtTONJettonMaster), not the symbol, so a look-alike scam jetton is ignored.
+// Pure (no I/O) so the matching logic is unit-testable.
+func parseTONTransfers(body []byte, wallet string) []transfer {
+	wantHash := tonAddrHash(wallet)                // recipient, format-agnostic
+	wantJetton := tonAddrHash(usdtTONJettonMaster) // USDT jetton master
 	var resp struct {
 		Events []struct {
 			Actions []struct {
@@ -153,6 +179,7 @@ func fetchTONTransfers(ctx context.Context, wallet string) []transfer {
 					} `json:"recipient"`
 					Amount string `json:"amount"`
 					Jetton struct {
+						Address  string `json:"address"`
 						Symbol   string `json:"symbol"`
 						Decimals int    `json:"decimals"`
 					} `json:"jetton"`
@@ -181,8 +208,9 @@ func fetchTONTransfers(ctx context.Context, wallet string) []transfer {
 			switch {
 			case a.TonTransfer != nil && sameTONHash(a.TonTransfer.Recipient.Address, wantHash):
 				out = append(out, transfer{AssetTON, float64(a.TonTransfer.Amount) / 1e9, tx})
-			case a.JettonTransfer != nil && sameTONHash(a.JettonTransfer.Recipient.Address, wantHash) &&
-				strings.Contains(strings.ToUpper(a.JettonTransfer.Jetton.Symbol), "USD"):
+			case a.JettonTransfer != nil &&
+				sameTONHash(a.JettonTransfer.Recipient.Address, wantHash) &&
+				sameTONHash(a.JettonTransfer.Jetton.Address, wantJetton):
 				dec := a.JettonTransfer.Jetton.Decimals
 				if dec == 0 {
 					dec = 6
@@ -231,7 +259,7 @@ func sameTONHash(apiAddr, wantHash string) bool {
 
 func fetchTronTransfers(ctx context.Context, wallet string) []transfer {
 	url := fmt.Sprintf(
-		"https://api.trongrid.io/v1/accounts/%s/transactions/trc20?only_to=true&limit=50&contract_address=%s",
+		"https://api.trongrid.io/v1/accounts/%s/transactions/trc20?only_to=true&limit=200&contract_address=%s",
 		wallet, usdtTRC20Contract)
 	hdr := http.Header{}
 	if k := os.Getenv("TRONGRID_KEY"); k != "" {
@@ -242,13 +270,21 @@ func fetchTronTransfers(ctx context.Context, wallet string) []transfer {
 		log.Printf("[pay] trongrid: %v", err)
 		return nil
 	}
+	return parseTronTransfers(body, wallet)
+}
+
+// parseTronTransfers extracts USDT-TRC20 transfers TO `wallet`. The query already
+// filters by contract_address, but we re-check the token contract defensively so
+// a payload with a look-alike token can't slip through. Pure (no I/O) for testing.
+func parseTronTransfers(body []byte, wallet string) []transfer {
 	var resp struct {
 		Data []struct {
 			TxID      string `json:"transaction_id"`
 			Value     string `json:"value"`
 			To        string `json:"to"`
 			TokenInfo struct {
-				Decimals int `json:"decimals"`
+				Decimals int    `json:"decimals"`
+				Address  string `json:"address"`
 			} `json:"token_info"`
 		} `json:"data"`
 	}
@@ -259,6 +295,9 @@ func fetchTronTransfers(ctx context.Context, wallet string) []transfer {
 	for _, d := range resp.Data {
 		if !strings.EqualFold(d.To, wallet) {
 			continue
+		}
+		if d.TokenInfo.Address != "" && !strings.EqualFold(d.TokenInfo.Address, usdtTRC20Contract) {
+			continue // not the real USDT-TRC20 contract
 		}
 		dec := d.TokenInfo.Decimals
 		if dec == 0 {

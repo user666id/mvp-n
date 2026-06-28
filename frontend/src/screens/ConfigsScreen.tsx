@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { useActiveRefresh } from '../lib/useForeground'
 import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -13,7 +13,6 @@ import { ConfigDetailSheet } from './ConfigDetailSheet'
 import { ServerStatsSheet } from './ServerStatsSheet'
 import { KeyEntrySheet } from './KeyEntrySheet'
 import { DevicesSheet } from './DevicesSheet'
-import { UsageSheet } from './UsageSheet'
 import {
   deleteConfig,
   getConfigs,
@@ -30,6 +29,9 @@ import { notify } from '../lib/telegram'
 import { useT } from '../lib/i18n'
 import { fmtSubDate } from '../lib/subscription'
 import { formatBytes } from '../lib/format'
+
+// Lazy: the Usage sheet pulls the chart bundle; load it on first open.
+const UsageSheet = lazy(() => import('./UsageSheet').then((m) => ({ default: m.UsageSheet })))
 
 export function ConfigsScreen({
   active,
@@ -60,6 +62,10 @@ export function ConfigsScreen({
   const [trafficTotal, setTrafficTotal] = useState<number | null>(null)
   const [devOpen, setDevOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
+  const [usageLoaded, setUsageLoaded] = useState(false)
+  useEffect(() => {
+    if (usageOpen) setUsageLoaded(true)
+  }, [usageOpen])
 
   const load = useCallback(async () => {
     setFailed(false)
@@ -311,7 +317,11 @@ export function ConfigsScreen({
       />
       <KeyEntrySheet open={keyOpen} onClose={() => setKeyOpen(false)} onActivated={load} />
       <DevicesSheet open={devOpen} onClose={() => setDevOpen(false)} onChanged={load} />
-      <UsageSheet open={usageOpen} onClose={() => setUsageOpen(false)} />
+      {usageLoaded && (
+        <Suspense fallback={null}>
+          <UsageSheet open={usageOpen} onClose={() => setUsageOpen(false)} />
+        </Suspense>
+      )}
     </div>
   )
 }

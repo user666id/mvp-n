@@ -226,25 +226,22 @@ export function AboutSheet({ open, onClose }: { open: boolean; onClose: () => vo
                 <ChangeGroups groups={r.groups} />
 
                 {r.patches && r.patches.length > 0 && (
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-3 border-t border-border pt-3.5">
                     <div className="text-[12px] font-medium uppercase tracking-[0.04em] text-faint">
                       {t('about.refinements')}
                     </div>
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-4">
                       {r.patches.map((p) => (
-                        <Collapse
+                        <div
                           key={p.version}
-                          title={
-                            <span className="flex items-center gap-2 text-[14px]">
-                              <span className="font-display font-medium">v{p.version}</span>
-                              <span className="text-[12px] text-faint">{fmtDate(p.date)}</span>
-                            </span>
-                          }
+                          className="flex flex-col gap-2 border-l-2 border-border pl-3.5"
                         >
-                          <div className="px-4 py-3">
-                            <ChangeGroups groups={p.groups} />
+                          <div className="flex items-center gap-2">
+                            <span className="font-display text-[14px] font-semibold">v{p.version}</span>
+                            <span className="text-[12px] text-faint">{fmtDate(p.date)}</span>
                           </div>
-                        </Collapse>
+                          <ChangeGroups groups={p.groups} />
+                        </div>
                       ))}
                     </div>
                   </div>

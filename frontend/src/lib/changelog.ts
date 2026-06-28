@@ -33,6 +33,33 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '2.6',
+    date: '2026-06-28',
+    groups: [
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'More reliable payments — incoming crypto is matched more strictly and credited atomically, so a paid renewal always lands.',
+            ru: 'Надёжнее оплата — входящие крипто-платежи сверяются строже и зачисляются атомарно, поэтому оплаченное продление всегда срабатывает.',
+          },
+          {
+            en: 'Faster to open — the Payment and Usage screens now load on demand instead of upfront.',
+            ru: 'Быстрее открывается — экраны «Оплата» и «Использование» подгружаются по необходимости, а не сразу.',
+          },
+          {
+            en: 'Update history — refinements appear inline inside each update, so you see the update and all its refinements at once.',
+            ru: 'История обновлений — доработки показываются прямо внутри обновления, так что вы сразу видите и само обновление, и все его доработки.',
+          },
+          {
+            en: 'Better accessibility — form fields are labelled and keyboard focus stays inside open windows.',
+            ru: 'Лучше доступность — у полей ввода есть подписи, а фокус клавиатуры остаётся внутри открытого окна.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '2.5',
     date: '2026-06-26',
     groups: [

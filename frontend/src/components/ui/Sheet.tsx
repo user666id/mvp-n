@@ -149,12 +149,44 @@ export function Sheet({
     return () => clearTimeout(id)
   }, [open])
 
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const FOCUSABLE =
+    'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'
+
+  // Escape closes; Tab is trapped inside the open sheet (keyboard a11y — focus
+  // shouldn't fall through to the page behind the modal).
   useEffect(() => {
     if (!mounted) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab' || !dialogRef.current) return
+      const f = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)
+      if (f.length === 0) return
+      const first = f[0]
+      const last = f[f.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [mounted, onClose])
+
+  // Move focus into the sheet when it opens, unless something inside already has
+  // it (e.g. an autofocused field) — so we never pop the keyboard unexpectedly.
+  useEffect(() => {
+    if (!shown) return
+    const root = dialogRef.current
+    if (!root || root.contains(document.activeElement)) return
+    root.querySelector<HTMLElement>(FOCUSABLE)?.focus()
+  }, [shown])
 
   // Lock the page behind the sheet while it's mounted (covers enter + exit).
   useEffect(() => {
@@ -198,6 +230,7 @@ export function Sheet({
   // paint over a full-screen sheet. At body level its z-50 reliably wins.
   return createPortal(
     <div
+      ref={dialogRef}
       className="fixed inset-0 z-50 flex flex-col overflow-hidden"
       role="dialog"
       aria-modal="true"

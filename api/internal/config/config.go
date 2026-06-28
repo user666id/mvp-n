@@ -34,11 +34,12 @@ type Config struct {
 	BotInternalToken     string // bot → GET /internal/user-lang
 
 	// Downstream services
-	AWGApiURL   string
-	AWGApiToken string
-	XrayAPIHost string
-	XrayAPIPort string
-	ConnectURL  string
+	AWGApiURL    string
+	AWGApiToken  string
+	XrayAPIHost  string
+	XrayAPIPort  string
+	ConnectURL   string
+	BotHealthURL string // Telegram bot liveness probe (admin status panel)
 
 	// Host metrics
 	NetInterface string
@@ -65,6 +66,7 @@ func Load() (*Config, error) {
 		XrayAPIHost:          getenv("XRAY_API_HOST", "127.0.0.1"),
 		XrayAPIPort:          getenv("XRAY_API_PORT", "10085"),
 		ConnectURL:           getenv("CONNECT_URL", "http://127.0.0.1:3000"),
+		BotHealthURL:         getenv("BOT_HEALTH_URL", "http://127.0.0.1:8082/health"),
 		NetInterface:         getenv("NET_INTERFACE", ""),
 		// Public receiving addresses (overridable via env). Defaults baked in so
 		// payments work out-of-the-box on deploy without a manual .env edit.

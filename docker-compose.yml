@@ -51,6 +51,7 @@ services:
       XRAY_API_HOST:  host.docker.internal
       XRAY_API_PORT:  "10085"
       CONNECT_URL:    http://connect:3000
+      BOT_HEALTH_URL: http://bot:8082/health
       # REALITY params baked into the VLESS URI by the API. MUST be passed in or
       # the link gets empty pbk/sid and clients fail with "empty password".
       SERVER_IP:        ${SERVER_IP:?SERVER_IP required}

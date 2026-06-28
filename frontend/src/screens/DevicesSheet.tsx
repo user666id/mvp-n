@@ -253,6 +253,7 @@ export function DevicesSheet({
           value={renameVal}
           onChange={(e) => setRenameVal(e.target.value)}
           placeholder={t('devices.renamePlaceholder')}
+          aria-label={t('devices.renameTitle')}
           className="mb-4 h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[16px] text-ink outline-none placeholder:text-faint focus:border-accent"
         />
         <div className="pb-2">

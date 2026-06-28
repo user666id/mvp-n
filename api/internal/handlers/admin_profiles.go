@@ -102,6 +102,7 @@ func (h *Handler) AdminDomains(w http.ResponseWriter, r *http.Request) {
 		func() dom { return httpCheck("AmneziaWG · 51820", "vpn", h.Config.AWGApiURL+"/health") },
 		dbCheck,
 		func() dom { return tcpCheck("xray API · 10085", "svc", xh+":"+h.Config.XrayAPIPort) },
+		func() dom { return httpCheck("Telegram bot", "svc", h.Config.BotHealthURL) },
 	}
 
 	out := make([]dom, len(jobs))

@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
         -o /api .
 
 # ─── Runtime ──────────────────────────────────────────────────────────────────
-FROM alpine:3.19
+FROM alpine:3.24
 
 RUN apk add --no-cache ca-certificates wget tzdata && \
     addgroup -S app && adduser -S app -G app

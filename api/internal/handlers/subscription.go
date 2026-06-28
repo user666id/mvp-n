@@ -20,15 +20,21 @@ func subscriptionActive(paidUntil sql.NullTime, now time.Time) bool {
 	return !paidUntil.Valid || paidUntil.Time.After(now)
 }
 
-// extendSubscription adds `days` to paid_until, counted from the later of NOW()
+// queryRower is satisfied by both *sql.DB and *sql.Tx, so extendSubscriptionTx
+// can run standalone or inside a caller's transaction (atomic credit).
+type queryRower interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+// extendSubscriptionTx adds `days` to paid_until, counted from the later of NOW()
 // and the current paid_until — so renewing early stacks instead of being lost —
-// and (re)activates the account without touching its configs/devices. Returns
-// the new expiry. This is the single entry point renewals and payments call.
-func (h *Handler) extendSubscription(ctx context.Context, uid int64, days int) (time.Time, error) {
+// and (re)activates the account without touching its configs/devices. It runs on
+// any queryRower, so a payment can claim its order and credit the days in ONE tx.
+func extendSubscriptionTx(ctx context.Context, q queryRower, uid int64, days int) (time.Time, error) {
 	var until time.Time
 	// UPSERT: a brand-new buyer (who paid before ever activating a key) has no
 	// users row yet — create it active; an existing user gets extended/reactivated.
-	err := h.DB.QueryRowContext(ctx, `
+	err := q.QueryRowContext(ctx, `
 		INSERT INTO users (id, is_active, paid_until)
 		VALUES ($1, true, NOW() + make_interval(days => $2))
 		ON CONFLICT (id) DO UPDATE
@@ -37,6 +43,11 @@ func (h *Handler) extendSubscription(ctx context.Context, uid int64, days int) (
 		    deleted_at = NULL
 		RETURNING paid_until`, uid, days).Scan(&until)
 	return until, err
+}
+
+// extendSubscription is the single entry point renewals and admin grants call.
+func (h *Handler) extendSubscription(ctx context.Context, uid int64, days int) (time.Time, error) {
+	return extendSubscriptionTx(ctx, h.DB, uid, days)
 }
 
 // AdminGrantSubscription (admin only) extends a user's subscription by N days —

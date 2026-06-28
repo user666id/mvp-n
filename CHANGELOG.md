@@ -7,6 +7,31 @@ Capsules (`X.Y`) are feature updates; refinements (`X.Y.Z`) are fixes and small
 tweaks shipped under a capsule. The user-facing copy of this history lives in
 `frontend/src/lib/changelog.ts` (About → Changelog).
 
+## [2.6] — 2026-06-28
+
+_(2.5.6 is folded into this 2.6 — there is no separate 2.5.6 release.)_
+
+### Security
+- **USDT payments are matched by the jetton master contract**, not the jetton symbol — a look-alike scam jetton (e.g. `USDX`) with the right amount can no longer be credited as USDT (`payments_verify.go`). TRC20 re-checks the token contract too.
+
+### Fixed
+- **Atomic payment crediting** — claiming an order and extending the subscription now run in ONE DB transaction (`extendSubscriptionTx`), so a crash between them can't leave a renewing buyer paid-but-uncredited.
+- Payment polling widened (TON 50→100, TRON 50→200 events) so a matching transfer in a burst isn't missed.
+
+### Added
+- **Telegram bot liveness** in the admin status panel — the bot serves a tiny `/health` on the compose network (`BOT_HEALTH_URL`, default `http://bot:8082/health`).
+- Tests for the crypto-transfer parsers (real-vs-fake jetton, wallet/contract filtering).
+
+### Changed
+- Lazy-load the Payment (`SubscribeSheet`) and Usage sheets — smaller first paint (main chunk 180→169 KB).
+- Local error boundary around the payment sheet so a crash there can't take down the whole app.
+- Accessibility — `aria-label`s on the key/rename/search inputs; focus trap + focus-on-open in the modal `Sheet`.
+- Changelog screen — refinements render inline inside each capsule (folds the earlier 2.5.6 change).
+
+### Dependencies
+- Runtime base `alpine:3.19 → 3.24` (api, connect) — 3.19 is EOL.
+- `golang.org/x/crypto 0.49→0.53`, `golang.org/x/net 0.52→0.56` (+ transitive x/sys, x/text).
+
 ## [2.5] — 2026-06-26
 
 ### Added

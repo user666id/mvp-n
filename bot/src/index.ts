@@ -1,4 +1,5 @@
 import { Bot, type Context } from 'grammy'
+import { createServer } from 'node:http'
 
 // ── Config ───────────────────────────────────────────────────────────────────
 const BOT_TOKEN = process.env.BOT_TOKEN
@@ -229,6 +230,20 @@ async function main() {
     bot.api.setMyCommands([]),
     bot.api.setMyCommands([], { language_code: 'ru' }),
   ])
+
+  // Tiny liveness endpoint so the admin status panel can see the bot is up
+  // (the long-poll bot otherwise serves no port). Reachable on the compose
+  // network at http://bot:8082/health.
+  const healthPort = Number(process.env.HEALTH_PORT || 8082)
+  createServer((req, res) => {
+    if (req.url === '/health') {
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end('{"ok":true,"service":"bot"}')
+    } else {
+      res.writeHead(404)
+      res.end()
+    }
+  }).listen(healthPort, () => console.log(`[bot] health endpoint on :${healthPort}`))
 
   console.log(`[bot] starting; mini app = ${MINI_APP_URL}`)
   await bot.start({

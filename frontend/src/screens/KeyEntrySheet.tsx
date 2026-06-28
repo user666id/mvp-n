@@ -56,6 +56,7 @@ export function KeyEntrySheet({
         value={key}
         onChange={(e) => setKey(e.target.value.toUpperCase())}
         placeholder="XXXX-XXXX"
+        aria-label={t('key.activateTitle')}
         autoCapitalize="characters"
         className="h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[16px] tracking-wider text-ink outline-none placeholder:text-faint focus:border-accent"
       />

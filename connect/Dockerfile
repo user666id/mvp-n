@@ -13,7 +13,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build \
         -trimpath -ldflags="-s -w" -o /connect .
 
-FROM alpine:3.19
+FROM alpine:3.24
 
 RUN apk add --no-cache ca-certificates wget tzdata && \
     addgroup -S app && adduser -S app -G app

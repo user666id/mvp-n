@@ -276,6 +276,7 @@ export function AdminScreen({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('admin.search')}
+              aria-label={t('admin.search')}
               className="h-[52px] w-full rounded-3xl border border-transparent bg-surface-sunken px-4 text-[15px] text-ink outline-none placeholder:text-faint focus:border-accent"
             />
           </div>
