@@ -1,5 +1,5 @@
-import { Suspense, useEffect, useState } from 'react'
-import { useForegroundRefetch } from '../lib/useForeground'
+import { Suspense } from 'react'
+import { useCachedResource } from '../lib/useForeground'
 import { Sheet } from '../components/ui/Sheet'
 import { Section } from '../components/ui/Card'
 import { LoadError } from '../components/ui/LoadError'
@@ -29,29 +29,15 @@ function Stat({ label, value }: { label: string; value: string | null }) {
  *  per-user analogue of the admin TrafficSheet (GET /profile/traffic). */
 export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, lang } = useT()
-  const [days, setDays] = useState<TrafficDay[] | null>(null)
-  const [total, setTotal] = useState(0)
-  const [failed, setFailed] = useState(false)
-
-  const load = () => {
-    setFailed(false)
-    setDays(null)
-    getProfileTraffic(30)
-      .then((r) => {
-        setDays(r.days)
-        setTotal(r.total)
-      })
-      .catch(() => setFailed(true))
-  }
-
-  useEffect(() => {
-    if (open) load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
-
-  // Re-fetch on foreground — a fetch suspended in the background can hang, leaving
-  // a permanent skeleton; resuming reloads it (same recovery the other screens have).
-  useForegroundRefetch(open, load)
+  // Shared cache: the home Usage widget and this sheet read the SAME 'profileTraffic'
+  // key, so they always agree; the last data is kept and revalidated in the background.
+  const { data, error, retry } = useCachedResource<{ days: TrafficDay[]; total: number }>(
+    'profileTraffic',
+    () => getProfileTraffic(30),
+    { active: open },
+  )
+  const days = data?.days ?? null
+  const total = data?.total ?? 0
 
   const today = days && days.length ? days[days.length - 1].bytes : 0
 
@@ -76,8 +62,8 @@ export function UsageSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
       <Section header={t('traffic.byDay')}>
         <div className="px-3 py-4">
-          {failed ? (
-            <LoadError onRetry={load} />
+          {error ? (
+            <LoadError onRetry={retry} />
           ) : !days ? (
             <div className="skeleton h-[168px] w-full rounded-2xl" />
           ) : chart.length ? (

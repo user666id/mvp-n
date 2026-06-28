@@ -7,6 +7,24 @@ Capsules (`X.Y`) are feature updates; refinements (`X.Y.Z`) are fixes and small
 tweaks shipped under a capsule. The user-facing copy of this history lives in
 `frontend/src/lib/changelog.ts` (About → Changelog).
 
+## [2.7] — 2026-06-28
+
+Unified, stale-while-revalidate loading across the whole Mini App — the fix for the
+long-standing "open a tab → stuck on a skeleton / re-enter → blank / close+reopen to
+load it" inconsistency, plus the intermittent white flash on boot.
+
+### Added
+- **`frontend/src/lib/cache.ts`** — a tiny module-level SWR store every screen reads through `useCachedResource` (`lib/useForeground.ts`): returns last-known data instantly, revalidates in the background, NEVER resets to a skeleton on re-activation, de-dupes in-flight fetches, and guards optimistic writes with an epoch so a slow revalidate can't clobber them. A first load still shows a skeleton but can't hang (the 12s request timeout + retries surface error+retry). Safe display lists (`configs`, `devices`) are persisted to localStorage — namespaced by the Telegram user id — for an instant cold-boot paint.
+
+### Changed
+- **Global resume recovery** — one app-level `visibilitychange` / `pageshow` / `online` listener (App.tsx) revalidates EVERY active view at once, not just the visible tab (the old per-view foreground hook only healed the active one).
+- **Single-source profile** — App, ConfigsScreen, DevicesSheet and the Account sheet all read the one `profile` cache key, so the home banner / Subscription tab / avatar / device count can't disagree. Profile is NOT persisted, so admin/access gating stays pessimistic (no flash of unlocked/admin UI from disk).
+- Migrated the destructive null-reset screens (ServerStats, Devices, Usage, Traffic, PaymentHistory, admin DomainStatus) + Configs/Account onto the shared hook. Order/pending/invoice endpoints stay OUT of the cache (the pay-again guard must be fresh).
+- Pre-warm the Payment (`SubscribeSheet`) chunk on idle.
+
+### Fixed
+- **White flash on open** — `main.tsx` no longer triggers an update-check `location.replace` / chunk `location.reload` after the app is live + visible (those started a fresh, splash-less document load). They now only fire pre-`ready()` (under the BotFather splash) or while hidden; a stale bundle is picked up on the next cold open instead.
+
 ## [2.6.2] — 2026-06-28
 
 ### Changed

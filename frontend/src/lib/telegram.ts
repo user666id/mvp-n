@@ -132,6 +132,12 @@ function applyScheme() {
 export function initTelegram() {
   applyScheme() // apply any saved override even outside Telegram (browser preview)
 
+  // Namespace the data cache (lib/cache) by the Telegram user id, so a different
+  // account on the same device can never read the previous one's persisted lists.
+  try {
+    localStorage.setItem('mvpn_uid', String(tg?.initDataUnsafe?.user?.id ?? 'anon'))
+  } catch {}
+
   // One global tap haptic for every button / role=button / link, so feedback is
   // consistent everywhere without wiring it into each component. Capture phase
   // so it fires even when a child stops propagation.
@@ -177,10 +183,19 @@ export function initTelegram() {
   tg.onEvent?.('contentSafeAreaChanged', applySafeArea)
 }
 
+let readyCalled = false
+
+/** True once signalReady() has run — i.e. Telegram's BotFather splash has been
+ *  dismissed and the app is painted. main.tsx uses this to NEVER trigger a reload
+ *  after the app is live (a fresh document load isn't re-covered by the splash and
+ *  shows a white flash). */
+export const isReady = () => readyCalled
+
 /** Tell Telegram the Mini App is ready — call once React has mounted, so the
  *  BotFather loading screen stays visible through the entire load (the app has
  *  no in-app splash of its own). */
 export function signalReady() {
+  readyCalled = true
   try {
     tg?.ready()
   } catch {}

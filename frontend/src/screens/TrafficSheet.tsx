@@ -1,5 +1,5 @@
-import { Suspense, useEffect, useState } from 'react'
-import { useForegroundRefetch } from '../lib/useForeground'
+import { Suspense } from 'react'
+import { useCachedResource } from '../lib/useForeground'
 import { Sheet } from '../components/ui/Sheet'
 import { Section } from '../components/ui/Card'
 import { LoadError } from '../components/ui/LoadError'
@@ -32,24 +32,12 @@ export function TrafficSheet({
   today: number
 }) {
   const { t, lang } = useT()
-  const [days, setDays] = useState<TrafficDay[] | null>(null)
-  const [failed, setFailed] = useState(false)
-
-  const load = () => {
-    setFailed(false)
-    setDays(null)
-    adminGetTraffic(30)
-      .then((r) => setDays(r.days))
-      .catch(() => setFailed(true))
-  }
-
-  useEffect(() => {
-    if (open) load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
-
-  // Re-fetch on foreground — a background-suspended fetch can hang on a skeleton.
-  useForegroundRefetch(open, load)
+  // Shared cache: keeps the last chart and revalidates in the background instead of
+  // wiping to a skeleton on every open.
+  const { data, error, retry } = useCachedResource('adminTraffic', () => adminGetTraffic(30), {
+    active: open,
+  })
+  const days: TrafficDay[] | null = data?.days ?? null
 
   // Start the chart at the first day with traffic — don't pad the start with
   // empty days from before tracking began ("count from the start, not from zero").
@@ -73,8 +61,8 @@ export function TrafficSheet({
 
       <Section header={t('traffic.byDay')}>
         <div className="px-3 py-4">
-          {failed ? (
-            <LoadError onRetry={load} />
+          {error ? (
+            <LoadError onRetry={retry} />
           ) : !days ? (
             <div className="skeleton h-[168px] w-full rounded-2xl" />
           ) : chart.length ? (

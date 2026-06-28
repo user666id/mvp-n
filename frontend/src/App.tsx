@@ -9,9 +9,11 @@ import { AccountSheet } from './screens/SettingsScreen'
 // stays small (it never ships in their first paint).
 const AdminScreen = lazy(() => import('./screens/AdminSheet').then((m) => ({ default: m.AdminScreen })))
 import { LoadingBar } from './components/ui/LoadingBar'
-import { ApiError, authTelegram, clearToken, getProfile, getToken, setLanguage, type Profile } from './api'
+import { ApiError, authTelegram, clearToken, getProfile, getToken, setLanguage } from './api'
 import { notify, signalReady, closeAllSheets } from './lib/telegram'
 import { useT } from './lib/i18n'
+import { useCachedResource } from './lib/useForeground'
+import * as cache from './lib/cache'
 import { TonConnectUIProvider } from '@tonconnect/ui-react'
 import { HeaderCtx } from './lib/headerCtx'
 
@@ -35,10 +37,17 @@ export default function App() {
   // Bumped when the Account sheet closes, so the screen behind it re-fetches
   // (e.g. after a reset that wiped configs) instead of showing stale data.
   const [revalidate, setRevalidate] = useState(0)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [profile, setProfile] = useState<Profile | null>(null)
 
-  const refreshProfile = () => getProfile().then(setProfile).catch(() => {})
+  // Profile is the SINGLE source of truth (cache key 'profile') — ConfigsScreen and
+  // SubscriptionScreen read the SAME key, so the home banner, the Subscription tab
+  // and the avatar can never disagree. It is NOT persisted to disk, so admin/access
+  // gating stays pessimistic (false / locked) until the first LIVE fetch resolves —
+  // a stale or foreign profile can never flash an unlocked or admin UI.
+  const { data: profile } = useCachedResource('profile', getProfile, {
+    active: phase === 'main',
+    revalidate,
+  })
+  const isAdmin = !!profile?.is_admin
 
   const handleLogin = async () => {
     setBusy(true)
@@ -86,28 +95,41 @@ export default function App() {
     if (phase !== 'main') return
     const saved = localStorage.getItem('mvpn_lang')
     if (saved === 'en' || saved === 'ru') setLanguage(saved).catch(() => {})
-    // Warm the heavy TON Connect chunk on idle, so the wallet capsule in the
-    // payment pane appears instantly instead of popping in after a chunk fetch
-    // when the user opens it. Idle → never competes with first paint.
-    const warmWallet = () => void import('./screens/WalletStatus')
-    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(warmWallet)
-    else setTimeout(warmWallet, 1500)
-    // Surface the admin tab for admins, and seed the avatar/account data
-    // (best-effort; a failed profile fetch just hides the admin tab).
-    getProfile()
-      .then((p) => {
-        setIsAdmin(!!p.is_admin)
-        setProfile(p)
-      })
-      .catch(() => {})
+    // Warm the heavy lazy chunks on idle so the wallet capsule AND the Payment
+    // screen appear instantly instead of popping in after a chunk fetch on first
+    // open. Idle → never competes with first paint.
+    const warm = () => {
+      void import('./screens/WalletStatus')
+      void import('./screens/SubscribeSheet')
+    }
+    if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(warm)
+    else setTimeout(warm, 1500)
+  }, [phase])
+
+  // Global resume recovery: when Telegram brings the Mini App back to the
+  // foreground (or the network returns), revalidate EVERY active view at once — not
+  // just the visible tab — so re-entering ANY tab shows fresh data without a full
+  // app re-open. Listens across the events different TG clients fire on resume.
+  useEffect(() => {
+    if (phase !== 'main') return
+    const onResume = () => {
+      if (document.visibilityState === 'visible') cache.invalidateAll()
+    }
+    document.addEventListener('visibilitychange', onResume)
+    window.addEventListener('pageshow', onResume)
+    window.addEventListener('online', onResume)
+    return () => {
+      document.removeEventListener('visibilitychange', onResume)
+      window.removeEventListener('pageshow', onResume)
+      window.removeEventListener('online', onResume)
+    }
   }, [phase])
 
   const handleLogout = () => {
     clearToken()
+    cache.clearAll() // drop every cached + persisted value so the next account is clean
     setTab('configs')
-    setIsAdmin(false)
     setAccountOpen(false)
-    setProfile(null)
     setError(null)
     setPhase('auth')
   }
@@ -153,8 +175,8 @@ export default function App() {
           <div className={tab === 'subscription' ? '' : 'hidden'}>
             <SubscriptionScreen
               active={tab === 'subscription'}
-              profile={profile}
-              onChanged={refreshProfile}
+              profile={profile ?? null}
+              onChanged={() => cache.invalidate('profile')}
               onAccount={() => setAccountOpen(true)}
               onBack={subBack ? () => { setSubBack(false); setTab('configs') } : undefined}
               accountName={profile?.first_name ?? undefined}

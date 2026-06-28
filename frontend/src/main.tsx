@@ -8,7 +8,7 @@ import App from './App'
 // here at boot — cheap, and guarantees availability for the jetton transfer.
 if (!(globalThis as { Buffer?: unknown }).Buffer) (globalThis as { Buffer?: unknown }).Buffer = Buffer
 import './index.css'
-import { initTelegram } from './lib/telegram'
+import { initTelegram, isReady } from './lib/telegram'
 import { LangProvider } from './lib/i18n'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
@@ -16,6 +16,10 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 // may request a hashed chunk a newer deploy replaced. Vite fires this on a failed
 // dynamic import — reload ONCE (guarded) to fetch the fresh, no-store index.
 window.addEventListener('vite:preloadError', () => {
+  // Never tear down a painted, READY app to a blank document — a fresh page load
+  // isn't re-covered by Telegram's splash and shows ~1s of white. Once live, let
+  // the failed chunk surface via the ErrorBoundary's recoverable card instead.
+  if (isReady() && document.visibilityState === 'visible') return
   if (!sessionStorage.getItem('mvpn_chunk_reloaded')) {
     sessionStorage.setItem('mvpn_chunk_reloaded', '1')
     location.reload()
@@ -38,6 +42,10 @@ async function checkForUpdate() {
     const html = await fetch('index.html?ts=' + Date.now(), { cache: 'no-store' }).then((r) => r.text())
     const latest = html.match(/index-([\w-]+)\.js/)?.[1]
     if (latest && latest !== running && !sessionStorage.getItem('mvpn_updated')) {
+      // Only navigate while Telegram's splash still covers the load (pre-ready) or
+      // the tab is hidden. A replace after the app is live + visible flashes white;
+      // defer it — the next cold open runs this check again under the splash.
+      if (isReady() && document.visibilityState === 'visible') return
       sessionStorage.setItem('mvpn_updated', '1')
       location.replace(location.pathname + '?v=' + latest)
     }

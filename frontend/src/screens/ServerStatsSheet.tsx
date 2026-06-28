@@ -1,6 +1,6 @@
-import React, { Suspense, useCallback, useEffect, useState } from 'react'
+import React, { Suspense } from 'react'
 import { Sheet } from '../components/ui/Sheet'
-import { useForegroundRefetch } from '../lib/useForeground'
+import { useCachedResource } from '../lib/useForeground'
 import { LoadError } from '../components/ui/LoadError'
 import { SheetHero } from '../components/ui/SheetHero'
 import { AreaChart } from '../components/charts'
@@ -30,30 +30,20 @@ export function ServerStatsSheet({
   configId: string | null
 }) {
   const { t } = useT()
-  const [stats, setStats] = useState<ServerStats | null>(null)
-  const [error, setError] = useState(false)
-
-  const load = useCallback(() => {
-    if (!configId) return
-    setStats(null)
-    setError(false)
-    getServerStats(configId)
-      .then(setStats)
-      .catch(() => setError(true))
-  }, [configId])
-
-  useEffect(() => {
-    if (open) load()
-  }, [open, load])
-
-  // Re-fetch on foreground — a background-suspended fetch can hang on a skeleton.
-  useForegroundRefetch(open, load)
+  // Shared SWR cache keyed per config: keeps the last stats and revalidates in the
+  // background, so re-opening this sheet shows them INSTANTLY instead of a fresh
+  // skeleton (the old setStats(null)-on-open was the "Server Stats stuck" bug).
+  const { data: stats, error, retry } = useCachedResource<ServerStats>(
+    `serverStats:${configId ?? ''}`,
+    () => getServerStats(configId as string),
+    { active: open && !!configId },
+  )
 
   return (
     <Sheet open={open} onClose={onClose} title={t('stats.title')}>
       <SheetHero icon={<Monitor size={30} />} title={t('stats.title')} />
       {error ? (
-        <LoadError onRetry={load} />
+        <LoadError onRetry={retry} />
       ) : !stats ? (
         <StatsSkeleton />
       ) : (

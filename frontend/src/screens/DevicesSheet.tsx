@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useForegroundRefetch } from '../lib/useForeground'
+import { useCachedResource } from '../lib/useForeground'
+import * as cache from '../lib/cache'
 import { Sheet } from '../components/ui/Sheet'
 import { Button } from '../components/ui/Button'
 import { Section } from '../components/ui/Card'
@@ -38,15 +39,17 @@ export function DevicesSheet({
 }) {
   const { t } = useT()
   const toast = useToast()
-  const [devices, setDevices] = useState<Device[] | null>(null)
-  const [failed, setFailed] = useState(false)
+  // Shared cache: the device list + the home Devices widget read the SAME 'devices'
+  // key, and the cap comes from the single 'profile' key — so they never disagree,
+  // and re-opening shows the last list instantly (no setDevices(null)-on-open wipe).
+  const { data: devices, error: failed, retry } = useCachedResource<Device[]>('devices', getDevices, {
+    active: open,
+  })
+  const { data: profile } = useCachedResource('profile', getProfile, { active: open })
+  const limit = profile?.device_limit || null
   const [renaming, setRenaming] = useState<Device | null>(null)
   const [renameVal, setRenameVal] = useState('')
   const [busy, setBusy] = useState(false)
-  // Device limit lives here now (moved off the profile/Settings): the count + cap
-  // are most meaningful right next to the device list. Edited inline with an
-  // iOS-style wheel (no separate sheet, no typing). 0 = no limit.
-  const [limit, setLimit] = useState<number | null>(null)
   const [editingLimit, setEditingLimit] = useState(false)
   const [limitVal, setLimitVal] = useState(0)
   const limitRef = useRef<HTMLDivElement>(null)
@@ -62,44 +65,25 @@ export function DevicesSheet({
     return () => document.removeEventListener('pointerdown', onDoc)
   }, [editingLimit])
 
-  const load = async () => {
-    setFailed(false)
-    setDevices(null)
-    // Limit is best-effort — a failure just hides the cap, never blocks the list.
-    getProfile()
-      .then((p) => setLimit(p.device_limit || null))
-      .catch(() => {})
-    try {
-      setDevices(await getDevices())
-    } catch {
-      // Don't fake an empty list (misleading) — show a retry instead.
-      setFailed(true)
-    }
+  // The list + cap come from the shared cache (revalidated on resume by App's
+  // global recovery). Mutations update the cache so the home widget, the count and
+  // this list stay in sync; refresh() reconciles against the server.
+  const refresh = () => {
+    cache.invalidate('devices', 'profile')
+    onChanged?.()
   }
 
-  // No Save button — the wheel auto-persists the value once it settles on a number.
+  // No Save button — the wheel auto-persists once it settles. Flip the cached count
+  // instantly, then reconcile (revert to server truth on failure).
   const persistLimit = async (v: number) => {
     setLimitVal(v)
+    cache.mutate('profile', (p: any) => (p ? { ...p, device_limit: v } : p))
     try {
       await setDeviceLimit(v)
-      setLimit(v || null)
       onChanged?.()
     } catch {
-      /* keep the wheel value; the user can re-pick to retry */
+      cache.invalidate('profile')
     }
-  }
-
-  useEffect(() => {
-    if (open) load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
-
-  // Re-load when the app returns to the foreground while the sheet is open.
-  useForegroundRefetch(open, load)
-
-  const refresh = async () => {
-    await load()
-    onChanged?.()
   }
 
   // Delete a device inline (with a confirm) — no separate actions sheet.
@@ -110,8 +94,9 @@ export function DevicesSheet({
       // AmneziaWG "device" is its config → deleting it revokes the peer.
       if (d.kind === 'awg') await deleteConfig(d.id)
       else await deleteDevice(d.id)
+      cache.mutate('devices', (l: Device[] | undefined) => l?.filter((x) => x.id !== d.id) ?? l)
       toast(t('devices.deletedToast'))
-      await refresh()
+      refresh()
     } finally {
       setBusy(false)
     }
@@ -124,9 +109,12 @@ export function DevicesSheet({
     setBusy(true)
     try {
       await renameDevice(renaming.id, name)
+      cache.mutate('devices', (l: Device[] | undefined) =>
+        l?.map((x) => (x.id === renaming.id ? { ...x, name } : x)) ?? l,
+      )
       setRenaming(null)
       toast(t('devices.renamed'))
-      await refresh()
+      refresh()
     } finally {
       setBusy(false)
     }
@@ -137,8 +125,10 @@ export function DevicesSheet({
     setBusy(true)
     try {
       await resetSubscriptionLink()
+      // A reset wipes devices server-side and may clear configs — refresh both.
+      cache.invalidate('devices', 'configs', 'profile')
       toast(t('devices.deletedAllToast'))
-      await refresh()
+      onChanged?.()
     } finally {
       setBusy(false)
     }
@@ -224,7 +214,7 @@ export function DevicesSheet({
         )}
 
         {failed ? (
-          <LoadError onRetry={load} />
+          <LoadError onRetry={retry} />
         ) : !devices ? (
           <ListSkeleton rows={3} />
         ) : devices.length === 0 ? (

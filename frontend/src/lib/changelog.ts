@@ -33,6 +33,38 @@ export interface ReleaseNote {
 
 export const RELEASES: ReleaseNote[] = [
   {
+    version: '2.7',
+    date: '2026-06-28',
+    groups: [
+      {
+        kind: 'changed',
+        items: [
+          {
+            en: 'Faster, steadier loading everywhere — every screen now keeps its last data and refreshes in the background, so tabs and panels open instantly and no longer get stuck on a loading skeleton.',
+            ru: 'Быстрее и стабильнее загрузка везде — каждый экран держит последние данные и обновляет их в фоне, поэтому вкладки и окна открываются мгновенно и больше не «залипают» на загрузке.',
+          },
+          {
+            en: 'Returning to the app refreshes everything at once — no more closing and re-opening to get a screen to load.',
+            ru: 'Возврат в приложение обновляет всё разом — больше не нужно закрывать и открывать заново, чтобы экран загрузился.',
+          },
+          {
+            en: 'The Payment screen opens faster.',
+            ru: 'Экран «Оплата» открывается быстрее.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        items: [
+          {
+            en: 'No more brief white flash when opening the app.',
+            ru: 'Убрана кратковременная белая вспышка при открытии приложения.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '2.6',
     date: '2026-06-28',
     groups: [

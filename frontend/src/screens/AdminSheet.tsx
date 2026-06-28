@@ -19,7 +19,7 @@ import { confirmDialog, notify, openLink } from '../lib/telegram'
 import { padId, formatBytes } from '../lib/format'
 import { subLabel } from '../lib/subscription'
 import { useT } from '../lib/i18n'
-import { useActiveRefresh } from '../lib/useForeground'
+import { useActiveRefresh, useCachedResource } from '../lib/useForeground'
 import {
   adminBlockProfile, adminCreateKeys, adminDeleteProfile,
   adminDeleteProfileDevice, adminGetDomains, adminGetProfileDevices,
@@ -367,17 +367,13 @@ function DomainStatusSheet({
   onBack?: () => void
 }) {
   const { t } = useT()
-  const [items, setItems] = useState<DomainStatus[] | null>(null)
-
-  const load = () => {
-    setItems(null)
-    adminGetDomains().then(setItems).catch(() => setItems([]))
-  }
-
-  useEffect(() => {
-    if (open) load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  // Shared cache: keeps the last status list and re-probes in the background on
+  // re-open / resume instead of wiping to a skeleton each time (was setItems(null)).
+  const { data: items } = useCachedResource<DomainStatus[]>(
+    'adminDomains',
+    () => adminGetDomains().catch(() => []),
+    { active: open },
+  )
 
   return (
     <Sheet open={open} onClose={onClose} onBack={onBack} title={t('admin.domains')} pills>

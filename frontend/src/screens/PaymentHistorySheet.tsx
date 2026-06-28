@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useForegroundRefetch } from '../lib/useForeground'
+import { useCachedResource } from '../lib/useForeground'
 import { Sheet } from '../components/ui/Sheet'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { LoadError } from '../components/ui/LoadError'
@@ -20,27 +19,14 @@ const planLabel = (days: number, t: ReturnType<typeof useT>['t']) =>
 /** Read-only list of the user's past payments (newest first). */
 export function PaymentHistorySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, lang } = useT()
-  const [items, setItems] = useState<Order[] | null>(null)
-  const [failed, setFailed] = useState(false)
-
-  // A failed fetch must NOT look like "no payments" — flag it so the UI shows a
-  // Retry instead of the empty state.
-  const load = () => {
-    setFailed(false)
-    setItems(null)
-    getOrderHistory()
-      .then(setItems)
-      .catch(() => setFailed(true))
-  }
-
-  useEffect(() => {
-    if (open) load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
-
-  // Re-fetch on foreground — a background-suspended fetch can hang on a skeleton;
-  // resuming reloads it (same recovery the other screens have).
-  useForegroundRefetch(open, load)
+  // Shared cache: keeps the last history list and revalidates in the background —
+  // a failed refetch keeps showing it rather than wiping to a skeleton. A first
+  // failure still surfaces a Retry (never the misleading "no payments" empty state).
+  const { data: items, error: failed, retry } = useCachedResource<Order[]>(
+    'paymentHistory',
+    getOrderHistory,
+    { active: open },
+  )
 
   const fmtWhen = (s?: string) => (s ? fmtSubDate(s, lang) : '')
   const assetLabel = (a: string) => (a === 'TON' ? 'GRAM' : 'USDT')
@@ -49,7 +35,7 @@ export function PaymentHistorySheet({ open, onClose }: { open: boolean; onClose:
     <Sheet open={open} onClose={onClose} onBack={onClose} title={t('sub.history')}>
       <SheetHero icon={<Clock size={30} />} title={t('sub.history')} />
       {failed ? (
-        <LoadError onRetry={load} />
+        <LoadError onRetry={retry} />
       ) : !items ? (
         <ListSkeleton rows={3} avatar={false} card />
       ) : items.length === 0 ? (

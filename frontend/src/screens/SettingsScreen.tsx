@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useForegroundRefetch } from '../lib/useForeground'
+import { useState } from 'react'
+import { useCachedResource } from '../lib/useForeground'
+import * as cache from '../lib/cache'
 import { Section } from '../components/ui/Card'
 import { Cell } from '../components/ui/Cell'
 import { Switch } from '../components/ui/Switch'
@@ -22,7 +23,7 @@ import {
 import { useT } from '../lib/i18n'
 import { subLabel } from '../lib/subscription'
 import {
-  ApiError, deleteAccount, getProfile, setLanguage, type Profile,
+  ApiError, deleteAccount, getProfile, setLanguage,
 } from '../api'
 
 const LS_NOTIFY = 'mvpn_notify'
@@ -38,7 +39,9 @@ export function AccountSheet({
 }) {
   const { t, lang, setLang } = useT()
   const toast = useToast()
-  const [profile, setProfile] = useState<Profile | null>(null)
+  // Single-sourced profile (shared cache) — the SAME value as the home banner, kept
+  // and revalidated in the background (no blank flash on re-open; recovers on resume).
+  const { data: profile } = useCachedResource('profile', getProfile, { active: open })
   const [notify_, setNotify] = useState(localStorage.getItem(LS_NOTIFY) === '1')
   const [profileOpen, setProfileOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
@@ -63,25 +66,6 @@ export function AccountSheet({
     setDarkShade(s)
   }
   const [busy, setBusy] = useState(false)
-
-  const load = useCallback(async () => {
-    try {
-      const p = await getProfile()
-      setProfile(p)
-    } catch {
-      /* keep null; screen still renders shell */
-    }
-  }, [])
-
-  // Load/refresh when the sheet opens. It stays mounted across opens, so this is
-  // a lazy first load + background refresh that keeps the current data on screen
-  // (no blank flash on every open).
-  useEffect(() => {
-    if (open) load()
-  }, [open, load])
-
-  // Re-load when the app returns to the foreground (suspended WebView / stale data).
-  useForegroundRefetch(open, load)
 
   const toggleNotify = (v: boolean) => {
     setNotify(v)
@@ -299,7 +283,7 @@ export function AccountSheet({
         onClose={() => setKeyOpen(false)}
         onActivated={() => {
           setKeyOpen(false)
-          load()
+          cache.invalidate('profile', 'configs')
         }}
       />
       <PaymentHistorySheet open={historyOpen} onClose={() => setHistoryOpen(false)} />
