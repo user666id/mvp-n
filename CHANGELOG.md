@@ -7,6 +7,11 @@ Capsules (`X.Y`) are feature updates; refinements (`X.Y.Z`) are fixes and small
 tweaks shipped under a capsule. The user-facing copy of this history lives in
 `frontend/src/lib/changelog.ts` (About → Changelog).
 
+## [2.6.2] — 2026-06-28
+
+### Changed
+- **VLESS Enhanced-only in the UI** — the Standard (Vision, `:43000`) mode is locked in the config Mode picker (greyed, like the roadmap protocols). The Vision server inbound stays up as a fallback, so existing Standard configs keep working; DB check confirmed 0 active configs on Standard at ship time. New configs already default to Enhanced.
+
 ## [2.6.1] — 2026-06-28
 
 ### Dependencies

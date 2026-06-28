@@ -259,27 +259,34 @@ export function ConfigDetailSheet({
                       )
                     })}
                   </div>
-                  {/* Mode — Standard (Vision) / Enhanced (XHTTP) */}
+                  {/* Mode — Enhanced (XHTTP) only. Standard (Vision) is locked in the
+                      UI (better against RU DPI), but its server inbound stays up so
+                      existing Standard configs keep working as a fallback. */}
                   <div className="px-4 pb-1.5 pt-3 text-[13px] text-muted">{t('create.mode')}</div>
                   <div className="flex gap-2 px-4">
                     {[
-                      { v: false, label: t('create.standard') },
-                      { v: true, label: t('create.enhanced') },
-                    ].map((m) => (
-                      <button
-                        key={String(m.v)}
-                        type="button"
-                        onClick={() => onToggle('enhanced', m.v)}
-                        className={
-                          'h-10 flex-1 rounded-full border text-[14px] font-medium transition-colors ' +
-                          (config.enhanced === m.v && !config.game_mode
-                            ? 'border-accent text-ink'
-                            : 'border-border text-ink active:bg-surface-sunken')
-                        }
-                      >
-                        {m.label}
-                      </button>
-                    ))}
+                      { v: false, label: t('create.standard'), locked: true },
+                      { v: true, label: t('create.enhanced'), locked: false },
+                    ].map((m) => {
+                      const selected = config.enhanced === m.v && !config.game_mode
+                      return (
+                        <button
+                          key={String(m.v)}
+                          type="button"
+                          disabled={m.locked}
+                          onClick={() => !m.locked && onToggle('enhanced', m.v)}
+                          className={
+                            'h-10 flex-1 rounded-full border text-[14px] font-medium transition-colors ' +
+                            (selected
+                              ? 'border-accent text-ink'
+                              : 'border-border text-ink active:bg-surface-sunken') +
+                            (m.locked ? ' opacity-50' : '')
+                          }
+                        >
+                          {m.label}
+                        </button>
+                      )
+                    })}
                   </div>
                   <p className="mt-3 border-t border-border px-4 py-3 text-[13px] leading-snug text-muted">
                     {t('detail.afterChange')}

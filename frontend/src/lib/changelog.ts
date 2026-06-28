@@ -60,6 +60,21 @@ export const RELEASES: ReleaseNote[] = [
     ],
     patches: [
       {
+        version: '2.6.2',
+        date: '2026-06-28',
+        groups: [
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'VLESS now runs in Enhanced mode only — the Standard mode is hidden from the picker for steadier connections; existing connections are unchanged.',
+                ru: 'VLESS теперь работает только в усиленном режиме — обычный убран из выбора для стабильности; существующие подключения не меняются.',
+              },
+            ],
+          },
+        ],
+      },
+      {
         version: '2.6.1',
         date: '2026-06-28',
         groups: [
