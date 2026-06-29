@@ -9,6 +9,11 @@ VLESS + REALITY and AmneziaWG · console in a Mini App · access via one-time ke
 
 </div>
 
+> **Public mirror.** A sanitized, read-only snapshot of mvp-n, published for transparency.
+> Secrets, the origin server IP and the receiving wallet addresses are replaced with
+> placeholders (`<origin-ip>`, `YOUR_TON_WALLET_ADDRESS`, `YOUR_TRON_WALLET_ADDRESS`).
+> The project is developed in a private repo; issues/PRs here are not actively monitored.
+
 ## What it is
 
 The user opens a Telegram bot, taps a single button — and lands in the
@@ -171,8 +176,3 @@ Copyright (C) 2026 mvp-n.net — [GNU AGPL-3.0](./LICENSE).
 The code is open for transparency. AGPL means: you may study, modify and
 self-host it, but if you run a modified version as a network service — you are
 required to publish the source of your changes under the same license.
-
-> **Public mirror.** A sanitized, read-only snapshot of mvp-n, published for transparency.
-> Secrets, the origin server IP and the receiving wallet addresses are replaced with
-> placeholders (`<origin-ip>`, `YOUR_TON_WALLET_ADDRESS`, `YOUR_TRON_WALLET_ADDRESS`).
-> The project is developed in a private repo; issues/PRs here are not actively monitored.

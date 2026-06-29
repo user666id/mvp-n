@@ -143,6 +143,15 @@ export default function App() {
     setTab('configs')
   }
 
+  // Tab panes are STACKED (each its own fixed, scrollable viewport) and cross-fade
+  // on switch — the incoming tab fades in over the outgoing. This is smooth now that
+  // every screen renders its cached content instantly (the old hard `hidden` cut, and
+  // the even-older fade that started the incoming blank, both felt janky). Inactive
+  // panes are non-interactive and keep their own scroll position while mounted.
+  const tabPane = (on: boolean) =>
+    'fixed inset-0 overflow-y-auto overflow-x-hidden transition-opacity duration-200 ease-out ' +
+    (on ? 'opacity-100' : 'pointer-events-none opacity-0')
+
   return (
     <TonConnectUIProvider manifestUrl={TON_MANIFEST} actionsConfiguration={{ twaReturnUrl: TON_TWA_RETURN }}>
     <ToastProvider>
@@ -160,7 +169,7 @@ export default function App() {
               Switch is INSTANT (no fade) — like the iOS/Telegram tab bar. A fade-in
               started the incoming tab at opacity 0 while the outgoing one was cut
               instantly, so there was a one-frame blank flash (the "flicker"). */}
-          <div className={tab === 'configs' ? '' : 'hidden'}>
+          <div className={tabPane(tab === 'configs')}>
             <ConfigsScreen
               active={tab === 'configs'}
               onAccount={() => setAccountOpen(true)}
@@ -172,7 +181,7 @@ export default function App() {
               revalidate={revalidate}
             />
           </div>
-          <div className={tab === 'subscription' ? '' : 'hidden'}>
+          <div className={tabPane(tab === 'subscription')}>
             <SubscriptionScreen
               active={tab === 'subscription'}
               profile={profile ?? null}
@@ -184,7 +193,7 @@ export default function App() {
             />
           </div>
           {isAdmin && (
-            <div className={tab === 'admin' ? '' : 'hidden'}>
+            <div className={tabPane(tab === 'admin')}>
               <Suspense fallback={<div className="min-h-screen bg-canvas"><LoadingBar /></div>}>
                 <AdminScreen
                   active={tab === 'admin'}

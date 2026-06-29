@@ -63,6 +63,23 @@ export const RELEASES: ReleaseNote[] = [
         ],
       },
     ],
+    patches: [
+      {
+        version: '2.7.1',
+        date: '2026-06-28',
+        groups: [
+          {
+            kind: 'changed',
+            items: [
+              {
+                en: 'The Admin panel now loads instantly like the rest of the app, and switching tabs cross-fades smoothly.',
+                ru: 'Админ-панель теперь грузится мгновенно, как остальное приложение, а переключение вкладок плавно перетекает.',
+              },
+            ],
+          },
+        ],
+      },
+    ],
   },
   {
     version: '2.6',

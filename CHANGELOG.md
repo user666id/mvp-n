@@ -7,6 +7,12 @@ Capsules (`X.Y`) are feature updates; refinements (`X.Y.Z`) are fixes and small
 tweaks shipped under a capsule. The user-facing copy of this history lives in
 `frontend/src/lib/changelog.ts` (About → Changelog).
 
+## [2.7.1] — 2026-06-28
+
+### Changed
+- **Admin panel onto the shared cache** — `adminProfiles` / `adminKeys` are now `useCachedResource` keys (AdminSheet.tsx), so the admin tab shows instantly on re-open and is healed by the app-wide resume recovery (a dropped first fetch no longer leaves it stuck on a skeleton). Key generate/revoke and profile block/delete now invalidate/mutate those keys.
+- **Smooth tab cross-fade** — the bottom-tab content is now stacked fixed panes that cross-fade on switch (App.tsx `tabPane`), instead of a hard `hidden` cut. Viable now that 2.7's cache makes the incoming tab render its content instantly (no blank-at-opacity-0 flash that forced the old hard cut). Each pane keeps its own scroll position.
+
 ## [2.7] — 2026-06-28
 
 Unified, stale-while-revalidate loading across the whole Mini App — the fix for the

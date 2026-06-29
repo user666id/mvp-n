@@ -19,7 +19,8 @@ import { confirmDialog, notify, openLink } from '../lib/telegram'
 import { padId, formatBytes } from '../lib/format'
 import { subLabel } from '../lib/subscription'
 import { useT } from '../lib/i18n'
-import { useActiveRefresh, useCachedResource } from '../lib/useForeground'
+import { useCachedResource } from '../lib/useForeground'
+import * as cache from '../lib/cache'
 import {
   adminBlockProfile, adminCreateKeys, adminDeleteProfile,
   adminDeleteProfileDevice, adminGetDomains, adminGetProfileDevices,
@@ -44,9 +45,14 @@ export function AdminScreen({
 }) {
   const { t, lang } = useT()
   const toast = useToast()
-  const [profiles, setProfiles] = useState<AdminProfile[] | null>(null)
-  const [trafficToday, setTrafficToday] = useState<number | null>(null)
-  const [keys, setKeys] = useState<AccessKeyRow[] | null>(null)
+  // Shared cache — admin profiles + keys are now on the same SWR store as the rest
+  // of the app, so they show instantly on re-open and are healed by the app-wide
+  // resume recovery (a dropped first fetch no longer leaves the panel stuck).
+  const { data: profData } = useCachedResource('adminProfiles', adminListProfiles, { active, revalidate })
+  const profiles = profData?.profiles ?? null
+  const trafficToday = profData?.traffic_today ?? null
+  const { data: keysData } = useCachedResource('adminKeys', adminListKeys, { active, revalidate })
+  const keys = keysData ?? null
   const [keyDays, setKeyDays] = useState(0) // 0 = lifetime; else 7/30/90/365
   const [genBusy, setGenBusy] = useState(false)
   const [sel, setSel] = useState<AdminProfile | null>(null)
@@ -72,38 +78,13 @@ export function AdminScreen({
     )
   })
 
-  const loadProfiles = async () => {
-    // Don't blank the list to a skeleton on a refetch (e.g. after block/unblock
-    // or re-open) — keep the current rows visible and swap them in when the new
-    // data arrives. The skeleton only shows on the very first load (profiles===null).
-    try {
-      const r = await adminListProfiles()
-      setProfiles(r.profiles)
-      setTrafficToday(r.traffic_today)
-    } catch {
-      setProfiles((prev) => prev ?? [])
-    }
-  }
-  const loadKeys = async () => {
-    try {
-      setKeys(await adminListKeys())
-    } catch {
-      setKeys([])
-    }
-  }
-
-  useActiveRefresh(active, revalidate, () => {
-    loadProfiles()
-    loadKeys()
-  })
-
   const generate = async () => {
     setGenBusy(true)
     try {
       await adminCreateKeys({ count: 1, plan_days: keyDays })
       notify('success')
       toast(t('admin.keysGenerated'))
-      await loadKeys()
+      cache.invalidate('adminKeys')
     } catch {
       toast(t('admin.generateFailed'))
     } finally {
@@ -115,7 +96,7 @@ export function AdminScreen({
     if (!(await confirmDialog(t('admin.keyDeleteConfirm')))) return
     try {
       await adminRevokeKey(k.id)
-      setKeys((prev) => (prev ?? []).filter((x) => x.id !== k.id))
+      cache.mutate('adminKeys', (prev: AccessKeyRow[] | undefined) => prev?.filter((x) => x.id !== k.id))
       toast(t('admin.keyDeleted'))
     } catch {
       toast(t('admin.deleteFailed'))
@@ -329,7 +310,7 @@ export function AdminScreen({
           open={!!sel}
           onClose={() => setSel(null)}
           onBack={() => setSel(null)}
-          onChanged={loadProfiles}
+          onChanged={() => cache.invalidate('adminProfiles')}
         />
       )}
       <DomainStatusSheet
