@@ -1,0 +1,75 @@
+name: Lint
+
+on:
+  workflow_dispatch: # also runnable by hand from the Actions tab
+  # Run gofmt/vet/go test + tsc automatically on PRs into the working/release
+  # branches, so regressions are caught before they can be shipped to `release`.
+  # (Build/security/codeql stay manual; this is the lightweight always-on gate.)
+  pull_request:
+    branches: [main, release]
+
+jobs:
+  go:
+    name: Go lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: gofmt
+        run: |
+          out=$(gofmt -l api connect awg-server)
+          if [ -n "$out" ]; then
+            echo "::error::Files not gofmt-ed:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: go vet (api)
+        working-directory: ./api
+        run: go vet ./...
+
+      - name: go vet (connect)
+        working-directory: ./connect
+        run: go vet ./...
+
+      - name: go vet (awg-server)
+        working-directory: ./awg-server
+        run: go vet ./...
+
+      - name: go test (api)
+        working-directory: ./api
+        run: go test ./...
+
+      - name: go test (connect)
+        working-directory: ./connect
+        run: go test ./...
+
+      - name: go test (awg-server)
+        working-directory: ./awg-server
+        run: go test ./...
+
+  frontend:
+    name: Frontend lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: TypeScript check
+        working-directory: ./frontend
+        run: npx tsc --noEmit
+
+      - name: Test
+        working-directory: ./frontend
+        run: npm test

@@ -1,0 +1,64 @@
+# ─── Binaries ────────────────────────────────────────────────────────────────
+*.exe
+*.out
+*.bin
+
+# Go binaries (one per service)
+/api/api
+/connect/connect
+/awg-server/awg-server
+
+# Go vendor
+vendor/
+
+# ─── Node ────────────────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+bot/dist/
+
+# ─── Python (legacy, may have leftovers) ─────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# ─── Environment & secrets ───────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+/etc/mvpn/
+credentials.json
+
+# ─── IDE / Editor ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Build / cache ───────────────────────────────────────────────────────────
+.cache/
+.tmp/
+tmp/
+*.log
+coverage.out
+*.test
+
+# ─── Local data ──────────────────────────────────────────────────────────────
+/var/
+/data/
+postgres_data/
+
+# extra
+*.bak
+*.bak.*
+frontend-tgui/dist/
+frontend-tgui/node_modules/
+
+# Claude agent tooling
+.claude/

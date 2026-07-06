@@ -1,0 +1,92 @@
+name: Mirror sync
+
+# On every push to `main`: run the Go tests + frontend build, and ONLY if they
+# pass, sync the public sanitized mirror (github.com/user666id/mvp-n) from HEAD.
+#
+# The actual scrub + leak-scan gate lives in scripts/sync-mirror.sh — this
+# workflow just gates it on a green build and provides push auth. If the
+# leak-scan finds a wallet / origin IP / admin id / token, the script aborts and
+# nothing is pushed, so a bad commit fails the job instead of leaking.
+#
+# Setup (one-time): add a repo secret MIRROR_TOKEN — a PAT (or fine-grained
+# token) with `contents: write` on user666id/mvp-n. Without it the sync job
+# fails fast with a clear message and the mirror is left untouched.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # allow a manual re-sync from the Actions tab
+
+# Never let two mirror pushes race — a force-push mid-flight could publish a
+# half-built tree. Newer pushes cancel older in-flight runs.
+concurrency:
+  group: mirror-sync
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Test + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: go test (api)
+        working-directory: ./api
+        run: go test ./...
+
+      - name: go test (connect)
+        working-directory: ./connect
+        run: go test ./...
+
+      - name: go test (awg-server)
+        working-directory: ./awg-server
+        run: go test ./...
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend install
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Frontend build
+        working-directory: ./frontend
+        run: npm run build
+
+  sync:
+    name: Sync public mirror
+    needs: verify
+    runs-on: ubuntu-latest
+    # Only auto-sync on a real push to main; a manual dispatch is also allowed.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # sync-mirror.sh does `git archive HEAD`; a shallow HEAD is enough.
+          fetch-depth: 1
+
+      - name: Guard — MIRROR_TOKEN must be configured
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          if [ -z "${MIRROR_TOKEN:-}" ]; then
+            echo "::error::MIRROR_TOKEN secret is not set — add a PAT with contents:write on user666id/mvp-n. Mirror not synced." >&2
+            exit 1
+          fi
+
+      - name: Sync mirror (scrub + leak-scan gate + force-push)
+        env:
+          # Feed the token into the push URL the script force-pushes to. The
+          # script scrubs infra secrets and runs its own leak-scan gate before
+          # any push; if the gate fails it exits non-zero and pushes nothing.
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+          MIRROR_URL: https://x-access-token:${{ secrets.MIRROR_TOKEN }}@github.com/user666id/mvp-n.git
+          MIRROR_COMMIT_NAME: mvp-n
+          MIRROR_COMMIT_EMAIL: noreply@mvp-n.net
+        run: bash scripts/sync-mirror.sh
