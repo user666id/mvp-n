@@ -1,0 +1,17 @@
+import { type ReactNode } from 'react'
+
+/**
+ * Category hero — a centred square icon tile + a title under it, at the top of a
+ * screen. A clean grey tile with a thin ring, the icon, and a title under it — a
+ * consistent, lightweight anchor per screen.
+ */
+export function SheetHero({ icon, title }: { icon: ReactNode; title?: string }) {
+  return (
+    <div className="mb-6 mt-1 flex flex-col items-center text-center">
+      <span className="grid h-[74px] w-[74px] place-items-center rounded-full bg-surface-sunken text-muted ring-1 ring-inset ring-border">
+        {icon}
+      </span>
+      {title && <div className="font-display mt-3 text-[20px] font-semibold text-ink">{title}</div>}
+    </div>
+  )
+}
