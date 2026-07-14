@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>mvp-n</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Self-hosted Hanken Grotesk (woff2 in /fonts, @font-face in /fonts.css) —
+         no external Google Fonts request. font-display:swap, so the page paints
+         immediately with the system fallback and upgrades when the font arrives. -->
+    <link rel="stylesheet" href="./fonts.css" />
+    <!-- No-flash background. Telegram's BotFather loading screen stays up until
+         ready() is called (once React mounts). To avoid a white/cream flash before
+         the theme applies, set the canvas to the SAVED app theme synchronously here
+         (not just the OS scheme) — mirrors applyScheme() in telegram.ts. -->
+    <style>
+      html, body { margin: 0; }
+      html { background: #1c1c1c; }
+    </style>
+    <script>
+      (function () {
+        try {
+          var pref = localStorage.getItem('mvpn_theme') // 'light' | 'dark' | null(system)
+          var tgDark = (((window.Telegram || {}).WebApp || {}).colorScheme === 'dark')
+          var osDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+          var dark = pref === 'dark' || (pref !== 'light' && (tgDark || osDark))
+          var bg = '#faf9f5'
+          if (dark) {
+            var shade = localStorage.getItem('mvpn_dark_shade')
+            bg = shade === 'black' ? '#000000' : '#1c1c1c'
+          }
+          document.documentElement.style.background = bg
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

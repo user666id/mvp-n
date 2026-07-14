@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://t.me/mvp_n_net_bot
+    about: Do NOT open a public issue. Report privately via the bot (see SECURITY.md).
+  - name: Question / support
+    url: https://t.me/mvp_n_net_bot
+    about: Usage questions and support go through the Telegram bot.
