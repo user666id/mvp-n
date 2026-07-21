@@ -9,11 +9,11 @@
     "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
-    "grammy": "^1.30.0"
+    "grammy": "^1.45.1"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
-    "tsx": "^4.22.4",
+    "tsx": "^4.23.1",
     "typescript": "^6.0.3"
   }
 }
